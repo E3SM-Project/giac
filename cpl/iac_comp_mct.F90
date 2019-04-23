@@ -121,7 +121,7 @@ contains
     call gcam_cpl_indices_set()
 
     ! Initialize gcam MPI communicator 
-    call gcam_mpi_init(mpicom_iac)
+    call spmd_init(mpicom_iac, IACID)
 
     ! I see this kind of thing everywhere, so why not
 #if (defined _MEMTRACE)
@@ -160,17 +160,15 @@ contains
                                    ref_tod=ref_tod, stop_ymd=stop_ymd,   &
                                    stop_tod=stop_tod,                    &
                                    calendar=calendar )
-
     call seq_infodata_GetData(infodata, case_name=caseid,                  &
                               case_desc=ctitle, start_type=starttype,      &
                               brnch_retain_casename=brnch_retain_casename, &
                               model_version=version,                       &
                               hostname=hostname, username=username)
 
-    call timemgr_setup(calendar_in=calendar,                           &
-                       start_ymd_in=start_ymd, start_tod_in=start_tod, &
-                       ref_ymd_in=ref_ymd, ref_tod_in=ref_tod,         &
-                       stop_ymd_in=stop_ymd, stop_tod_in=stop_tod)  
+    call set_timemgr_init( calendar_in=calendar, start_ymd_in=start_ymd, start_tod_in=start_tod, &
+                           ref_ymd_in=ref_ymd, ref_tod_in=ref_tod, stop_ymd_in=stop_ymd,         &
+                           stop_tod_in=stop_tod)
 
     ! Startup type - we'll be generic here too for now
     if (     trim(starttype) == trim(seq_infodata_start_type_start)) then
@@ -191,6 +189,7 @@ contains
          hostname_in=hostname, username_in=username)
 
     ! Do whatever init gcam needs
+    ! I.e. read namelist and grid, etc.
     call gcam_init()
 
     ! Here it gets tricky, as I copy from rof and other components.
@@ -199,8 +198,11 @@ contains
     ! overhead if we do this with only one proc, but if we ever go
     ! multiproc it will be better to do this now, and it lets me cut
     ! and paste for now.
-
-    if (gcam_active) then
+    if ( .not. gcam_active) then
+       call seq_infodata_PutData( infodata, iac_present   =.false.)
+       call seq_infodata_PutData( infodata, iac_prognostic=.false.)
+       return
+    else
        ! Initialize memory for input state
        begr = iac%begr
        endr = iac%endr
