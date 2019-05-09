@@ -1,33 +1,8 @@
-module iac_comp_mct
-  
-!========================================================================
-! DESCRIPTION:
-! Interface of integrated assessment component with the main E3SM driver. 
-! This is a thin interface taking E3SM driver information
-! in MCT (Model Coupling Toolkit) format and converting it to use by GCAM
-! Shamelessly copied and stolen from other components (mostly
-! RTM/ROF) in the ACME development tree, so if something looks wrong
-! it's probably because I didn't understand correctly what the
-! original code did.
 
-! Note: Iac single letter descriptor is 'z', because all the other logical ones were
-! already taken.
-
-  use seq_flds_mod
-  use shr_kind_mod     , only : r8 => shr_kind_r8
-  use shr_file_mod     , only : shr_file_setLogUnit, shr_file_setLogLevel, &
-                                shr_file_getLogUnit, shr_file_getLogLevel, &
-                                shr_file_getUnit, shr_file_setIO
-  use shr_const_mod    , only : SHR_CONST_REARTH
-  use seq_cdata_mod    , only : seq_cdata, seq_cdata_setptrs
-  use seq_timemgr_mod  , only : seq_timemgr_EClockGetData, seq_timemgr_StopAlarmIsOn, &
-                                seq_timemgr_RestartAlarmIsOn, seq_timemgr_EClockDateInSync
-  use seq_infodata_mod , only : seq_infodata_type, seq_infodata_GetData, seq_infodata_PutData, &
-                                seq_infodata_start_type_start, seq_infodata_start_type_cont,   &
-                                seq_infodata_start_type_brnch
-  use seq_comm_mct     , only : seq_comm_suffix, seq_comm_inst,seq_comm_name
-
-  use iac_mod          , only : iac
+  ! interface to setup and run the model
+  use giac_comp_mod      , only : giac_init, giac_run, giac_finish
+  use giac_cpl_indeces   , only : giac_cpl_indeces_set
+  use iac_ctl_mod        , only : iac_ctl   ! coupler interface structure, for holding stuff
   use gcam_var           , only : gcam_lon, gcam_lat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
@@ -118,7 +93,7 @@ contains
          gsMap=gsMap_iac, dom=dom_z, infodata=infodata)
 
     ! Determine attriute vector indices
-    call gcam_cpl_indices_set()
+    call giac_cpl_indices_set()
 
     ! Initialize gcam MPI communicator 
     call spmd_init(mpicom_iac, IACID)
@@ -190,7 +165,7 @@ contains
 
     ! Do whatever init gcam needs
     ! I.e. read namelist and grid, etc.
-    call gcam_init()
+    call giac_init()
 
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begr,endr regional
@@ -201,11 +176,10 @@ contains
     if ( .not. gcam_active) then
        call seq_infodata_PutData( infodata, iac_present   =.false.)
        call seq_infodata_PutData( infodata, iac_prognostic=.false.)
-       return
     else
        ! Initialize memory for input state
-       begr = iac%begr
-       endr = iac%endr
+       begr = iac_ctl%begr
+       endr = iac_ctl%endr
        allocate (totrunin(begr:endr,nt_gcam))
        
        ! Initialize iac gsMap 
@@ -224,13 +198,13 @@ contains
        call mct_aVect_zero(z2x_z) 
        
        ! Create mct iac export state - try to review what this is.
-       call iac_export(r2x_r%rattr)
+       call iac_export(z2x_z%rattr)
     end if
 
     ! Fill in infodata - of course, have to review all this
     call seq_infodata_PutData( infodata, iac_present=gcam_active, &
-         iacice_present=.false., iac_prognostic=gcam_active, &
-         iac_nx = gcamlon, iac_ny = gcamlat)
+         iac_prognostic=gcam_active, &
+         iac_nx = gcam_lon, iac_ny = gcam_lat)
     call seq_infodata_PutData( infodata, flood_present=flood_active)
 
     ! Reset shr logging to original values
@@ -258,7 +232,7 @@ contains
     ! Run IAC model
 
     ! !USES:
-    use shr_kind_mod    ,  only : r8 => shr_kind_r8
+    use shr_kind_mod    ,  only : r8 => shr_kind_r8,r4 => shr_kind_r4
     use gcam_instMod    , only : iac2atm_vars, atm2iac_vars, iac2lnd_vars, lnd2iac_vars
     use gcam_driver     ,  only : gcam_drv
     use gcam_time_manager,  only : get_curr_date, get_nstep, get_curr_calday, get_step_size
@@ -276,6 +250,18 @@ contains
     use spmdMod         ,  only : masterproc, mpicom
     use perf_mod        ,  only : t_startf, t_stopf, t_barrierf
     use shr_orb_mod     ,  only : shr_orb_decl
+
+    ! Set up the onlys, if only to help us track where everything is
+    use iac_import_export  
+    use gcam_comp_mod
+    use glm_comp_mod
+    use iac2gcam_mod
+    use gcam2glm_mod
+    use gcam2emisfile_mod
+    use glm2iac_mod
+    use iac_fields_mod
+    use shr_cal_mod
+
     use mct_mod
     use ESMF
 
@@ -292,11 +278,11 @@ contains
     integer      :: mon_sync             ! Sync current month
     integer      :: day_sync             ! Sync current day
     integer      :: tod_sync             ! Sync current time of day (sec)
-    integer      :: ymd                  ! CLM current date (YYYYMMDD)
-    integer      :: yr                   ! CLM current year
-    integer      :: mon                  ! CLM current month
-    integer      :: day                  ! CLM current day
-    integer      :: tod                  ! CLM current time of day (sec)
+    integer      :: ymd                  ! gcam current date (YYYYMMDD)
+    integer      :: yr                   ! gcam current year
+    integer      :: mon                  ! gcam current month
+    integer      :: day                  ! gcam current day
+    integer      :: tod                  ! gcam current time of day (sec)
     integer      :: dtime                ! time step increment (sec)
     integer      :: nstep                ! time step index
     logical      :: rstwr_sync           ! .true. ==> write restart file before returning
@@ -304,16 +290,12 @@ contains
     logical      :: nlend_sync           ! Flag signaling last time-step
     logical      :: nlend                ! .true. ==> last time-step
     logical      :: dosend               ! true => send data back to driver
-    logical      :: doalb                ! .true. ==> do albedo calculation on this time step
     real(r8)     :: nextsw_cday          ! calday from clock of next radiation computation
     real(r8)     :: caldayp1             ! gcam calday plus dtime offset
     integer      :: shrlogunit,shrloglev ! old values for share log unit and log level
     integer      :: lbnum                ! input to memory diagnostic
     integer      :: g,i,lsz              ! counters
     real(r8)     :: calday               ! calendar day for nstep
-    real(r8)     :: declin               ! solar declination angle in radians for nstep
-    real(r8)     :: declinp1             ! solar declination angle in radians for nstep+1
-    real(r8)     :: eccf                 ! earth orbit eccentricity factor
     real(r8)     :: recip                ! reciprical
     logical,save :: first_call = .true.  ! first call work
     logical      :: atm_present
@@ -327,6 +309,11 @@ contains
     ! I feel this is probably important
     if (.not.iac_active) return
 
+    ! Again, gcam is not multiproc, so hopefully this is a null op.
+    ! But I want to maintain domain infrastructure, just for
+    ! consistency if no other reason.
+    call get_proc_bounds(bounds)
+
     ! Reset shr logging to my log file
     call shr_file_getLogUnit (shrlogunit)
     call shr_file_getLogLevel(shrloglev)
@@ -338,14 +325,14 @@ contains
          curr_ymd=ymd, curr_tod=tod_sync,  &
          curr_yr=yr_sync, curr_mon=mon_sync, curr_day=day_sync)
 
-    ! We might do some mapping here, taking MCT to our GCAM regions.
-    ! But I'm not sure yet - see line 284 in rof_comp_mct.F90, for
-    ! example.   
+    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
+         atm_present=atm_present) 
 
-    ! Or, this is where we extract our MCT Avects into something gcam
-    ! will use?  Maybe generate those iaci, iaco AVects?
+    ! Import from land model
+    call t_startf('iac_import')
+    call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
+    call t_stopf('iac_import')
 
-    ! First advance iac time step
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr_sync,mon_sync,day_sync,tod_sync
     nlend = seq_timemgr_StopAlarmIsOn( EClock )
     rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
@@ -357,8 +344,32 @@ contains
     ! handled via file I/O I have to rewrite the mapping code
     ! internally anyway, so I might as well simply use the MCT
     ! method, since it is already there.
-    call iac_run_mod( Eclock, cdata_z, iaci, iaco)
 
+    ! Check input/output sequence.  Also, I probably need some timing
+    ! and logging information surrounding all these.
+
+    ! Setup to call calc_clmC, basically.  Probably in for some
+    ! refactoring 
+    call iac2gcam_run_mod( cdata_z, lnd2iac_vars)
+
+    ! Run GCAM, for this timestep.  
+    ! Input are lnd values, output is gcam inputs to glm and
+    ! emissivities back to atm
+    call gcam_run_mod( cdata_z, lnd2iac_vars, gcam2glm_vars, &
+         gcam_emis_vars)
+
+    ! Review what iESM gcam2emisfile_run_mod() did - if it just
+    ! output a file then that is now taken over by coupler
+    ! interactions (i.e. iac_export).  But if there are some
+    ! calculations, then we need this function to do them.
+    call gcam2atm_run_mod( cdata_z, gcam_emis_vars, glm2atm_vars)
+
+    ! Set up to run glm
+    call gcam2glm_run_mod( cdata_z, gcam2glm_vars, glm_vars)
+
+    ! Run glm, which produces the coupled vars to lnd (z->l)
+    call glm_run_mod( cdata_z, glm_vars, glm2lnd_vars)
+    
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock
     call get_curr_date( yr, mon, day, tod )
@@ -421,9 +432,9 @@ contains
     character(len=32), parameter :: sub = 'iac_SetgsMap_mct'
     !-----------------------------------------------------
 
-    begr  = iac%begr
-    endr  = iac%endr
-    lsize = iac%lnumr
+    begr  = iac_ctl%begr
+    endr  = iac_ctl%endr
+    lsize = iac_ctl%lnumr
     gsize = gcam_lon*gcam_lat
 
     ! Check 
@@ -431,12 +442,12 @@ contains
     do n = begr,endr
        ni = ni + 1
        if (ni > lsize) then
-          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac%lnumr
+          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac_ctl%lnumr
           call shr_sys_abort( sub//' ERROR: iac > expected' )
        endif
     end do
     if (ni /= lsize) then
-       write(iulog,*) sub, ' : ERROR iac total count',ni,iac%lnumr
+       write(iulog,*) sub, ' : ERROR iac total count',ni,iac_ctl%lnumr
        call shr_sys_abort( sub//' ERROR: iac not equal to expected' )
     endif
 
@@ -445,7 +456,7 @@ contains
     ni = 0
     do n = begr,endr
        ni = ni + 1
-       gindex(ni) = iac%gindex(n)
+       gindex(ni) = iac_ctl%gindex(n)
     end do
     call mct_gsMap_init( gsMap_iac, gindex, mpicom_z, IACID, lsize, gsize )
     deallocate(gindex)
@@ -507,42 +518,42 @@ contains
 
     ! Determine bounds numbering consistency
     ni = 0
-    do n = iac%begr,iac%endr
+    do n = iac_ctl%begr,iac_ctl%endr
        ni = ni + 1
-       if (ni > iac%lnumr) then
-          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac%lnumr
+       if (ni > iac_ctl%lnumr) then
+          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac_ctl%lnumr
           call shr_sys_abort( sub//' ERROR: iac > expected' )
        end if
     end do
-    if (ni /= iac%lnumr) then
-       write(iulog,*) sub, ' : ERROR iac total count',ni,iac%lnumr
+    if (ni /= iac_ctl%lnumr) then
+       write(iulog,*) sub, ' : ERROR iac total count',ni,iac_ctl%lnumr
        call shr_sys_abort( sub//' ERROR: iac not equal to expected' )
     endif
 
     ! Fill in correct values for domain components
     ni = 0
-    do n = iac%begr,iac%endr
+    do n = iac_ctl%begr,iac_ctl%endr
        ni = ni + 1
-       data(ni) = iac%lonc(n)
+       data(ni) = iac_ctl%lonc(n)
     end do
     call mct_gGrid_importRattr(dom_z,"lon",data,lsize) 
 
     ni = 0
-    do n = iac%begr,iac%endr
+    do n = iac_ctl%begr,iac_ctl%endr
        ni = ni + 1
-       data(ni) = iac%latc(n)
+       data(ni) = iac_ctl%latc(n)
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
     ni = 0
-    do n = iac%begr,iac%endr
+    do n = iac_ctl%begr,iac_ctl%endr
        ni = ni + 1
-       data(ni) = iac%area(n)*1.0e-6_r8/(re*re)
+       data(ni) = iac_ctl%area(n)*1.0e-6_r8/(re*re)
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
     ni = 0
-    do n = iac%begr,iac%endr
+    do n = iac_ctl%begr,iac_ctl%endr
        ni = ni + 1
        data(ni) = 1.0_r8
     end do

@@ -1,16 +1,39 @@
 #define DEBUG
-Module iac_comp_mod
+Module giac_comp_mod
   
-!---------------------------------------------------------------------------
-!BOP
-!
-! !MODULE: iac_comp_mod
-!
-!  Interface of the integrated assessment component in CCSM
-!
-! !DESCRIPTION:
-!
-! !USES:
+  !---------------------------------------------------------------------------
+  !BOP
+  !
+  ! !MODULE: giac_comp_mod
+  !
+  !  Interface of the gcam/iac fortran layer with gcam and glm subcomponents, for E3SM
+  !
+  ! !DESCRIPTION:
+  !
+  !  The naming scheme here is a little wonky, because we use "gcam" in
+  !  two different ways: as the overall name for this specific iac component,
+  !  and as one of the subcomponents that we run as part of that
+  !  component.  Therefore, we shall use the term "giac" to represent the
+  !  overall component: The driving _mct() functions in ../../../cpl
+  !  call these giac functions, which then drive the combination of
+  !  gcam and glm subcomponents, as well as their fortran wrapper and
+  !  interation functions.  To sum up, this is how we are naming
+  !  files and functions in this directory:
+  !
+  !     giac: overall driver functions and variables
+  !     gcam: code for running the gcam part of the model
+  !     glm:  code for running the glm part of the model
+  !     iac2gcam and glm2iac: conversions between these subcomponents
+  !      and the E3SM-style iac component.
+  !     gcam2glm : conversions between the two subcomponents
+  !     gcam_run and glm_run: fortran wrappers to run the C++
+  !      submodel routines.
+  !     mk* : auxilliary fortran routines, used by other wrappers
+  !     updatelandusedata() : auxilliary C functions for updating the
+  !      pfts (currently, the output is what we send back to the land
+  !      model, z->l).
+  !     
+  ! !USES:
   use gcam_comp_mod
   use glm_comp_mod
   use iac2gcam_mod
@@ -30,9 +53,9 @@ Module iac_comp_mod
 
 ! !PUBLIC MEMBER FUNCTIONS:
 
-  public :: iac_init_mod               ! clm initialization
-  public :: iac_run_mod                ! clm run phase
-  public :: iac_final_mod              ! clm finalization/cleanup
+  public :: giac_init               ! giac initialization
+  public :: giac_run                ! giac run phase
+  public :: giac_final              ! giac finalization/cleanup
 
 ! !PUBLIC DATA MEMBERS: None
 
@@ -98,10 +121,10 @@ contains
 !---------------------------------------------------------------------------
 !BOP
 
-! !IROUTINE: iac_init_mod
+! !IROUTINE: giac_init
 
 ! !INTERFACE:
-  subroutine iac_init_mod( EClock, cdata, iaci, iaco)
+  subroutine giac_init( nlfile)
 
 ! !DESCRIPTION:
 ! Initialize interface for iac
@@ -114,6 +137,7 @@ contains
     type(iac_cdata_type) :: cdata
     real*8, pointer :: iaci(:,:)
     real*8, pointer :: iaco(:,:)
+    
 
 ! !LOCAL VARIABLES:
     character(len=*),parameter :: subname='(iac_init_mod)'
