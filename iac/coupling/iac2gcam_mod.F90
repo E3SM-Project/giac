@@ -1,4 +1,4 @@
-#define DEBUG
+define DEBUG
 Module iac2gcam_mod
   
 !---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ contains
     integer :: Country_AEZ_IDVarId
     integer :: GCAM_IDVarId
     integer :: WeightVarId
-    integer :: base_var1_mean_pftVarId
+    integer :: base_npp_m_mean_pftVarId
     integer :: base_abovg_c_mean_pftVarId
     integer :: dimid
     integer :: i
@@ -441,7 +441,8 @@ contains
   subroutine iac2gcam_run_mod( EClock, cdata, iaco, gcami)
 
 ! !DESCRIPTION:
-! Run interface
+! Run interface: takes the lnd values in "iaco" and puts them in
+! "gcami" for input to gcam.
 
 ! !USES:
     implicit none
@@ -452,19 +453,20 @@ contains
     real*8, pointer :: iaco(:,:)
     real*8, pointer :: gcami(:,:)
 
+
 ! !LOCAL VARIABLES:
 
                                                
     character(len=*),parameter :: subname='(iac2gcam_run_mod)'
-    character(len=128) :: casename,var1name,var2name
+    character(len=128) :: casename,var1name,hr_mname
     character(len=256) :: clmC_bfn,clmC_bfn_dir
     character(len=512) :: iac_base_clmfile
     integer :: abovg_c_mean_pftVarId
     integer :: aez
     integer :: areaVarId
     integer :: base_pft_weight_mean_gVarId
-    integer :: base_var1_mean_pftVarId
-    integer :: base_var2_mean_pftVarId
+    integer :: base_npp_m_mean_pftVarId
+    integer :: base_hr_m_mean_pftVarId
     integer :: blowg_c_mean_pftVarId
     integer :: cropid
     integer :: dimid,varid
@@ -497,15 +499,15 @@ contains
     logical, dimension(:,:,:), allocatable  :: avail
     real*8                                  :: medianval,madval
     real*8, dimension(2)                    :: scalar_var_lims
-    real*8, dimension(:), allocatable       :: sum_scaled_var1_raw,sum_scaled_var2_raw,sum_scaled_base_var1_raw,&
-sum_scaled_base_var2_raw,sum_scalar,sum_bscalar,final_var1, &
-final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
+    real*8, dimension(:), allocatable       :: sum_scaled_npp_m_raw,sum_scaled_hr_m_raw,sum_scaled_base_npp_m_raw,&
+sum_scaled_base_hr_m_raw,sum_scalar,sum_bscalar,final_npp_m, &
+final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
     real*8, dimension(:), allocatable       :: scalar_var_rmna ! Filtered data points
     real*8, dimension(:,:), allocatable     :: area,landfrac,scalar,bscalar,aezwtmap,na
-    real*8, dimension(:,:,:), allocatable   :: base_var1,base_var2,base_pft_wt,napft,nac,nacbase,pft_wt,scalar_var,aez_times_ncrop_by_pft
+    real*8, dimension(:,:,:), allocatable   :: base_npp_m,base_hr_m,base_pft_wt,napft,nac,nacbase,pft_wt,scalar_var,aez_times_ncrop_by_pft
                                                
     real*8, dimension(:,:,:), allocatable,TARGET   :: abovg_c,blowg_c,npp_m,hr_m
-    real*8, dimension(:,:,:), pointer       :: var1,var2
+    real*8, dimension(:,:,:), pointer       :: npp_m,hr_m
     real*8, dimension(:,:,:,:), allocatable :: gcamijt
     real*8, parameter                       :: mad_limit = 5.2
 
@@ -534,14 +536,10 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     iac_iac_nx = cdata%i(iac_cdatai_iac_nx)
     iac_iac_ny = cdata%i(iac_cdatai_iac_ny)
 
-    if (npp_hr_on) then
-       !----- exp1.1 only, f05
-       var1name='npp_mean_pft'
-       var2name='hr_mean_pft'
-    else
-       var1name='abovg_c_mean_pft'
-       var2name='blowg_c_mean_pft'
-    end if
+    !----- exp1.1 only, f05
+    !var1name='npp_mean_pft'
+    !var2name='hr_mean_pft'
+
 !
 ! Read base data from netcdf file. Carbon stock data supplied by calc_clmc
 !    
@@ -570,16 +568,16 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     allocate(area(numLons,numLats))
     allocate(avail(numLons,numLats,npfts))
     allocate(base_pft_wt(numLons,numLats,npfts))
-    allocate(base_var1(numLons,numLats,npfts))
-    allocate(base_var2(numLons,numLats,npfts))
+    allocate(base_npp_m(numLons,numLats,npfts))
+    allocate(base_hr_m(numLons,numLats,npfts))
     allocate(blowg_c(numLons,numLats,npfts))
     allocate(bscalar(numLons,numLats))
     allocate(final_above(ncrops))
     allocate(final_below(ncrops))
-    allocate(final_bvar1(ncrops))
-    allocate(final_bvar2(ncrops))
-    allocate(final_var1(ncrops))
-    allocate(final_var2(ncrops))
+    allocate(final_bnpp_m(ncrops))
+    allocate(final_bhr_m(ncrops))
+    allocate(final_npp_m(ncrops))
+    allocate(final_hr_m(ncrops))
     allocate(gcamijt(ncrops,naez,nreg,2))
     allocate(hr_m(numLons,numLats,npfts))
     allocate(indx(lenmap) )
@@ -596,11 +594,11 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     allocate(aez_times_ncrop_by_pft(numLons,numLats,npfts))
     allocate(sum_bscalar(ncrops))
     allocate(sum_scalar(ncrops))
-    allocate(sum_scaled_base_var1_raw(ncrops))
-    allocate(sum_scaled_base_var2_raw(ncrops))
-    allocate(sum_scaled_var1_raw(ncrops))
-    allocate(sum_scaled_var2_raw(ncrops))                         
-    allocate(var2_scalar(ncrops))                         
+    allocate(sum_scaled_base_npp_m_raw(ncrops))
+    allocate(sum_scaled_base_hr_m_raw(ncrops))
+    allocate(sum_scaled_npp_m_raw(ncrops))
+    allocate(sum_scaled_hr_m_raw(ncrops))                         
+    allocate(hr_m_scalar(ncrops))                         
 
     !
     ! Compute pft_wt, abovg_c, blowg_c; valid if final = true
@@ -620,22 +618,12 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
        mm_clmC = mon-1
     endif
 
-    calc_avg = .false.
-    if (EClock(iac_EClock_Agcamsetden) == 1) calc_avg = .true.
+    ! This seems to set our input values to clm-based climatology before
+    ! 2005.  Is this okay?  Leave it for now.
 
     if (yy_clmC < 2005) then
        write(logunit,*)'iac2gcam yy_clmC=',yy_clmC,' reading above/below 15 year means 1990-2004'
-
-! tcx moved to namelist
-!       if (npp_hr_on) then
-!!exp1.1
-!          filename = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/clm_for_gcam_15yr_means/year_1990-2004_exp1.1/iESM_exp1.1.clm2.h1.1990-2004_mean_exp1.1.nc'
-!       else
-!!exp1.0
-!          filename = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/clm_for_gcam_15yr_means/year_1990-2004/b40.20th.1deg.coup.001_gcam.clm2.h1.1990-2004_mean.nc'
-!       endif
-
-       status= nf90_open(trim(iac_base_clmfile),nf90_nowrite,ncid)
+       status= nf90_open(trim(iac_base_clmfile),nf90_nowrite,ncid) 
        if(status /= nf90_NoErr) call handle_err(status)
    
        status = nf90_inq_varid(ncid,'pft_weight_mean_g',varid)
@@ -653,76 +641,26 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
        status = nf90_get_var(ncid,varid,blowg_c)
        if(status /= nf90_NoErr) call handle_err(status)
 
-       if (npp_hr_on) then
-          status = nf90_inq_varid(ncid,'npp_mean_pft',varid)
-          if(status /= nf90_NoErr) call handle_err(status)
-          status = nf90_get_var(ncid,varid,npp_m)
-          if(status /= nf90_NoErr) call handle_err(status)
-
-          status = nf90_inq_varid(ncid,'hr_mean_pft',varid)
-          if(status /= nf90_NoErr) call handle_err(status)
-          status = nf90_get_var(ncid,varid,hr_m)
-          if(status /= nf90_NoErr) call handle_err(status)
-          var1=>npp_m
-          var2=>hr_m
-       else
-          var1=>abovg_c
-          var2=>blowg_c
-          npp_m = 0.0
-          hr_m = 0.0
-       endif
+       ! npp_hr_on - now default
+       status = nf90_inq_varid(ncid,'npp_mean_pft',varid)
+       if(status /= nf90_NoErr) call handle_err(status)
+       status = nf90_get_var(ncid,varid,npp_m)
+       if(status /= nf90_NoErr) call handle_err(status)
+       
+       status = nf90_inq_varid(ncid,'hr_mean_pft',varid)
+       if(status /= nf90_NoErr) call handle_err(status)
+       status = nf90_get_var(ncid,varid,hr_m)
+       if(status /= nf90_NoErr) call handle_err(status)
 
        status = nf90_close(ncid)
        if(status /= nf90_NoErr) call handle_err(status)
     else
-       clmC_bfn = './'//trim(casename)//'.clm2.h1.'
-
-       if (fast_oneway_iac_coupling) then
-
-       !---- tcx existing files
-       if (iac_iac_nx == 720 .and. iac_iac_ny == 360) then
-          !----- exp1.1 only, f05
-          clmC_bfn = trim(clmc_bfn_dir)//'/iESM_exp1.1.clm2.h1.'
-       else if (iac_iac_nx == 288 .and. iac_iac_ny == 192) then
-          !----- exp1.0 only, f09
-!          if (yy_clmC >= 2005 .and. yy_clmC <= 2019) &
-!             clmC_bfn = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/cli017/y9s/archive/b40.rcp4_5.1deg.bprp.001_AEZ_exp1_2005-2019/b40.rcp4_5.1deg.bprp.001_AEZ_exp1.clm2.h1.'
-!          if (yy_clmC >= 2020 .and. yy_clmC <= 2034) &
-!             clmC_bfn = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/cli017/y9s/archive/b40.rcp4_5.1deg.bprp.001_AEZ_exp1_2020-2034/lnd/hist/b40.rcp4_5.1deg.bprp.001_AEZ_exp1.clm2.h1.'
-!          if (yy_clmC >= 2035 .and. yy_clmC <= 2049) &
-!             clmC_bfn = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/cli017/y9s/archive/b40.rcp4_5.1deg.bprp.001_AEZ_exp1_2035-2049/lnd/hist/b40.rcp4_5.1deg.bprp.001_AEZ_exp1.clm2.h1.'
-!          if (yy_clmC >= 2050 .and. yy_clmC <= 2064) &
-!             clmC_bfn = '/scratch2/scratchdirs/tcraig/IESM/inputdata/iac/giac/iac2gcam/cli017/y9s/transient/rcps/b40.rcp4_5.1deg.bprp.001_AEZ_exp1/b40.rcp4_5.1deg.bprp.001_AEZ_exp1.clm2.h1.'
-
-          !----- exp1.2 only, f09
-          clmC_bfn = trim(clmc_bfn_dir)//'/iESM_exp1.2.clm2.h1.'
-
-       else
-          write(logunit,*) subname,' fast_oneway_iac_coupling now support for current clm resolution ',iac_iac_nx, iac_iac_ny
-          call shr_sys_abort(subname//' fast iac coupling not compatable with clm resolution ')
-
-       endif
-       endif
-       write(logunit,*)'iac2gcam yy_clmC=',yy_clmC,' calling calc_clmc mm_clmC',mm_clmC,' calc avg=',calc_avg
-       call calc_clmC(yy_clmC,mm_clmC,clmC_bfn,pft_wt,abovg_c,blowg_c,npp_m,hr_m,calc_avg)
+       ! In iESM we cracked and read from the clm.h1 file.  Now, we
+       ! extract from the coupler.
+       !call calc_clmC(yy_clmC,mm_clmC,clmC_bfn,pft_wt,abovg_c,blowg_c,npp_m,hr_m,calc_avg) 
+       call calc_clmC(iaco,pft_wt,abovg_c,blowg_c,npp_m,hr_m)
     endif
 
-    if (calc_avg.ne..true.) return
-
-    if (npp_hr_on) then
-       var1=>npp_m
-       var2=>hr_m
-    else
-       var1=>abovg_c
-       var2=>blowg_c
-       npp_m = 0.0
-       hr_m = 0.0
-    endif
-
-#ifdef DEBUG
-    write(logunit,*)'iac2gcam proceeding to preprocess yearly clm average'
-#endif
-    call shr_sys_flush(logunit)
 
     !
     ! the na arrays are used to set up a mask for missing values
@@ -769,27 +707,34 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
        na=miss_val
     end where
 
+    ! Reminder: always use npp_m and hr_m
+    !var1=>npp_m
+    !var2=>hr_m
+    !var1name='npp_mean_pft'
+    !var2name='hr_mean_pft'
+
+
 #ifdef DEBUG
-    write(logunit,*)'reading base values of var1'
+    write(logunit,*)'reading base values of npp_m'
 #endif
     call shr_sys_flush(logunit)
-    status = nf90_inq_varid(ncidbase, trim(var1name), base_var1_mean_pftVarId)
+    status = nf90_inq_varid(ncidbase, 'npp_mean_pft', base_npp_m_mean_pftVarId)
     if(status /= nf90_NoErr) call handle_err(status)
-    status = nf90_get_var(ncidbase,base_var1_mean_pftVarId,base_var1)
+    status = nf90_get_var(ncidbase,base_npp_m_mean_pftVarId,base_npp_m)
     if(status /= nf90_NoErr) call handle_err(status)
-    where(base_var1.gt.0.9*miss_val)
+    where(base_npp_m.gt.0.9*miss_val)
        nac=miss_val
     end where
 
 #ifdef DEBUG
-    write(logunit,*)'reading base values of var2'
+    write(logunit,*)'reading base values of hr_m'
 #endif
     call shr_sys_flush(logunit)
-    status = nf90_inq_varid(ncidbase, trim(var2name), base_var2_mean_pftVarId)
+    status = nf90_inq_varid(ncidbase, 'hr_m', base_hr_m_mean_pftVarId)
     if(status /= nf90_NoErr) call handle_err(status)
-    status = nf90_get_var(ncidbase,base_var2_mean_pftVarId,base_var2)
+    status = nf90_get_var(ncidbase,base_hr_m_mean_pftVarId,base_hr_m)
     if(status /= nf90_NoErr) call handle_err(status)
-    where(base_var2.gt.0.9*miss_val)
+    where(base_hr_m.gt.0.9*miss_val)
        nac=miss_val
     end where
 
@@ -808,14 +753,14 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 
     call shr_sys_flush(logunit)
 
-    where(var1.gt.0.9*miss_val)
+    where(npp_m.gt.0.9*miss_val)
        nac=miss_val
     end where
 
     !hr is set by calc_clmc
 
     call shr_sys_flush(logunit)
-    where(var2.gt.0.9*miss_val)
+    where(hr_m.gt.0.9*miss_val)
        nac=miss_val
     end where
 
@@ -827,7 +772,6 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 
     status = nf90_close(ncidbase)
     if(status /= nf90_NoErr) call handle_err(status)
-
 
     !        # Compute the median and median absolute deviation for each AEZ/crop combination
     !        # See: Davies, P.L. and Gather, U. (1993), "The identification of multiple outliers"
@@ -847,7 +791,7 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     
        ! for calculating the scalars we need to set the 
        !following to missing to prevent divideby0 errors
-       where(base_var2.eq.0..or.base_var1.eq.0.)
+       where(base_hr_m.eq.0..or.base_npp_m.eq.0.)
           nacbase=miss_val
        end where
 
@@ -863,7 +807,7 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 ! calculate scaled values of carbon ignoring all missing values.
 
        where (avail.and.nacbase.lt.0.9*miss_val)
-          scalar_var=var1/base_var1
+          scalar_var=npp_m/base_npp_m
        else where
           scalar_var=miss_val
        end where
@@ -908,7 +852,7 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
        
        medianval=median(scalar_var_rmna,numvals)
 #ifdef DEBUG
-       write(6,*)'iac2gcam: medianval for var1 is ',medianval
+       write(6,*)'iac2gcam: medianval for npp_m is ',medianval
 #endif
        madval=mad(scalar_var_rmna,numvals,medianval=medianval)
        scalar_var_lims(1:1)=medianval-(mad_limit*madval)
@@ -921,13 +865,13 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
        ! remove outliers from entire distribution for now we keep track of what is removed
        !
        where(avail.and.(scalar_var<scalar_var_lims(1).or.scalar_var>scalar_var_lims(2)))
-          var1=miss_val
+          npp_m=miss_val
           nac=miss_val
        end where
 
        ! calculate scaled values of carbon ignoring all missing values.
-       where (avail.and.base_var2.gt.0.)
-          scalar_var=var2/base_var2
+       where (avail.and.base_hr_m.gt.0.)
+          scalar_var=hr_m/base_hr_m
        else where
           scalar_var=miss_val
        end where
@@ -957,7 +901,7 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 
        medianval=median(scalar_var_rmna,numvals)
 #ifdef DEBUG
-       write(6,*)'iac2gcam: medianval for var2 is ',medianval
+       write(6,*)'iac2gcam: medianval for hr_m is ',medianval
 #endif
        madval   =mad(scalar_var_rmna,numvals,medianval=medianval)
        scalar_var_lims(1:1)=medianval-(mad_limit*madval)
@@ -968,7 +912,7 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 #endif
 
        where(avail.and.(scalar_var<scalar_var_lims(1).or.scalar_var>scalar_var_lims(2)))
-          var2=miss_val
+          hr_m=miss_val
           nac=miss_val
        end where
 
@@ -1024,19 +968,19 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
                    aezwtmap(map(i)%x,map(i)%y)=map(i)%WT
                 end if
              end do
-             sum_scaled_var1_raw=0.
-             sum_scaled_var2_raw=0.
-             sum_scaled_base_var1_raw=0.
-             sum_scaled_base_var2_raw=0.
+             sum_scaled_npp_m_raw=0.
+             sum_scaled_hr_m_raw=0.
+             sum_scaled_base_npp_m_raw=0.
+             sum_scaled_base_hr_m_raw=0.
              sum_scalar=0.
              sum_bscalar=0.
-             final_var1=0.
-             final_var2=0.
-             final_bvar1=0.
-             final_bvar2=0.
+             final_npp_m=0.
+             final_hr_m=0.
+             final_bnpp_m=0.
+             final_bhr_m=0.
              final_above=0.
              final_below=0.
-             var2_scalar=0.
+             hr_m_scalar=0.
              do ipft=2,npfts
                 !
                 ! scaling factor based on all weights
@@ -1051,45 +995,45 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
                 !
                 do icrop=1,pft2gcam_mapping(ipft)%ncrops
                    cropid=pft2gcam_mapping(ipft)%crop_id(icrop)
-                   sum_scaled_var1_raw(cropid)=sum_scaled_var1_raw(cropid)+sum(var1(:,:,ipft)*scalar(:,:),mask=namask)
-                   sum_scaled_var2_raw(cropid)=sum_scaled_var2_raw(cropid)+sum(var2(:,:,ipft)*scalar(:,:),mask=namask)
-                   sum_scaled_base_var1_raw(cropid)=sum_scaled_base_var1_raw(cropid)+sum(base_var1(:,:,ipft)*bscalar(:,:),mask=namask)
-                   sum_scaled_base_var2_raw(cropid)=sum_scaled_base_var2_raw(cropid)+sum(base_var2(:,:,ipft)*bscalar(:,:),mask=namask)
+                   sum_scaled_npp_m_raw(cropid)=sum_scaled_npp_m_raw(cropid)+sum(npp_m(:,:,ipft)*scalar(:,:),mask=namask)
+                   sum_scaled_hr_m_raw(cropid)=sum_scaled_hr_m_raw(cropid)+sum(hr_m(:,:,ipft)*scalar(:,:),mask=namask)
+                   sum_scaled_base_npp_m_raw(cropid)=sum_scaled_base_npp_m_raw(cropid)+sum(base_npp_m(:,:,ipft)*bscalar(:,:),mask=namask)
+                   sum_scaled_base_hr_m_raw(cropid)=sum_scaled_base_hr_m_raw(cropid)+sum(base_hr_m(:,:,ipft)*bscalar(:,:),mask=namask)
                    sum_scalar(cropid)=sum_scalar(cropid)+sum(scalar(:,:),mask=namask)
                    sum_bscalar(cropid)=sum_bscalar(cropid)+sum(bscalar(:,:),mask=namask)
                 end do
              end do
              !
-             ! Calculate the final var1 and hr forcing with 
+             ! Calculate the final npp_m and hr forcing with 
              ! respect to the base period values using the sums from above.
              !
              where(sum_scalar.gt.0.)
-                final_var1=sum_scaled_var1_raw/sum_scalar
-                final_var2=sum_scaled_var2_raw/sum_scalar
+                final_npp_m=sum_scaled_npp_m_raw/sum_scalar
+                final_hr_m=sum_scaled_hr_m_raw/sum_scalar
              end where
              where(sum_bscalar.gt.0.)
-                final_bvar1=sum_scaled_base_var1_raw/sum_bscalar
-                final_bvar2=sum_scaled_base_var2_raw/sum_bscalar
+                final_bnpp_m=sum_scaled_base_npp_m_raw/sum_bscalar
+                final_bhr_m=sum_scaled_base_hr_m_raw/sum_bscalar
              end where
              !
              ! There are a few valid 0/0 points that need to be trapped
              !
-             where((final_var1.eq.0..and.sum_scalar.gt.0.).and.(final_bvar1.eq.0..and.sum_bscalar.gt.0.))
+             where((final_npp_m.eq.0..and.sum_scalar.gt.0.).and.(final_bnpp_m.eq.0..and.sum_bscalar.gt.0.))
                 final_above=1.
              end where
-             where((final_var2.eq.0..and.sum_scalar.gt.0.).and.(final_bvar2.eq.0..and.sum_bscalar.gt.0.))
+             where((final_hr_m.eq.0..and.sum_scalar.gt.0.).and.(final_bhr_m.eq.0..and.sum_bscalar.gt.0.))
                 final_below=1.
              end where
              !
              ! output ratios of npp and hr referenced to the base period 1990-2005
              !
-             where(final_bvar1.gt.0.)
-                final_above=final_var1/final_bvar1
+             where(final_bnpp_m.gt.0.)
+                final_above=final_npp_m/final_bnpp_m
              end where
 
-             where(final_bvar2.gt.0.)
-                var2_scalar=1. - ((final_var2/final_bvar2)-1.)
-                final_below=(final_above+var2_scalar)/2.
+             where(final_bhr_m.gt.0.)
+                hr_m_scalar=1. - ((final_hr_m/final_bhr_m)-1.)
+                final_below=(final_above+hr_m_scalar)/2.
              end where
              !
              ! This data needs to be put into the gcami array
@@ -1126,16 +1070,16 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     deallocate(area)
     deallocate(avail)
     deallocate(base_pft_wt)
-    deallocate(base_var1)
-    deallocate(base_var2)
+    deallocate(base_npp_m)
+    deallocate(base_hr_m)
     deallocate(blowg_c)
     deallocate(bscalar)
     deallocate(final_above)
     deallocate(final_below)
-    deallocate(final_bvar1)
-    deallocate(final_bvar2)
-    deallocate(final_var1)
-    deallocate(final_var2)
+    deallocate(final_bnpp_m)
+    deallocate(final_bhr_m)
+    deallocate(final_npp_m)
+    deallocate(final_hr_m)
     deallocate(gcamijt)
     deallocate(hr_m)
     deallocate(indx)
@@ -1152,11 +1096,11 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
     deallocate(aez_times_ncrop_by_pft)
     deallocate(sum_bscalar)
     deallocate(sum_scalar)
-    deallocate(sum_scaled_base_var1_raw)
-    deallocate(sum_scaled_base_var2_raw)
-    deallocate(sum_scaled_var1_raw)
-    deallocate(sum_scaled_var2_raw)
-    deallocate(var2_scalar)
+    deallocate(sum_scaled_base_npp_m_raw)
+    deallocate(sum_scaled_base_hr_m_raw)
+    deallocate(sum_scaled_npp_m_raw)
+    deallocate(sum_scaled_hr_m_raw)
+    deallocate(hr_m_scalar)
 
   end subroutine iac2gcam_run_mod
 
@@ -1201,7 +1145,8 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
 ! !IROUTINE: calc_clmC
 
 ! !INTERFACE:
-  subroutine calc_clmC(yy,mm,bfn,out_pft_weight,out_abovg_c,out_blowg_c,out_npp,out_hr,calc_avg)
+  !subroutine calc_clmC(yy,mm,bfn,out_pft_weight,out_abovg_c,out_blowg_c,out_npp,out_hr,calc_avg)
+  subroutine calc_clmC(iaco,pft_wt,abovg_c,blowg_c,npp_m,hr_m)
 
 ! !DESCRIPTION:
 ! Calculate clm C from monthly average files for gcam
@@ -1449,6 +1394,15 @@ final_var2,final_bvar1,final_bvar2,final_above,final_below,var2_scalar
            write(logunit,*) subname,' read_restart rpointer NOT found ',trim(iac_clmC_rpointer)
         endif ! rpointer exist
      endif  ! read_restart
+
+     !------------------------------------------------------------
+     ! Here is where we read teh clm history file, and where we need
+     ! to replace with iaco/lnd2iac_vars.  There are also a bunch of
+     ! dimensions and stuff that we read, now extraneously, that we
+     ! should probably extract from the clmbase back in iac2gcam_mod
+     ! and put in a module somewhere.  Actually, perhaps this module
+     ! - private globals?  How does fortran deal with this kind of
+     ! thing?  Or maybe just the iac_cdata structure.
 
      write(filename,'(a,i4.4,a,i2.2,a)') trim(bfn),yy,'-',mm,'.nc'
      write(logunit,*) subname,' read ',trim(filename)

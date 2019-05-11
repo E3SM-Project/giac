@@ -1,19 +1,20 @@
-
-  ! interface to setup and run the model
-  use giac_comp_mod      , only : giac_init, giac_run, giac_finish
+module iac_comp_mct
+  !---------------------------------------------------------------------------
+  ! !DESCRIPTION:
+  !  Interface of the active gcam model to the MCT drive
+  !
+  ! !uses:
+  !use giac_comp_mod      , only : giac_init, giac_run, giac_finish
   use giac_cpl_indeces   , only : giac_cpl_indeces_set
   use iac_ctl_mod        , only : iac_ctl   ! coupler interface structure, for holding stuff
   use gcam_var           , only : gcam_lon, gcam_lat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
                                 gcam_active, gcam_var_set
-
 ! Stub in other moduals for running iac
 ! use IacMod
 ! use IacVar
 
-!
-! PUBLIC MEMBER FUNCTIONS:
   implicit none
   SAVE
   private                              ! By default make data private
@@ -306,8 +307,14 @@ contains
     character(len=32)               :: rdate                ! date char string for restart file names
     character(len=32), parameter    :: sub = "iac_run_mct"
 
+    ! This may be redundant, but the downstream modules use what
+    ! looks like a different EClock interface.  Rather than hunt down
+    ! everything there, we'll just copy waht we need here.
+    integer, pointer :: GClock(:)
+
     ! I feel this is probably important
     if (.not.iac_active) return
+
 
     ! Again, gcam is not multiproc, so hopefully this is a null op.
     ! But I want to maintain domain infrastructure, just for
@@ -319,12 +326,20 @@ contains
     call shr_file_getLogLevel(shrloglev)
     call shr_file_setLogUnit (iulog)
 
-    ! Determine time of next atmospheric shortwave calculation
-    ! This appears to be just for tagging purposes
+    ! Get the model time - I'm not certain what should be sync and
+    ! what shouldn't, but for now we'll just follow the pattern
     call seq_timemgr_EClockGetData(EClock, &
-         curr_ymd=ymd, curr_tod=tod_sync,  &
-         curr_yr=yr_sync, curr_mon=mon_sync, curr_day=day_sync)
+         curr_ymd=ymd, curr_tod=tod,  &
+         curr_yr=yr, curr_mon=mon, curr_day=day,&
+         dtime=dtime)
 
+    ! Assign the date to GClock
+    allocate(GClock(iac_EClock_size))
+    GClock=0
+    GClock(iac_EClock_ymd) = ymd
+    GClock(iac_EClock_tod) = tod
+    GClock(iac_EClock_dt) = dtime
+    
     call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
          atm_present=atm_present) 
 
@@ -333,7 +348,7 @@ contains
     call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
     call t_stopf('iac_import')
 
-    write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr_sync,mon_sync,day_sync,tod_sync
+    write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
     nlend = seq_timemgr_StopAlarmIsOn( EClock )
     rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
     call advance_timestep()
@@ -349,26 +364,32 @@ contains
     ! and logging information surrounding all these.
 
     ! Setup to call calc_clmC, basically.  Probably in for some
-    ! refactoring 
-    call iac2gcam_run_mod( cdata_z, lnd2iac_vars)
+    ! refactoring.  Take the coupled lnd fields (lnd2iac) and turn
+    ! them into  gcam inputs (iac2gcam)
+    call iac2gcam_run_mod(GClock, cdata_z, lnd2iac_vars, iac2gcam_vars)
+
+    ! This pushes the carbon densities to gcam, but it might be a
+    ! relic from how we ran in the past, with all the smoothing and
+    ! future calculations and what not.
+    call gcam_setdensity_mod(GClock, cdata_z, iac2gcam_vars)
 
     ! Run GCAM, for this timestep.  
     ! Input are lnd values, output is gcam inputs to glm and
     ! emissivities back to atm
-    call gcam_run_mod( cdata_z, lnd2iac_vars, gcam2glm_vars, &
+    call gcam_run_mod( GClock, cdata_z, iac2gcam_vars, gcam2glm_vars, &
          gcam_emis_vars)
 
     ! Review what iESM gcam2emisfile_run_mod() did - if it just
     ! output a file then that is now taken over by coupler
     ! interactions (i.e. iac_export).  But if there are some
     ! calculations, then we need this function to do them.
-    call gcam2atm_run_mod( cdata_z, gcam_emis_vars, glm2atm_vars)
+    call gcam2atm_run_mod( GClock, cdata_z, gcam_emis_vars, glm2atm_vars)
 
     ! Set up to run glm
-    call gcam2glm_run_mod( cdata_z, gcam2glm_vars, glm_vars)
+    call gcam2glm_run_mod( GClock, cdata_z, gcam2glm_vars, glm_vars)
 
     ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod( cdata_z, glm_vars, glm2lnd_vars)
+    call glm_run_mod( GClock, cdata_z, glm_vars, glm2lnd_vars)
     
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock
@@ -379,7 +400,7 @@ contains
        call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
        write(iulog,*)' gcam ymd=',ymd     ,'  gcam tod= ',tod
        write(iulog,*)'sync ymd=',ymd_sync,' sync tod= ',tod_sync
-       call shr_sys_abort( sub//":: RTM clock is not in sync with Master Sync clock" )
+       call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
     end if
     
     ! Reset shr logging to my original values
