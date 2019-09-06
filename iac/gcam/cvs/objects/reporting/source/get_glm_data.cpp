@@ -300,13 +300,19 @@ pair<string, int> GetGLMData::parseTypeAndAEZFromName( const string& aGCAMName )
     size_t index = aGCAMName.find( "AEZ" );
     if( index == string::npos ) {
         // TODO: warn?
-        return make_pair<string, int>( aGCAMName, 0 );
+        // TRS 20190905
+        // Apparently our mpicxx doesn't like this use of make_pair,
+        // although I don't really see anything wrong with it.  So
+        // just use a pair cast directly.
+        //return make_pair<string, int>( aGCAMName, 0 );
+      return pair<string, int> {aGCAMName, 0};
     }
     else {
         string typeName( aGCAMName, 0, index);
         string aezStr( aGCAMName, index + 3, string::npos );
         int aez = boost::lexical_cast<int>( aezStr );
-        return make_pair<string, int>( typeName, aez );
+        // return make_pair<string, int>( typeName, aez );
+	return pair<string, int> {typeName, aez};
     }
 }
 

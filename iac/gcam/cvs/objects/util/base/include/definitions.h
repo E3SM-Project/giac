@@ -69,7 +69,7 @@
 #endif
 
 //! A flag which turns on or off the compilation of the XML database code.
-#define __USE_XML_DB__ 1
+#define __USE_XML_DB__ 0
 
 // This allows for memory leak debugging.
 #if defined(_MSC_VER)

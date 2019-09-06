@@ -5,8 +5,6 @@ module iac_import_export
   !  internal iac variables.  
   ! !uses:
   use shr_kind_mod , only: r8 => shr_kind_r8, cl=>shr_kind_cl
-  use abortutils   , only: endrun
-  use decompmod    , only: bounds_type
   use lnd2iacType  , only: lnd2iac_type
   use iac2lndType  , only: iac2lnd_type
   use iac2atmType  , only: iac2atm_type
@@ -19,7 +17,7 @@ module iac_import_export
   public :: iac_export    ! export iac vars to lnd and atm via coupler
 
 contains
-  subroutine iac_import(bounds, x2z, lnd2iac_vars)
+  subroutine iac_import(x2z, lnd2iac_vars)
     !---------------------------------------------------------------------------
     ! !DESCRIPTION:
     ! Convert the input data from the coupler to iac
@@ -35,9 +33,8 @@ contains
     use netcdf
     !
     ! !ARGUMENTS:
-    type(bounds_type)  , intent(in)    :: bounds   ! bounds
     real(r8)           , intent(in)    :: x2z(:,:) ! driver import state to iacmodel
-    type(iac2lnd_type) , intent(inout) :: iac2lnd_vars    ! gcam
+    type(lnd2iac_type) , intent(inout) :: lnd2iac_vars    ! gcam
     !
     ! LOCAL VARIABLES
     integer :: n,n1
@@ -58,17 +55,17 @@ contains
     ! grid cell index to lat/lon in a domain decomposition.  So this
     ! means we want probably want to keep our vars in a grid
     ! decomposition and extract lats and lons later on.
-
+ 
     ! Also, *this* won't work either, because we have pfts in our
     ! dimensioning.  I need to review how attribute vectors work
     ! again.  Flattened (g,pft) or (lon,lat,pft)
-    iac2lnd_vars%npp(begg:endg,:) = x2z(index_x2z_Sl_npp,begg:endg)
-    iac2lnd_vars%hr(begg:endg,:) = x2z(index_x2z_Sl_hr,:)
+    lnd2iac_vars%npp(begg:endg,:) = x2z(index_x2z_Sl_npp,begg:endg)
+    lnd2iac_vars%hr(begg:endg,:) = x2z(index_x2z_Sl_hr,:)
 
   end subroutine lnd_import
    !===============================================================================
 
-  subroutine iac_export( bounds, iac2lnd_vars, iac2atm_vars, z2x)
+  subroutine iac_export(iac2lnd_vars, iac2atm_vars, z2x)
 
     !---------------------------------------------------------------------------
     ! !DESCRIPTION:
@@ -82,7 +79,6 @@ contains
     !
     ! !ARGUMENTS:
     implicit none
-    type(bounds_type) , intent(in)    :: bounds  ! bounds
     type(iac2lnd_type), intent(inout) :: iac2lnd_vars ! gcam to land output
     type(iac2atm_type), intent(inout) :: iac2atm_vars ! gcam to atm output
     real(r8)          , intent(out)   :: l2x(:,:)! land to coupler export state on land grid

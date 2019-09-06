@@ -84,7 +84,7 @@ module gcam_var
   !----------------------------------------------------------
   ! Active gcam
   !----------------------------------------------------------
-  logical, public :: active_gcam = .false.  ! true to turn on gcam coupling
+  logical, public :: gcam_active = .false.  ! true to turn on gcam coupling
 
 contains
 
@@ -115,6 +115,15 @@ contains
     if ( present(version_in      ) ) version       = version_in
     if ( present(username_in     ) ) username      = username_in
     if ( present(hostname_in     ) ) hostname      = hostname_in
-    if ( present(gcam_active     ) ) gcam_active   = gcam_active
 
-  end subroutine clm_varctl_set
+    ! I'm no longer sure this gets set here, but for now let's turn
+    ! it on if we call gcam_var_set()  
+    gcam_active = .true.
+
+    ! This is only if we pass it in to the call, which is dumb - why
+    ! would we call it otherwise?  But I might have lost track of the
+    ! sequence here.
+    !if ( present(gcam_active     ) ) gcam_active   = gcam_active
+
+  end subroutine gcam_var_set
+end module

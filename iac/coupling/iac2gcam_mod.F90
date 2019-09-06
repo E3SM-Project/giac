@@ -1,4 +1,4 @@
-define DEBUG
+#define DEBUG
 Module iac2gcam_mod
   
 !---------------------------------------------------------------------------
@@ -506,7 +506,7 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
     real*8, dimension(:,:), allocatable     :: area,landfrac,scalar,bscalar,aezwtmap,na
     real*8, dimension(:,:,:), allocatable   :: base_npp_m,base_hr_m,base_pft_wt,napft,nac,nacbase,pft_wt,scalar_var,aez_times_ncrop_by_pft
                                                
-    real*8, dimension(:,:,:), allocatable,TARGET   :: abovg_c,blowg_c,npp_m,hr_m
+    ! real*8, dimension(:,:,:), allocatable,TARGET   :: abovg_c,blowg_c,npp_m,hr_m
     real*8, dimension(:,:,:), pointer       :: npp_m,hr_m
     real*8, dimension(:,:,:,:), allocatable :: gcamijt
     real*8, parameter                       :: mad_limit = 5.2
@@ -658,7 +658,8 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
        ! In iESM we cracked and read from the clm.h1 file.  Now, we
        ! extract from the coupler.
        !call calc_clmC(yy_clmC,mm_clmC,clmC_bfn,pft_wt,abovg_c,blowg_c,npp_m,hr_m,calc_avg) 
-       call calc_clmC(iaco,pft_wt,abovg_c,blowg_c,npp_m,hr_m)
+       calc_avg=.false.
+       call calc_clmC(iaco,pft_wt,abovg_c,blowg_c,npp_m,hr_m,calc_avg)
     endif
 
 
@@ -666,6 +667,7 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
     ! the na arrays are used to set up a mask for missing values
     !
     na=1.
+
     nac=1.
     nacbase=1.
     napft=1.
@@ -1146,7 +1148,7 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
 
 ! !INTERFACE:
   !subroutine calc_clmC(yy,mm,bfn,out_pft_weight,out_abovg_c,out_blowg_c,out_npp,out_hr,calc_avg)
-  subroutine calc_clmC(iaco,pft_wt,abovg_c,blowg_c,npp_m,hr_m)
+  subroutine calc_clmC(iaco,out_pft_weight,out_abovg_c,out_blowg_c,out_npp,out_hr,calc_avg)
 
 ! !DESCRIPTION:
 ! Calculate clm C from monthly average files for gcam
@@ -1155,14 +1157,15 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
 
 ! !ARGUMENTS:
 
-    integer, intent(in)  :: yy          ! year
-    integer, intent(in)  :: mm          ! month
-    character(len=*),intent(in) :: bfn   ! base filename
+    !integer, intent(in)  :: yy          ! year
+    !integer, intent(in)  :: mm          ! month
+    !character(len=*),intent(in) :: bfn   ! base filename
     real*8,  intent(out) :: out_abovg_c(:,:,:)
     real*8,  intent(out) :: out_blowg_c(:,:,:)
     real*8,  intent(out) :: out_npp(:,:,:)
     real*8,  intent(out) :: out_hr(:,:,:)
     real*8,  intent(out) :: out_pft_weight(:,:,:)
+    real*8,  pointer :: iaco(:,:)
     logical, intent(in)  :: calc_avg      ! compute long term mean for use
 
 ! !LOCAL VARIABLES:

@@ -14,7 +14,7 @@ module gcam_cpl_indices
   private                              ! By default make data private
   !
   ! !PUBLIC MEMBER FUNCTIONS:
-  public :: giac_cpl_indices_set        ! Set the coupler indices
+  public :: gcam_cpl_indices_set        ! Set the coupler indices
   !
   ! !PUBLIC DATA MEMBERS:
   !
@@ -35,7 +35,7 @@ module gcam_cpl_indices
 contains
 
   !-----------------------------------------------------------------------
-  subroutine giac_cpl_indices_set( )
+  subroutine gcam_cpl_indices_set( )
     !
     ! !DESCRIPTION: 
     ! Set the coupler indices needed by the gcam coupler
