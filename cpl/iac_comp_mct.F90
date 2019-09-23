@@ -4,13 +4,37 @@ module iac_comp_mct
   !  Interface of the active gcam model to the MCT drive
   !
   ! !uses:
-  !use giac_comp_mod      , only : giac_init, giac_run, giac_finish
-  use giac_cpl_indeces   , only : giac_cpl_indeces_set
-  use iac_ctl_mod        , only : iac_ctl   ! coupler interface structure, for holding stuff
-  use gcam_var           , only : gcam_lon, gcam_lat,  iulog, &
+  use seq_flds_mod
+  use shr_kind_mod     , only : r8 => shr_kind_r8
+  use shr_file_mod     , only : shr_file_setLogUnit, shr_file_setLogLevel, &
+                                shr_file_getLogUnit, shr_file_getLogLevel, &
+                                shr_file_getUnit, shr_file_setIO
+  use shr_const_mod    , only : SHR_CONST_REARTH
+  use shr_taskmap_mod  , only : shr_taskmap_write
+  use seq_cdata_mod    , only : seq_cdata, seq_cdata_setptrs
+  use seq_comm_mct     , only : info_taskmap_comp
+  use seq_timemgr_mod  
+  use seq_infodata_mod 
+  use seq_comm_mct     , only : seq_comm_suffix, seq_comm_inst, seq_comm_name
+
+  use gcam_cpl_indices   , only : gcam_cpl_indices_set
+  use iac_data_mod        ! coupler interface structure, for holding stuff
+  use iac_init_mod
+  use iac_import_export
+  use iac2gcam_mod
+  use gcam_comp_mod
+  use glm_comp_mod
+  use gcam2glm_mod
+  use gcam_var           , only : gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
                                 gcam_active, gcam_var_set
+  use iac_spmd_mod
+  use iac_fields_mod
+
+  use ESMF
+  use mct_mod
+
 ! Stub in other moduals for running iac
 ! use IacMod
 ! use IacVar
@@ -18,6 +42,24 @@ module iac_comp_mct
   implicit none
   SAVE
   private                              ! By default make data private
+
+! Internal variable structures - probably move to a mod or something later
+! We probably need to allocate these during init, if I can figure out
+! the sizes 
+
+! I'm naming these with a _data suffix to differentiate between these
+  ! and the lnd2iac_vars, which are AVects.
+
+  real*8, pointer :: lnd2iac_data(:,:)
+  real*8, pointer :: iac2gcam_data(:,:)
+  real*8, pointer :: gcam2glm_data(:,:)
+  real*8, pointer :: gcam_emis_data(:,:)
+  real*8, pointer :: glm2atm_data(:,:)
+  real*8, pointer :: glm_data(:,:)
+  real*8, pointer :: glm2lnd_data(:,:)
+
+  real*8, pointer :: glm_wh_data(:)
+
 !
 ! PUBLIC MEMBER FUNCTIONS:
 
@@ -31,6 +73,7 @@ module iac_comp_mct
 
   private :: iac_SetgsMap_mct         ! Set the iac model MCT GS map
   private :: iac_domain_mct           ! Set the iac model domain information
+
 
 ! REVISION HISTORY:
 ! Author: Tim Shippert
@@ -75,7 +118,7 @@ contains
     integer :: shrlogunit,shrloglev                  ! old values for log unit and log level
 
     ! Possibly not useful, as we expect gcam to run with just one proc
-    integer :: begr, endr                            ! Region indeces
+    integer :: begg, endg                            ! Region indeces
 
     character(len=SHR_KIND_CL) :: caseid             ! case identifier name
     character(len=SHR_KIND_CL) :: ctitle             ! case description title
@@ -94,7 +137,7 @@ contains
          gsMap=gsMap_iac, dom=dom_z, infodata=infodata)
 
     ! Determine attriute vector indices
-    call giac_cpl_indices_set()
+    call gcam_cpl_indices_set()
 
     ! Initialize gcam MPI communicator 
     call spmd_init(mpicom_iac, IACID)
@@ -142,10 +185,6 @@ contains
                               model_version=version,                       &
                               hostname=hostname, username=username)
 
-    call set_timemgr_init( calendar_in=calendar, start_ymd_in=start_ymd, start_tod_in=start_tod, &
-                           ref_ymd_in=ref_ymd, ref_tod_in=ref_tod, stop_ymd_in=stop_ymd,         &
-                           stop_tod_in=stop_tod)
-
     ! Startup type - we'll be generic here too for now
     if (     trim(starttype) == trim(seq_infodata_start_type_start)) then
        nsrest = nsrStartup
@@ -166,7 +205,7 @@ contains
 
     ! Do whatever init gcam needs
     ! I.e. read namelist and grid, etc.
-    call giac_init()
+    call iac_init()
 
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begr,endr regional
@@ -179,9 +218,9 @@ contains
        call seq_infodata_PutData( infodata, iac_prognostic=.false.)
     else
        ! Initialize memory for input state
-       begr = iac_ctl%begr
-       endr = iac_ctl%endr
-       allocate (totrunin(begr:endr,nt_gcam))
+       begg = iac_ctl%begg
+       endg = iac_ctl%endg
+       !allocate (totrunin(begg:endg,nt_gcam))
        
        ! Initialize iac gsMap 
        call iac_SetgsMap_mct( mpicom_iac, IACID, gsMap_iac)
@@ -198,15 +237,14 @@ contains
        call mct_aVect_init(z2x_z, rList=seq_flds_z2x_fields, lsize=lsize)
        call mct_aVect_zero(z2x_z) 
        
-       ! Create mct iac export state - try to review what this is.
-       call iac_export(z2x_z%rattr)
+       ! Create mct iac expxort state - try to review what this is.
+       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z)
     end if
 
     ! Fill in infodata - of course, have to review all this
     call seq_infodata_PutData( infodata, iac_present=gcam_active, &
          iac_prognostic=gcam_active, &
-         iac_nx = gcam_lon, iac_ny = gcam_lat)
-    call seq_infodata_PutData( infodata, flood_present=flood_active)
+         iac_nx = gcam_nlon, iac_ny = gcam_nlat)
 
     ! Reset shr logging to original values
     call shr_file_setLogUnit (shrlogunit)
@@ -233,38 +271,6 @@ contains
     ! Run IAC model
 
     ! !USES:
-    use shr_kind_mod    ,  only : r8 => shr_kind_r8,r4 => shr_kind_r4
-    use gcam_instMod    , only : iac2atm_vars, atm2iac_vars, iac2lnd_vars, lnd2iac_vars
-    use gcam_driver     ,  only : gcam_drv
-    use gcam_time_manager,  only : get_curr_date, get_nstep, get_curr_calday, get_step_size
-    use gcam_time_manager,  only : advance_timestep, set_nextsw_cday,update_rad_dtime
-    use decompMod       ,  only : get_proc_bounds
-    use abortutils      ,  only : endrun
-    use gcam_varctl      ,  only : iulog
-    use gcam_varorb      ,  only : eccen, obliqr, lambm0, mvelpp
-    use shr_file_mod    ,  only : shr_file_setLogUnit, shr_file_setLogLevel
-    use shr_file_mod    ,  only : shr_file_getLogUnit, shr_file_getLogLevel
-    use seq_cdata_mod   ,  only : seq_cdata, seq_cdata_setptrs
-    use seq_timemgr_mod ,  only : seq_timemgr_EClockGetData, seq_timemgr_StopAlarmIsOn
-    use seq_timemgr_mod ,  only : seq_timemgr_RestartAlarmIsOn, seq_timemgr_EClockDateInSync
-    use seq_infodata_mod,  only : seq_infodata_type, seq_infodata_GetData
-    use spmdMod         ,  only : masterproc, mpicom
-    use perf_mod        ,  only : t_startf, t_stopf, t_barrierf
-    use shr_orb_mod     ,  only : shr_orb_decl
-
-    ! Set up the onlys, if only to help us track where everything is
-    use iac_import_export  
-    use gcam_comp_mod
-    use glm_comp_mod
-    use iac2gcam_mod
-    use gcam2glm_mod
-    use gcam2emisfile_mod
-    use glm2iac_mod
-    use iac_fields_mod
-    use shr_cal_mod
-
-    use mct_mod
-    use ESMF
 
     ! ARGUMENTS:
     implicit none
@@ -303,7 +309,7 @@ contains
     logical      :: lnd_present
     type(seq_infodata_type),pointer :: infodata             ! CESM information from the driver
     type(mct_gGrid),        pointer :: dom_z                ! iac model domain data
-    type(bounds_type)               :: bounds               ! bounds
+    !type(bounds_type)               :: bounds               ! bounds
     character(len=32)               :: rdate                ! date char string for restart file names
     character(len=32), parameter    :: sub = "iac_run_mct"
 
@@ -312,14 +318,13 @@ contains
     ! everything there, we'll just copy waht we need here.
     integer, pointer :: GClock(:)
 
+    ! The gcam functions from iESM have a somewhat different "cdata"
+    ! structure, so we keep cdata_z as the E3SM version and use gdata
+    ! for the internal gcam version.
+    type(iac_cdata_type) :: gdata
+
     ! I feel this is probably important
-    if (.not.iac_active) return
-
-
-    ! Again, gcam is not multiproc, so hopefully this is a null op.
-    ! But I want to maintain domain infrastructure, just for
-    ! consistency if no other reason.
-    call get_proc_bounds(bounds)
+    if (.not.gcam_active) return
 
     ! Reset shr logging to my log file
     call shr_file_getLogUnit (shrlogunit)
@@ -334,24 +339,34 @@ contains
          dtime=dtime)
 
     ! Assign the date to GClock
-    allocate(GClock(iac_EClock_size))
+    allocate(GClock(iac_eclock_size))
     GClock=0
-    GClock(iac_EClock_ymd) = ymd
-    GClock(iac_EClock_tod) = tod
-    GClock(iac_EClock_dt) = dtime
+    GClock(iac_eclock_ymd) = ymd
+    GClock(iac_eclock_tod) = tod
+    GClock(iac_eclock_dt) = dtime
     
     call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
          atm_present=atm_present) 
 
     ! Import from land model
-    call t_startf('iac_import')
-    call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
-    call t_stopf('iac_import')
+    !call t_startf('iac_import')
+    !call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
+    call iac_import(x2z_z, lnd2iac_vars)
+    !call t_stopf('iac_import')
 
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
     nlend = seq_timemgr_StopAlarmIsOn( EClock )
     rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
-    call advance_timestep()
+
+    ! May need a time manager mod
+    ! call advance_timestep()
+
+    ! More set up - we need to convert the AVects we have in
+    ! lnd2iac_vars into the format that the iac2gcam_mod et al
+    ! functions want.
+
+    ! Something like:
+    ! lnd2iac_data(iac_inpp,:) = lnd2iac_vars%npp(:)
 
     ! Run gcam.  At this point, iaci (input) and iaco (output) should
     ! be MCT AVects.  Instead, it might make sense to write external
@@ -366,34 +381,35 @@ contains
     ! Setup to call calc_clmC, basically.  Probably in for some
     ! refactoring.  Take the coupled lnd fields (lnd2iac) and turn
     ! them into  gcam inputs (iac2gcam)
-    call iac2gcam_run_mod(GClock, cdata_z, lnd2iac_vars, iac2gcam_vars)
+    call iac2gcam_run_mod(GClock, gdata, lnd2iac_data, iac2gcam_data)
 
     ! This pushes the carbon densities to gcam, but it might be a
     ! relic from how we ran in the past, with all the smoothing and
     ! future calculations and what not.
-    call gcam_setdensity_mod(GClock, cdata_z, iac2gcam_vars)
+    call gcam_setdensity_mod(GClock, gdata, iac2gcam_data)
 
     ! Run GCAM, for this timestep.  
     ! Input are lnd values, output is gcam inputs to glm and
     ! emissivities back to atm
-    call gcam_run_mod( GClock, cdata_z, iac2gcam_vars, gcam2glm_vars, &
-         gcam_emis_vars)
+    call gcam_run_mod( GClock, gdata, iac2gcam_data, gcam2glm_data, &
+         gcam_emis_data)
 
     ! Review what iESM gcam2emisfile_run_mod() did - if it just
     ! output a file then that is now taken over by coupler
     ! interactions (i.e. iac_export).  But if there are some
     ! calculations, then we need this function to do them.
-    call gcam2atm_run_mod( GClock, cdata_z, gcam_emis_vars, glm2atm_vars)
+    ! call gcam2atm_run_mod( GClock, cdata_z, gcam_emis_data, glm2atm_data)
 
     ! Set up to run glm
-    call gcam2glm_run_mod( GClock, cdata_z, gcam2glm_vars, glm_vars)
+    call gcam2glm_run_mod( GClock, gdata, gcam2glm_data, glm_data, glm_wh_data)
 
     ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod( GClock, cdata_z, glm_vars, glm2lnd_vars)
+    call glm_run_mod( GClock, gdata, glm_data, glm_wh_data, glm2lnd_data)
     
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock
-    call get_curr_date( yr, mon, day, tod )
+    ! Again, may need time manager module with these kind of functions
+    ! call get_curr_date( yr, mon, day, tod )
     ymd = yr*10000 + mon*100 + day
     tod = tod
     if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
@@ -448,34 +464,35 @@ contains
     integer,allocatable :: gindex(:)         ! indexing for iac grid cells
     integer :: n, ni                         ! indices
     integer :: lsize,gsize                   ! size of iac data and number of grid cells
-    integer :: begr, endr                    ! beg, end iac indices
+    integer :: begg, endg                   ! beg, end iac indices
     integer :: ier                           ! error code
     character(len=32), parameter :: sub = 'iac_SetgsMap_mct'
     !-----------------------------------------------------
 
-    begr  = iac_ctl%begr
-    endr  = iac_ctl%endr
-    lsize = iac_ctl%lnumr
-    gsize = gcam_lon*gcam_lat
+    begg  = iac_ctl%begg
+    endg  = iac_ctl%endg
+
+    lsize = iac_ctl%endg - iac_ctl%begg + 1
+    gsize = gcam_nlon*gcam_nlat
 
     ! Check 
     ni = 0
-    do n = begr,endr
+    do n = begg,endg
        ni = ni + 1
        if (ni > lsize) then
-          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac_ctl%lnumr
+          write(iulog,*) sub, ' : ERROR iac count',n,ni,lsize
           call shr_sys_abort( sub//' ERROR: iac > expected' )
        endif
     end do
     if (ni /= lsize) then
-       write(iulog,*) sub, ' : ERROR iac total count',ni,iac_ctl%lnumr
+       write(iulog,*) sub, ' : ERROR iac total count',ni,lsize
        call shr_sys_abort( sub//' ERROR: iac not equal to expected' )
     endif
 
     ! Determine gsmap_iac
     allocate(gindex(lsize),stat=ier)
     ni = 0
-    do n = begr,endr
+    do n = begg,endg
        ni = ni + 1
        gindex(ni) = iac_ctl%gindex(n)
     end do
@@ -539,42 +556,43 @@ contains
 
     ! Determine bounds numbering consistency
     ni = 0
-    do n = iac_ctl%begr,iac_ctl%endr
+    do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       if (ni > iac_ctl%lnumr) then
-          write(iulog,*) sub, ' : ERROR iac count',n,ni,iac_ctl%lnumr
+       if (ni > lsize) then
+          write(iulog,*) sub, ' : ERROR iac count',n,ni,lsize
           call shr_sys_abort( sub//' ERROR: iac > expected' )
        end if
     end do
-    if (ni /= iac_ctl%lnumr) then
-       write(iulog,*) sub, ' : ERROR iac total count',ni,iac_ctl%lnumr
+    if (ni /= lsize) then
+       write(iulog,*) sub, ' : ERROR iac total count',ni,lsize
        call shr_sys_abort( sub//' ERROR: iac not equal to expected' )
     endif
 
     ! Fill in correct values for domain components
     ni = 0
-    do n = iac_ctl%begr,iac_ctl%endr
+    do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = iac_ctl%lonc(n)
+       data(ni) = iac_ctl%long(n)
     end do
     call mct_gGrid_importRattr(dom_z,"lon",data,lsize) 
 
     ni = 0
-    do n = iac_ctl%begr,iac_ctl%endr
+    do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = iac_ctl%latc(n)
+       data(ni) = iac_ctl%latg(n)
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
     ni = 0
-    do n = iac_ctl%begr,iac_ctl%endr
+    do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        data(ni) = iac_ctl%area(n)*1.0e-6_r8/(re*re)
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
+    ! This may need to be modified, depending on what mask and frac are
     ni = 0
-    do n = iac_ctl%begr,iac_ctl%endr
+    do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        data(ni) = 1.0_r8
     end do

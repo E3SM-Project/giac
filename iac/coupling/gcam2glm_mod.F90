@@ -371,8 +371,8 @@ contains
     integer, pointer :: EClock(:)
     type(iac_cdata_type) :: cdata
     real(r8), pointer :: gcamo(:,:)
-    real(r8), pointer :: glmi_wh(:)
     real(r8), pointer :: glmi(:,:)
+    real(r8), pointer :: glmi_wh(:)
 
 ! !PARAMETERS:
 

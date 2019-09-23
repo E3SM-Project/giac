@@ -86,6 +86,9 @@ module gcam_var
   !----------------------------------------------------------
   logical, public :: gcam_active = .false.  ! true to turn on gcam coupling
 
+  ! Some sizes
+  integer, public :: gcam_nlon, gcam_nlat
+
 contains
 
   subroutine gcam_var_set(caseid_in, ctitle_in,brnch_retain_casename_in, &

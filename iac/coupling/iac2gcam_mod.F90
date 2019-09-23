@@ -506,8 +506,8 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
     real*8, dimension(:,:), allocatable     :: area,landfrac,scalar,bscalar,aezwtmap,na
     real*8, dimension(:,:,:), allocatable   :: base_npp_m,base_hr_m,base_pft_wt,napft,nac,nacbase,pft_wt,scalar_var,aez_times_ncrop_by_pft
                                                
-    ! real*8, dimension(:,:,:), allocatable,TARGET   :: abovg_c,blowg_c,npp_m,hr_m
-    real*8, dimension(:,:,:), pointer       :: npp_m,hr_m
+    real*8, dimension(:,:,:), allocatable,TARGET   :: abovg_c,blowg_c,npp_m,hr_m
+    !real*8, dimension(:,:,:), pointer       :: npp_m,hr_m
     real*8, dimension(:,:,:,:), allocatable :: gcamijt
     real*8, parameter                       :: mad_limit = 5.2
 
@@ -1168,6 +1168,12 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
     real*8,  pointer :: iaco(:,:)
     logical, intent(in)  :: calc_avg      ! compute long term mean for use
 
+    ! Rather than inputs, we will have to derive new values here
+    ! somehow.  Right now they are used to build the history and
+    ! maybe restart files. 
+    integer :: yy, mm
+    character(len=*), parameter :: bfn = 'gcam_output'
+
 ! !LOCAL VARIABLES:
     integer :: i,j,k,n,n1
     integer :: iun
@@ -1317,13 +1323,13 @@ final_hr_m,final_bnpp_m,final_bhr_m,final_above,final_below,hr_m_scalar
         status = nf90_get_var(ncid,varid,mm_restart)
         if(status /= nf90_NoErr) call handle_err(status)
 
-        if ((yy == yy_restart .and. mm == mm_restart+1) .or. &
-            (yy == yy_restart+1 .and. mm == 1 .and. mm_restart == 12)) then
+        !if ((yy == yy_restart .and. mm == mm_restart+1) .or. &
+        !    (yy == yy_restart+1 .and. mm == 1 .and. mm_restart == 12)) then
            ! OK, current yy/mm next month from yy_restart/mm_restart
-        else
-           write(logunit,*) subname,' ERROR: restart date not consistent',yy_restart,mm_restart,yy,mm
-           call shr_sys_abort(subname//' ERROR: restart date not consistent')
-        endif
+        !else
+        !   write(logunit,*) subname,' ERROR: restart date not consistent',yy_restart,mm_restart,yy,mm
+        !   call shr_sys_abort(subname//' ERROR: restart date not consistent')
+        !endif
 
         status = nf90_inq_varid(ncid,'pft_weight_mean_g',varid)
         if(status /= nf90_NoErr) call handle_err(status)
