@@ -41,18 +41,31 @@ contains
     begg = iac_ctl%begg
     endg = iac_ctl%endg
 
-    ! This won't work, if we are of different ranks.  We could  use
-    ! reshape, but that gets complicated if we do have some domain
-    ! decomposition.  What I don't currently know is how to go from
-    ! grid cell index to lat/lon in a domain decomposition.  So this
-    ! means we want probably want to keep our vars in a grid
-    ! decomposition and extract lats and lons later on.
- 
-    ! Also, *this* won't work either, because we have pfts in our
-    ! dimensioning.  I need to review how attribute vectors work
-    ! again.  Flattened (g,pft) or (lon,lat,pft)
-    !lnd2iac_vars%npp(begg:endg,:) = x2z(index_x2z_Sl_npp,:)
-    !lnd2iac_vars%hr(begg:endg,:) = x2z(index_x2z_Sl_hr,:)
+    ! So, the idea here is to take the 17 (npft) fields for each of
+    ! hr, npp, and pftwgtg and map them into a single 1D array of
+    ! nlat*nlon*npft for each of those.  So we first loop over npft,
+    ! then extract the global-indexed data, then pack them into the
+    ! lnd2iac_vars(:,:) structure.
+
+    do p=1,iac_ctl%npft
+
+       ! This for logging purposes...
+       write(pftstr,'(I0)') p
+       pftstr=trim(pftstr)
+
+       ! Now loop over our global index...
+       ! g=1,ngrid - one domain.
+       do g=iac_ctl%begg,iac_ctl%endg
+          i=iac_ctl%long(g)
+          j=iac_ctl%latg(g)  ! extract lat, lon indeces from g
+
+          ! i (lon) varies fastest, p slowest:
+          ! n=i+nlon*(j-1)+nlat*nlon*(p-1)
+          lnd2iac_vars%hr(i,j,p) = x2z(index_x2z_Sl_hr(p),g)
+          lnd2iac_vars%npp(i,j,p) = x2z(index_x2z_Sl_npp(p),g)
+          lnd2iac_vars%pftwgt(i,j,p) = x2z(index_x2z_Sl_pftwgt(p),g)
+       end do ! global index g
+    end do ! pft index p
 
   end subroutine iac_import
    !===============================================================================
@@ -73,6 +86,33 @@ contains
     type(iac2lnd_type), intent(inout) :: iac2lnd_vars ! gcam to land output
     type(iac2atm_type), intent(inout) :: iac2atm_vars ! gcam to atm output
     type(mct_aVect),    intent(out)   :: z2x! land to coupler export state on land grid
+
+    ! LOCAL VARIABLES
+    integer :: n,n1
+    integer :: begg, endg
+    character(len=32), parameter :: sub = 'iac_export'
+
+    ! Once again, domain decomp isn't meaningful with one proc, but keep it for
+    ! consistency with everybody else
+    begg = iac_ctl%begg
+    endg = iac_ctl%endg
+
+    ! g=1,ngrid - one domain.
+    do g=iac_ctl%begg,iac_ctl%endg
+       i=iac_ctl%long(g)
+       j=iac_ctl%latg(g)  ! extract lat, lon indeces from g
+
+       ! Co2flux to atm
+       ! Convention has fluxes negative from lnd to atm, so we
+       ! assume for iac to atm as well
+       z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
+
+       ! Now the 17 iac->lnd vars
+       do p=1,iac%npft
+          x2z(index_z2x_Sl_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
+       enddo ! pft index p
+
+    end do ! global index g
 
   end subroutine iac_export
 end module iac_import_export

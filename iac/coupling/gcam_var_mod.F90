@@ -19,6 +19,12 @@ module gcam_var
   integer , parameter, public ::  iundef = -9999999
   real(r8), parameter, public ::  rundef = -9999999._r8
   integer , parameter, public ::  fname_len = SHR_KIND_CL   ! max length of file names in this module
+
+  ! netCDF fill values as you write out
+  real(r8), public, parameter :: spval    = 1.e36_r8        ! special value for real data
+  integer , public, parameter :: ispval   = -9999           ! special value for int data
+
+
   !----------------------------------------------------------
   !
   ! Run control variables

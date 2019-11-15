@@ -86,7 +86,7 @@ contains
   subroutine iac_init_mct( EClock, cdata_z, x2z_z, z2x_z, NLFilename)
 
     !---------------------------------------------------------------------------
-    ! DESCRIPTION:
+    ! !DESCRIPTION:
     ! Initialize iac model and hook in arrays from lnd module
     !
     ! !ARGUMENTS:
@@ -137,6 +137,7 @@ contains
          gsMap=gsMap_iac, dom=dom_z, infodata=infodata)
 
     ! Determine attriute vector indices
+    call gcam_cpl_indices_init()
     call gcam_cpl_indices_set()
 
     ! Initialize gcam MPI communicator 
@@ -208,7 +209,7 @@ contains
     call iac_init()
 
     ! Here it gets tricky, as I copy from rof and other components.
-    ! I'm going to go ahead and use the whole begr,endr regional
+    ! I'm going to go ahead and use the whole begg,endg domain
     ! indeces for now - I'm not sure if there is any meaningful
     ! overhead if we do this with only one proc, but if we ever go
     ! multiproc it will be better to do this now, and it lets me cut
@@ -224,8 +225,9 @@ contains
        
        ! Initialize iac gsMap 
        call iac_SetgsMap_mct( mpicom_iac, IACID, gsMap_iac)
-       
-       ! Initialize iac domain - I feel like this should be mostly null
+
+       ! Initialize iac domain - I feel like this should be mostly
+       ! null, but I think the global seg mapping stuff needs it
        lsize = mct_gsMap_lsize(gsMap_iac, mpicom_iac)
        call iac_domain_mct( lsize, gsMap_iac, dom_z )
        
@@ -568,36 +570,54 @@ contains
        call shr_sys_abort( sub//' ERROR: iac not equal to expected' )
     endif
 
-    ! Fill in correct values for domain components
+    ! lon 
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = iac_ctl%long(n)
+       i = iac_ctl%ilon(n)
+       data(ni) = iac_ctl%lon(i)
     end do
     call mct_gGrid_importRattr(dom_z,"lon",data,lsize) 
 
+    ! lat
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = iac_ctl%latg(n)
+       j = iac_ctl%jlat(n)
+       data(ni) = iac_ctl%lat(j)
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
+    ! Area - pulled from lnd2iac_var array
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = iac_ctl%area(n)*1.0e-6_r8/(re*re)
+       i = iac_ctl%ilon(n)
+       j = iac_ctl%jlat(n)
+       !If area is in radians, then we need to scale
+       !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
+       !But I believe it's in km^2 already (at least from clm.h1 file)
+       data(ni) = lnd2iac_var%area(i,j) 
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
-    ! This may need to be modified, depending on what mask and frac are
+    ! frac - same as lndfrac, from lnd2iac_var
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
-       data(ni) = 1.0_r8
+       i = iac_ctl%ilon(n)
+       j = iac_ctl%jlat(n)
+       data(ni) = lnd2iac_var%landfrac(i,j)
     end do
-    call mct_gGrid_importRattr(dom_z,"mask",data,lsize) 
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
+
+    ! iacmask = lndmask - this is globally indexed
+    ni = 0
+    do n = iac_ctl%begg,iac_ctl%endg
+       ni = ni + 1
+       idata(ni) = iac_ctl%iacmask(n)
+    end do
+    call mct_gGrid_importRattr(dom_z,"mask",idata,lsize) 
 
     deallocate(data)
     deallocate(idata)
