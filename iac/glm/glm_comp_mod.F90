@@ -12,7 +12,7 @@ Module glm_comp_mod
 !
 ! !USES:
 
-  use iac_fields_mod
+  use iac_data_mod, only : cdata => gdata, EClock => GClock
 
   implicit none
   SAVE
@@ -45,7 +45,7 @@ contains
 ! !IROUTINE: glm_init_mod
 
 ! !INTERFACE:
-  subroutine glm_init_mod( EClock, cdata, glmi, glmi_wh,glmo)
+  subroutine glm_init_mod(glmi, glmi_wh,glmo)
 
 ! !DESCRIPTION:
 ! Initialize interface for glm
@@ -54,8 +54,6 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
     real*8, pointer :: glmi(:,:)
     real*8, pointer :: glmi_wh(:)
     real*8, pointer :: glmo(:,:)
@@ -80,7 +78,8 @@ contains
     cdata%i(iac_cdatai_glm_ny) = iac_glm_ny
     cdata%i(iac_cdatai_glm_size) = iac_glm_nx * iac_glm_ny
 
-    allocate(glmi(iac_glmi_nflds,glm_data_size))
+    ! Already allocated by gcam_init_mod
+    !allocate(glmi(iac_glmi_nflds,glm_data_size))
     allocate(glmi_wh(numreg*numaez))
     allocate(glmo(iac_glmo_nflds,glm_data_size))
 
@@ -96,7 +95,7 @@ contains
 ! !IROUTINE: glm_run_mod
 
 ! !INTERFACE:
-  subroutine glm_run_mod( EClock, cdata, glmi, glmi_wh, glmo)
+  subroutine glm_run_mod(glmi, glmi_wh, glmo)
 
 ! !DESCRIPTION:
 ! Run interface for glm
@@ -105,8 +104,6 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
     real*8, pointer :: glmi(:,:)
     real*8, pointer :: glmi_wh(:)
     real*8, pointer :: glmo(:,:)

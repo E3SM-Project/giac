@@ -18,7 +18,7 @@ module iac_comp_mct
   use seq_comm_mct     , only : seq_comm_suffix, seq_comm_inst, seq_comm_name
 
   use gcam_cpl_indices   , only : gcam_cpl_indices_set
-  use iac_data_mod        ! coupler interface structure, for holding stuff
+  use iac_data_mod        ! including gdata, GClock
   use iac_init_mod
   use iac_import_export
   use iac2gcam_mod
@@ -52,24 +52,25 @@ module iac_comp_mct
 
   real*8, pointer :: lnd2iac_data(:,:)
   real*8, pointer :: iac2gcam_data(:,:)
-  real*8, pointer :: gcam2glm_data(:,:)
-  real*8, pointer :: gcam_emis_data(:,:)
+  real*8, pointer :: gcam2glm_data(:,:)  ! gcam output for gcam
+  real*8, pointer :: gcam_emis_data(:,:) ! co2 flux output for atm
   real*8, pointer :: glm2atm_data(:,:)
-  real*8, pointer :: glm_data(:,:)
-  real*8, pointer :: glm2lnd_data(:,:)
+  real*8, pointer :: glmi_data(:,:)      ! glm input, converted from gcam2glm_data
+  real*8, pointer :: glmo_data(:,:)      ! glm output
+  real*8, pointer :: glm2lnd_data(:,:)   ! or maybe this is glm output
 
   real*8, pointer :: glm_wh_data(:)
 
-!
-! PUBLIC MEMBER FUNCTIONS:
+  !
+  ! PUBLIC MEMBER FUNCTIONS:
 
   public :: iac_init_mct               ! iac initialization
   public :: iac_run_mct                ! iac run phase
   public :: iac_final_mct              ! iac finalization/cleanup
-!
-! PRIVATE MEMBER FUNCTIONS:
-
-! PRIVATE MEMBER FUNCTIONS:
+  !
+  ! PRIVATE MEMBER FUNCTIONS:
+  
+  ! PRIVATE MEMBER FUNCTIONS:
 
   private :: iac_SetgsMap_mct         ! Set the iac model MCT GS map
   private :: iac_domain_mct           ! Set the iac model domain information
@@ -208,6 +209,12 @@ contains
     ! I.e. read namelist and grid, etc.
     call iac_init()
 
+    ! Now that we have the grid, we can allocate some of our working
+    ! arrays. 
+    call gcam_init_mod(iac2gcam_data,gcamo_data,gcam_emis_data)
+    call gcam2glm_init_mod(glmi_data)
+    call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
+
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begg,endg domain
     ! indeces for now - I'm not sure if there is any meaningful
@@ -315,15 +322,6 @@ contains
     character(len=32)               :: rdate                ! date char string for restart file names
     character(len=32), parameter    :: sub = "iac_run_mct"
 
-    ! This may be redundant, but the downstream modules use what
-    ! looks like a different EClock interface.  Rather than hunt down
-    ! everything there, we'll just copy waht we need here.
-    integer, pointer :: GClock(:)
-
-    ! The gcam functions from iESM have a somewhat different "cdata"
-    ! structure, so we keep cdata_z as the E3SM version and use gdata
-    ! for the internal gcam version.
-    type(iac_cdata_type) :: gdata
 
     ! I feel this is probably important
     if (.not.gcam_active) return
@@ -341,8 +339,6 @@ contains
          dtime=dtime)
 
     ! Assign the date to GClock
-    allocate(GClock(iac_eclock_size))
-    GClock=0
     GClock(iac_eclock_ymd) = ymd
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
@@ -363,47 +359,22 @@ contains
     ! May need a time manager mod
     ! call advance_timestep()
 
-    ! More set up - we need to convert the AVects we have in
-    ! lnd2iac_vars into the format that the iac2gcam_mod et al
-    ! functions want.
-
-    ! Something like:
-    ! lnd2iac_data(iac_inpp,:) = lnd2iac_vars%npp(:)
-
-    ! Run gcam.  At this point, iaci (input) and iaco (output) should
-    ! be MCT AVects.  Instead, it might make sense to write external
-    ! functions to go back and forth - but since in iESM it was all
-    ! handled via file I/O I have to rewrite the mapping code
-    ! internally anyway, so I might as well simply use the MCT
-    ! method, since it is already there.
-
+    ! Run gcam.  
     ! Check input/output sequence.  Also, I probably need some timing
     ! and logging information surrounding all these.
 
-    ! Setup to call calc_clmC, basically.  Probably in for some
-    ! refactoring.  Take the coupled lnd fields (lnd2iac) and turn
-    ! them into  gcam inputs (iac2gcam)
-    call iac2gcam_run_mod(GClock, gdata, lnd2iac_data, iac2gcam_data)
-
-    ! This pushes the carbon densities to gcam, but it might be a
-    ! relic from how we ran in the past, with all the smoothing and
-    ! future calculations and what not.
-    call gcam_setdensity_mod(GClock, gdata, iac2gcam_data)
+    ! This pushes the carbon densities to gcam.  The lnd2iac_vars
+    ! structure holds most of what we want, I think - the rest should
+    ! be in iac_cdata_mod somewhere.
+    call gcam_setdensity_mod(lnd2iac_vars)
 
     ! Run GCAM, for this timestep.  
-    ! Input are lnd values, output is gcam inputs to glm and
-    ! emissivities back to atm
-    call gcam_run_mod( GClock, gdata, iac2gcam_data, gcam2glm_data, &
-         gcam_emis_data)
-
-    ! Review what iESM gcam2emisfile_run_mod() did - if it just
-    ! output a file then that is now taken over by coupler
-    ! interactions (i.e. iac_export).  But if there are some
-    ! calculations, then we need this function to do them.
-    ! call gcam2atm_run_mod( GClock, cdata_z, gcam_emis_data, glm2atm_data)
+    ! Inputs taken care of by gcam_setdensity_mod(), so both of these
+    ! are outputs, for input to glm and for export to atm (emis)
+    call gcam_run_mod(gcam2glm_data, gcam_emis_data)
 
     ! Set up to run glm
-    call gcam2glm_run_mod( GClock, gdata, gcam2glm_data, glm_data, glm_wh_data)
+    call gcam2glm_run_mod(gcam2glm_data, glm_data, glm_wh_data)
 
     ! Run glm, which produces the coupled vars to lnd (z->l)
     call glm_run_mod( GClock, gdata, glm_data, glm_wh_data, glm2lnd_data)

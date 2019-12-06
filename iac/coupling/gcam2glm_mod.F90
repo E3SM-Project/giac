@@ -12,7 +12,7 @@ Module gcam2glm_mod
 !
 ! !USES:
 
-  use iac_fields_mod
+  use iac_data_mod, only : cdata => gdata, EClock => GClock
   use shr_file_mod, only: shr_file_getunit, shr_file_freeunit
   use shr_cal_mod
   use shr_sys_mod
@@ -107,7 +107,7 @@ contains
 ! !IROUTINE: gcam2glm_init_mod
 
 ! !INTERFACE:
-  subroutine gcam2glm_init_mod( EClock, cdata, gcamo, glmi, glmi_wh)
+  subroutine gcam2glm_init_mod()
 
 ! !DESCRIPTION:
 ! Initialize interface for glm
@@ -116,14 +116,6 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
-    real(r8), pointer :: gcamo(:,:)
-    real(r8), pointer :: glmi(:,:)
-    real(r8), pointer :: glmi_wh(:)
-
-
-
 
 ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
@@ -359,7 +351,7 @@ contains
 ! !IROUTINE: gcam2glm_run_mod
 
 ! !INTERFACE:
-  subroutine gcam2glm_run_mod( EClock, cdata, gcamo, glmi, glmi_wh)
+  subroutine gcam2glm_run_mod(gcamo, glmi, glmi_wh)
 
 ! !DESCRIPTION:
 ! Run interface for glm
@@ -368,8 +360,6 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
     real(r8), pointer :: gcamo(:,:)
     real(r8), pointer :: glmi(:,:)
     real(r8), pointer :: glmi_wh(:)

@@ -60,6 +60,13 @@ contains
        !end if
     endif
 
+    ! Initialize some iac_data stuff
+    allocate(GClock(iac_eclock_size))
+    allocate(gdata%c(iac_cdata_size))
+    allocate(gdata%r(iac_cdata_size))
+    allocate(gdata%i(iac_cdata_size))
+    allocate(gdata%l(iac_cdata_size))
+
     ! Read grid file
     call t_startf('gcam_grid')
 
