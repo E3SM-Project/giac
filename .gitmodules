@@ -1,0 +1,3 @@
+[submodule "gcam"]
+	path = iac/gcam
+	url = git@github.com:JGCRI/gcam-core
