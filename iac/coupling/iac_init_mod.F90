@@ -6,10 +6,12 @@ module iac_init_mod
   use shr_sys_mod , only : shr_sys_abort
   use shr_file_mod, only : shr_file_get, shr_file_getUnit, shr_file_freeUnit
   use iac_spmd_mod, only : masterproc
-  use iac_io_mod
+  !use iac_io_mod
   use gcam_var_mod, only : iulog
-
   use iac_data_mod
+  use iac_io_mod, only : ncd_pio_openfile, ncd_pio_closefile, ncd_io
+  use iac_io_mod, only : file_desc_t
+  use iac_io_mod
 
   implicit none
   save
@@ -20,6 +22,16 @@ contains
     ! !DESCRIPTION:
     ! Read in namelist, define grid, allocate variables
     !---------------------------------------------------------------------------
+    use shr_kind_mod, only: CL => SHR_KIND_CL, CXX => SHR_KIND_CXX
+
+    character(len=CXX) :: gcam_gridfile
+    character(len=CL) :: nlfilename_iac
+    integer :: iac_npft, unitn, ier, dimid, i, j, n
+    type(file_desc_t) :: ncid
+    logical :: lexist, found
+    real(r8), pointer :: tempr(:,:)
+    integer, pointer :: itempr(:,:)
+    character(len=32) :: subname = 'iac_init'
 
     ! GCAM namelist
     namelist /gcam_inparm/ gcam_gridfile, iac_npft
@@ -34,7 +46,7 @@ contains
     end if
 
     if (masterproc) then
-       unitn = sr_file_getunit()
+       !unitn = sr_file_getunit()
        write(iulog,*) 'Read in gcam_inparm namelist from: ', trim(nlfilename_iac)
        open( unitn, file=trim(nlfilename_iac), status='old' )
        ier = 1
@@ -68,8 +80,6 @@ contains
     allocate(gdata%l(iac_cdata_size))
 
     ! Read grid file
-    call t_startf('gcam_grid')
-
     call ncd_pio_init()
 
     inquire(file=gcam_gridfile,exist=lexist)
@@ -101,16 +111,16 @@ contains
     allocate(iac_ctl%iacmask(iac_ctl%ngrid))
 
     ! Dimension order: (lon,lat,pft)
-    allocate(lnd2iac_var%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_var%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_var%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
 
-    allocate(lnd2iac_var%landfrac(iac_ctl%nlon,iac_ctl%nlat)
-    allocate(lnd2iac_var%area(iac_ctl%nlon,iac_ctl%nlat)
+    allocate(lnd2iac_vars%landfrac(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(lnd2iac_vars%area(iac_ctl%nlon,iac_ctl%nlat))
 
-    allocate(iac2lnd_var%landuse(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
 
-    allocate(iac2atm_var%co2emiss(iac_ctl%nlon,iac_ctl%nlat)
+    allocate(iac2atm_vars%co2emiss(iac_ctl%nlon,iac_ctl%nlat))
 
     ! Assign our global index, ilon, and jlat, to go from (g)
     ! dimension to (lon,lat) dimensions.
@@ -119,7 +129,7 @@ contains
           n = (j-1)*iac_ctl%nlat + i
           iac_ctl%gindex(n)=n  ! Dumb, but allows decomp someday, maybe
           iac_ctl%ilon(n)=i
-          iac_ctl%jlon(n)=j
+          iac_ctl%jlat(n)=j
        end do
     end do
 
@@ -135,8 +145,8 @@ contains
     ! But it *is* annoying not to have any simple examples of netcdf
     ! interaction 
 
-    allocate(tempr(rtmlon,rtmlat))  
-    allocate(itempr(rtmlon,rtmlat))  
+    allocate(tempr(iac_ctl%nlon,iac_ctl%nlat))  
+    allocate(itempr(iac_ctl%nlon,iac_ctl%nlat))  
 
     ! lon
     call ncd_io(ncid=ncid, varname='lon', flag='read', data=tempr, readvar=found)
@@ -162,7 +172,7 @@ contains
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
           ! area needed by lnd2iac_var, input to gcam
-          lnd2iac_var%area(i,j) = tempr(i,j)
+          lnd2iac_vars%area(i,j) = tempr(i,j)
        enddo
     enddo
 
@@ -174,7 +184,7 @@ contains
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
           ! area needed by lnd2iac_var, input to gcam
-          lnd2iac_var%landfrac(i,j) = tempr(i,j)
+          lnd2iac_vars%landfrac(i,j) = tempr(i,j)
        enddo
     enddo
 

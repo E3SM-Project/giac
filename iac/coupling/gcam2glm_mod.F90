@@ -13,6 +13,7 @@ Module gcam2glm_mod
 ! !USES:
 
   use iac_data_mod, only : cdata => gdata, EClock => GClock
+  use iac_data_mod, only : iac_EClock_ymd, iac_EClock_tod, iac_EClock_dt
   use shr_file_mod, only: shr_file_getunit, shr_file_freeunit
   use shr_cal_mod
   use shr_sys_mod
@@ -113,6 +114,7 @@ contains
 ! Initialize interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -357,6 +359,7 @@ contains
 ! Run interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:

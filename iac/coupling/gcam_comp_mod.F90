@@ -11,8 +11,10 @@ module gcam_comp_mod
  
   use iac_data_mod         , only : cdata => gdata, EClock => GClock, &
                                     lnd2iac_type
-
-  use iac_ctl_type         , only : nlat, nlon, npft
+  use shr_sys_mod , only : shr_sys_abort
+  use iac_data_mod, only : iac_ctl
+  use shr_kind_mod,      only: CX => SHR_KIND_CX
+  use iac_spmd_mod, only : masterproc
 
   implicit none
   SAVE
@@ -38,13 +40,13 @@ module gcam_comp_mod
   ! probably need to be moved to the gcam_var_mod.f90 module or
   ! something, but for now i'll define them up here - they are only
   ! used within the gcam_comp_mod functions anyway.
-  character(len=*) ::  case_name
-  character(len=*) ::  gcam_config
-  character(len=*) ::  base_co2_file
-  character(len=*) ::  gcam2elm_co2_mapping_file
-  character(len=*) ::  gcam2elm_luc_mapping_file
-  character(len=*) ::  gcam2elm_woodharvest_mapping_file
-  character(len=*) ::  elm2gcam_mapping_file
+  character(len=CX) ::  case_name
+  character(len=CX) ::  gcam_config
+  character(len=CX) ::  base_co2_file
+  character(len=CX) ::  gcam2elm_co2_mapping_file
+  character(len=CX) ::  gcam2elm_luc_mapping_file
+  character(len=CX) ::  gcam2elm_woodharvest_mapping_file
+  character(len=CX) ::  elm2gcam_mapping_file
 
   logical :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
 
@@ -89,6 +91,8 @@ contains
 ! Initialize interface for gcam
 
 ! !USES:
+    !use gcam_var, only : NLFilename_in
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -99,7 +103,9 @@ contains
     character(len=*),parameter :: subname='(gcam_init_mod)'
     character(len=128) :: casename
     integer,save :: iulog = 6
-    integer      :: i, unitn
+    integer      :: i, unitn, ier
+    logical      :: lexist
+    character(len=128) :: nlfilename_in
 
 ! !REVISION HISTORY:
 ! Author: T Shippert - modified heavily for E3SM/GCAM coupling
@@ -124,24 +130,24 @@ contains
     ! Read in namelist
     ! Note: no concat with instance number, because we only have one
     ! instance (proc) currently
-    nlfilename_iac = "gcam_in"
+    nlfilename_in = "gcam_in"
 
-    inquire (file = trim(nlfilename_iac), exist = lexist)
+    inquire (file = trim(nlfilename_in), exist = lexist)
     if ( .not. lexist ) then
-       write(iulog,*) subname // ' ERROR: nlfilename_iac does NOT exist:'&
-            //trim(nlfilename_iac)
+       write(iulog,*) subname // ' ERROR: nlfilename_in does NOT exist:'&
+            //trim(nlfilename_in)
        call shr_sys_abort(trim(subname)//' ERROR nlfilename_rof does not exist')
     end if
   
     if (masterproc) then
        unitn = shr_file_getunit()
-       write(iulog,*) 'Read in gcam_inparm namelist from: ', trim(nlfilename_iac)
-       open( unitn, file=trim(nlfilename_iac), status='old' )
+       write(iulog,*) 'Read in iac_inparm namelist from: ', trim(nlfilename_in)
+       open( unitn, file=trim(nlfilename_in), status='old' )
        ier = 1
        do while ( ier /= 0 )
-          read(unitn, gcam_inparm, iostat=ier)
+          read(unitn, iac_inparm, iostat=ier)
           if (ier < 0) then
-             call shr_sys_abort( subname//' encountered end-of-file on gcam_inparm read' )
+             call shr_sys_abort( subname//' encountered end-of-file on iac_inparm read' )
           endif
        end do
        close(unitn)
@@ -158,15 +164,11 @@ contains
     allocate(gcamo(iac_gcamo_nflds,cdata%i(iac_cdatai_gcamo_size)))
     allocate(gcamoemis(iac_gcamoemis_nemis,cdata%i(iac_cdatai_gcamoemis_size)))
     
-    gcami = iac_spval
-    gcamo = iac_spval
-    gcamoemis = iac_spval
-    
     ! create CCSM_GCAM_interface Object 
-    call initCCSMInterface()
+    !call initCCSMInterface()
     
     ! Call initcGCAM method of CCSM/GCAM Interface 
-    call initcGCAM()
+    !call initcGCAM()
     
   end subroutine gcam_init_mod
 
@@ -183,6 +185,8 @@ contains
 ! Run interface for gcam
 
 ! !USES:
+   use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
+   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
     implicit none
 
 ! !ARGUMENTS:
@@ -205,6 +209,10 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
+    gcami = iac_spval
+    gcamo = iac_spval
+    gcamoemis = iac_spval
+    
   restart_now = cdata%l(iac_cdatal_rest)
   iu  = cdata%i(iac_cdatai_logunit)
 
@@ -215,7 +223,7 @@ contains
   write(iu,*) trim(subname),' date= ',ymd,tod
 
   !  Call runcGCAM method of E3SM Interface 
-  call runcGCAM(ymd,gcamo,gcamo_emis,base_co2_file, nlon, nlat, write_co2)
+  !call runcGCAM(ymd,gcamo,gcamo_emis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
 
   end subroutine gcam_run_mod
 
@@ -232,6 +240,8 @@ contains
 ! Setdensity interface for gcam
 
 ! !USES:
+   use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
+   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
     implicit none
 
 ! !ARGUMENTS:
@@ -263,9 +273,9 @@ contains
 
   !  Call setdensity method of CCSM Interface 
   !call setdensitycGCAM(ymd,tod,gcami,size(gcami,dim=1),size(gcami,dim=2))
-  call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
-       lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-       nlon, nlat, npft, mapping_file, read_scalars, write_scalars)
+  !call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
+  !     lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
+  !     iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, mapping_file, read_scalars, write_scalars)
   
   end subroutine gcam_setdensity_mod
 
@@ -293,10 +303,10 @@ contains
 !---------------------------------------------------------------------------
 
   !  Cleanup GCAM 
-  call finalizecGCAM()
+  !call finalizecGCAM()
 
   !  Cleanup CCSM Interface Object 
-  call deleteCCSMInterface()
+  !call deleteCCSMInterface()
 
   end subroutine gcam_final_mod
 

@@ -8,6 +8,7 @@ module iac_import_export
   use iac_data_mod
   use gcam_cpl_indices
   use mct_mod
+  use iac_data_mod,   only : iac_ctl
   !
   implicit none
   public :: iac_import    ! import lnd vars from coupler
@@ -25,11 +26,11 @@ contains
     use netcdf
     !
     ! !ARGUMENTS:
-    type(mct_AVect)    , intent(in)    :: x2z ! driver import state to iacmodel
+    real(r8), intent(in)    :: x2z(:,:) ! driver import state to iacmodel
     type(lnd2iac_type) , intent(inout) :: lnd2iac_vars    ! gcam
     !
     ! LOCAL VARIABLES
-    integer :: n,n1
+    integer :: n,n1,p,g,i,j
     integer :: begg, endg
     character(len=32), parameter :: sub = 'iac_import'
 
@@ -50,14 +51,14 @@ contains
     do p=1,iac_ctl%npft
 
        ! This for logging purposes...
-       write(pftstr,'(I0)') p
-       pftstr=trim(pftstr)
+       !write(pftstr,'(I0)') p
+       !pftstr=trim(pftstr)
 
        ! Now loop over our global index...
        ! g=1,ngrid - one domain.
        do g=iac_ctl%begg,iac_ctl%endg
-          i=iac_ctl%long(g)
-          j=iac_ctl%latg(g)  ! extract lat, lon indeces from g
+          i=iac_ctl%lon(g)
+          j=iac_ctl%lat(g)  ! extract lat, lon indeces from g
 
           ! i (lon) varies fastest, p slowest:
           ! n=i+nlon*(j-1)+nlat*nlon*(p-1)
@@ -85,10 +86,10 @@ contains
     implicit none
     type(iac2lnd_type), intent(inout) :: iac2lnd_vars ! gcam to land output
     type(iac2atm_type), intent(inout) :: iac2atm_vars ! gcam to atm output
-    type(mct_aVect),    intent(out)   :: z2x! land to coupler export state on land grid
+    real(r8),    intent(out)   :: z2x(:,:)! land to coupler export state on land grid
 
     ! LOCAL VARIABLES
-    integer :: n,n1
+    integer :: n,n1,g,i,j,p
     integer :: begg, endg
     character(len=32), parameter :: sub = 'iac_export'
 
@@ -99,8 +100,8 @@ contains
 
     ! g=1,ngrid - one domain.
     do g=iac_ctl%begg,iac_ctl%endg
-       i=iac_ctl%long(g)
-       j=iac_ctl%latg(g)  ! extract lat, lon indeces from g
+       i=iac_ctl%lon(g)
+       j=iac_ctl%lat(g)  ! extract lat, lon indeces from g
 
        ! Co2flux to atm
        ! Convention has fluxes negative from lnd to atm, so we
@@ -108,8 +109,8 @@ contains
        z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
 
        ! Now the 17 iac->lnd vars
-       do p=1,iac%npft
-          x2z(index_z2x_Sl_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
+       do p=1,iac_ctl%npft
+          z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
        enddo ! pft index p
 
     end do ! global index g

@@ -25,15 +25,15 @@ module gcam_cpl_indices
 
   ! iac -> drv
   ! The stuff we send back to the coupler (i.e. to lnd)
-  integer, public ::index_z2x_Sz_pct_pft(:)      ! percent pft of vegetated land unit
-  integer, public ::index_z2x_Fazz_co2flux(:)    ! co2 from iac to atm, flux
+  integer, pointer, public ::index_z2x_Sz_pct_pft(:)      ! percent pft of vegetated land unit
+  integer, public ::index_z2x_Fazz_fco2_iac    ! co2 from iac to atm, flux
   integer, public ::nflds_z2x = 0
 
   ! drv -> iac
   ! The stuff we get from the coupler (from lnd)
-  integer, public ::index_x2z_Sl_hr(:)        ! total heterotrophic respiration
-  integer, public ::index_x2z_Sl_npp(:)       ! net primary production
-  integer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
+  integer, pointer, public ::index_x2z_Sl_hr(:)        ! total heterotrophic respiration
+  integer, pointer, public ::index_x2z_Sl_npp(:)       ! net primary production
+  integer, pointer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
   integer, public ::nflds_x2z = 0
 
   !-----------------------------------------------------------------------
@@ -124,6 +124,6 @@ contains
     deallocate(index_x2z_Sl_hr)
     deallocate(index_x2z_Sl_npp)
     deallocate(index_x2z_Sl_pftwgt)
-  end subroutine gcam_cpl_indices_init
+  end subroutine gcam_cpl_indices_finish
 
 end module gcam_cpl_indices

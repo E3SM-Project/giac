@@ -12,7 +12,7 @@ Module glm2iac_mod
 !
 ! !USES:
 
-  use iac_fields_mod
+  use iac_data_mod
   use shr_cal_mod
   use netcdf
 

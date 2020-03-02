@@ -21,17 +21,16 @@ module iac_comp_mct
   use iac_data_mod        ! including gdata, GClock
   use iac_init_mod
   use iac_import_export
-  use iac2gcam_mod
+  !use iac2gcam_mod
   use gcam_comp_mod
   use glm_comp_mod
   use gcam2glm_mod
-  use gcam_var           , only : gcam_nlon, gcam_nlat,  iulog, &
+  use gcam_var_mod        , only : gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
                                 gcam_active, gcam_var_set
   use iac_spmd_mod
-  use iac_fields_mod
-
+  !use iac_fields_mod
   use ESMF
   use mct_mod
 
@@ -58,7 +57,7 @@ module iac_comp_mct
   real*8, pointer :: glmi_data(:,:)      ! glm input, converted from gcam2glm_data
   real*8, pointer :: glmo_data(:,:)      ! glm output
   real*8, pointer :: glm2lnd_data(:,:)   ! or maybe this is glm output
-
+  real(r8), pointer :: glm_data(:,:)
   real*8, pointer :: glm_wh_data(:)
 
   !
@@ -211,8 +210,8 @@ contains
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 
-    call gcam_init_mod(iac2gcam_data,gcamo_data,gcam_emis_data)
-    call gcam2glm_init_mod(glmi_data)
+    call gcam_init_mod(iac2gcam_data,gcam_emis_data)
+    call gcam2glm_init_mod()
     call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
 
     ! Here it gets tricky, as I copy from rof and other components.
@@ -247,7 +246,7 @@ contains
        call mct_aVect_zero(z2x_z) 
        
        ! Create mct iac expxort state - try to review what this is.
-       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z)
+       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
     end if
 
     ! Fill in infodata - of course, have to review all this
@@ -348,8 +347,8 @@ contains
 
     ! Import from land model
     !call t_startf('iac_import')
-    !call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
-    call iac_import(x2z_z, lnd2iac_vars)
+    call iac_import(x2z_z%rattr, lnd2iac_vars)
+    !call iac_import(x2z_z, lnd2iac_vars)
     !call t_stopf('iac_import')
 
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
@@ -377,7 +376,7 @@ contains
     call gcam2glm_run_mod(gcam2glm_data, glm_data, glm_wh_data)
 
     ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod( GClock, gdata, glm_data, glm_wh_data, glm2lnd_data)
+    call glm_run_mod(glm_data, glm_wh_data, glm2lnd_data)
     
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock
@@ -497,7 +496,7 @@ contains
     type(mct_ggrid), intent(out)   :: dom_z       ! Domain information from the iac model
     !
     ! LOCAL VARIABLES
-    integer :: n, ni              ! index
+    integer :: n, ni, i, j             ! index
     integer , pointer :: idata(:) ! temporary
     real(r8), pointer :: data(:)  ! temporary
     real(r8) :: re = SHR_CONST_REARTH*0.001_r8 ! radius of earth (km)
@@ -524,8 +523,8 @@ contains
     call mct_gGrid_importRAttr(dom_z,"lon"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"area" ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"aream",data,lsize) 
-    data(:) = 0.0_R8     
-    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize) 
+    idata(:) = 0.0 
+    call mct_gGrid_importIAttr(dom_z,"mask" ,idata,lsize) 
 
     ! Determine bounds numbering consistency
     ni = 0
@@ -568,7 +567,7 @@ contains
        !If area is in radians, then we need to scale
        !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
        !But I believe it's in km^2 already (at least from clm.h1 file)
-       data(ni) = lnd2iac_var%area(i,j) 
+       data(ni) = lnd2iac_vars%area(i,j) 
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
@@ -578,7 +577,7 @@ contains
        ni = ni + 1
        i = iac_ctl%ilon(n)
        j = iac_ctl%jlat(n)
-       data(ni) = lnd2iac_var%landfrac(i,j)
+       data(ni) = lnd2iac_vars%landfrac(i,j)
     end do
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
 
@@ -588,7 +587,7 @@ contains
        ni = ni + 1
        idata(ni) = iac_ctl%iacmask(n)
     end do
-    call mct_gGrid_importRattr(dom_z,"mask",idata,lsize) 
+    call mct_gGrid_importIattr(dom_z,"mask",idata,lsize) 
 
     deallocate(data)
     deallocate(idata)

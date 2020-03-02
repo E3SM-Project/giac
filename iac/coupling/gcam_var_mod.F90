@@ -1,4 +1,4 @@
-module gcam_var
+module gcam_var_mod
   !-----------------------------------------------------------------------
   ! !DESCRIPTION:
   ! Module containing run control variables
@@ -135,4 +135,4 @@ contains
     !if ( present(gcam_active     ) ) gcam_active   = gcam_active
 
   end subroutine gcam_var_set
-end module
+end module gcam_var_mod

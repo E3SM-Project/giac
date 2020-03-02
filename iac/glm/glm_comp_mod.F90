@@ -13,6 +13,7 @@ Module glm_comp_mod
 ! !USES:
 
   use iac_data_mod, only : cdata => gdata, EClock => GClock
+  use iac_data_mod
 
   implicit none
   SAVE
@@ -26,7 +27,7 @@ Module glm_comp_mod
 
 ! !PUBLIC DATA MEMBERS: None
 
-  integer, parameter :: glm_data_size   = iac_glm_nx*iac_glm_ny  ! should be set by glm
+  integer, parameter :: glm_data_size   = iac_glm_nx*iac_glm_ny ! should be set by glm
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -71,6 +72,7 @@ contains
     iu  = cdata%i(iac_cdatai_logunit)
     numreg = cdata%i(iac_cdatai_gcam_nreg)
     numaez = cdata%i(iac_cdatai_gcam_naez)
+
 
     cdata%l(iac_cdatal_glm_present) = .true.
     cdata%l(iac_cdatal_glm_prognostic) = .true.

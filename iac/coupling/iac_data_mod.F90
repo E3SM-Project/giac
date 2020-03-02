@@ -46,7 +46,7 @@ module iac_data_mod
     real*8 , pointer :: r(:)
     integer, pointer :: i(:)
     logical, pointer :: l(:)
-  end type iac_cadta_type
+  end type iac_cdata_type
 
   ! Making these structures, since it's easier to make sure
   ! everything is contiguous, which is important when coupling with
@@ -65,7 +65,7 @@ module iac_data_mod
   type, public :: iac2lnd_type
      ! Output to lnd, dimensioned (lon,lat,pft)
      real(r8), allocatable :: pct_pft(:,:,:)
-  end type iac2lnd_type
+ end type iac2lnd_type
 
   type, public :: iac2atm_type
      ! output to atm, dimensioned (lon,lat)
@@ -130,6 +130,21 @@ module iac_data_mod
   integer, parameter, public :: iac_cdataio_glmo_flds       =  6
 
   !--- reals ---
+  real*8,  parameter, public :: iac_spval = -999.0
+  integer, parameter, public :: iac_gcam_nreg =  14
+  integer, parameter, public :: iac_gcam_nsector =  12
+  integer, parameter, public :: iac_gcamoemis_nemis=  1
+  integer, parameter, public :: iac_gcam_naez =  18
+  integer, parameter, public :: iac_gcam_ncrops =  27
+  integer, parameter, public :: iac_gcam_timestep =  5
+  integer, parameter, public :: iac_gcam_ioyears =  15
+  integer, parameter, public :: iac_gcamo_ntime =  2
+  integer, parameter, public :: iac_glm_nx  = 720
+  integer, parameter, public :: iac_glm_ny  = 360
+  integer, parameter, public :: iac_iaco_npfts =  17
+  integer, parameter, public :: iac_iac_npfts  = 16
+  character(len=*), parameter, public :: iac_gcam2glm_map = 'some_map_file'
+
   !--- integers ---
   integer, parameter, public :: iac_cdatai_logunit         =  1
   integer, parameter, public :: iac_cdatai_iac_nx          =  2
