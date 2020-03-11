@@ -154,21 +154,20 @@ contains
        call shr_file_freeUnit(unitn)
     end if
 
-    ! Removed a bunch of cdata() allocations, because I don't think
-    ! they apply anymore - everything is handled via namelist and
-    ! module variables, not configuration files.  But, if I'm wrong,
-    ! see unused/giac_comp_mod.F90 and unused/cdata_frag.F90
-
-    ! These allocations are currently wrong
+    ! Here is where we put our namelist inputs into the gdata structure
+    ! (remember, we call it cdata in gcam-space, but it's not the same
+    ! as teh cdata_z structure used in e3sm-space).  This is how we
+    ! transmit the namelist variables downstream to all the gcam and
+    ! gcam/coupling functions that need them - through gdata.
 
     allocate(gcamo(iac_gcamo_nflds,cdata%i(iac_cdatai_gcamo_size)))
     allocate(gcamoemis(iac_gcamoemis_nemis,cdata%i(iac_cdatai_gcamoemis_size)))
     
     ! create CCSM_GCAM_interface Object 
-    !call initCCSMInterface()
+    call initCCSMInterface()
     
     ! Call initcGCAM method of CCSM/GCAM Interface 
-    !call initcGCAM()
+    call initcGCAM()
     
   end subroutine gcam_init_mod
 
@@ -223,7 +222,7 @@ contains
   write(iu,*) trim(subname),' date= ',ymd,tod
 
   !  Call runcGCAM method of E3SM Interface 
-  !call runcGCAM(ymd,gcamo,gcamo_emis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
+  call runcGCAM(ymd,gcamo,gcamoemis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
 
   end subroutine gcam_run_mod
 
@@ -273,9 +272,10 @@ contains
 
   !  Call setdensity method of CCSM Interface 
   !call setdensitycGCAM(ymd,tod,gcami,size(gcami,dim=1),size(gcami,dim=2))
-  !call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
-  !     lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-  !     iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, mapping_file, read_scalars, write_scalars)
+  call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
+       lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
+       iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
+       read_scalars, write_scalars) 
   
   end subroutine gcam_setdensity_mod
 
@@ -303,10 +303,10 @@ contains
 !---------------------------------------------------------------------------
 
   !  Cleanup GCAM 
-  !call finalizecGCAM()
+  call finalizecGCAM()
 
   !  Cleanup CCSM Interface Object 
-  !call deleteCCSMInterface()
+  call deleteCCSMInterface()
 
   end subroutine gcam_final_mod
 

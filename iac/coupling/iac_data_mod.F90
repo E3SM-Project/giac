@@ -110,7 +110,7 @@ module iac_data_mod
   integer, parameter, public :: iac_cdatac_gcam2glm_basecrop= 5
   integer, parameter, public :: iac_cdatac_gcam2glm_basepast= 6
   integer, parameter, public :: iac_cdatac_gcam2glm_baseothr= 7
-  integer, parameter, public :: iac_cdatac_gcam2glm_aezmap =  8
+  integer, parameter, public :: iac_cdatac_gcam2glm_glumap =  8
   integer, parameter, public :: iac_cdatac_gcam2glm_basebiomass= 9
   integer, parameter, public :: iac_cdatac_gcam2emisfile_co2base2000 = 10
   integer, parameter, public :: iac_cdatac_gcam2emisfile_grid720x360 = 11
@@ -156,7 +156,7 @@ module iac_data_mod
   integer, parameter, public :: iac_cdatai_gcam_yr1        =  8
   integer, parameter, public :: iac_cdatai_gcam_yr2        =  9
   integer, parameter, public :: iac_cdatai_gcam_nreg       =  10
-  integer, parameter, public :: iac_cdatai_gcam_naez       =  11
+  integer, parameter, public :: iac_cdatai_gcam_nglu       =  11
   integer, parameter, public :: iac_cdatai_gcam_timestep   =  12
   integer, parameter, public :: iac_cdatai_gcamo_ntime     =  13
   integer, parameter, public :: iac_cdatai_gcamo_nflds     =  14
@@ -165,6 +165,8 @@ module iac_data_mod
   integer, parameter, public :: iac_cdatai_gcami_size      =  17
   integer, parameter, public :: iac_cdatai_gcami_ncrops    =  18
   integer, parameter, public :: iac_cdatai_gcamoemis_size  =  19
+  ! TRS: add - max nglus in a region, for temp arrays
+  integer, parameter, public :: iac_cdatai_gcam_max_nglu  =  20
   !--- logicals ---
   integer, parameter, public :: iac_cdatal_rest            =  1
   integer, parameter, public :: iac_cdatal_iac_present     =  2

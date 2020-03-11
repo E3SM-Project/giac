@@ -60,7 +60,7 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    integer :: iu,numreg,numaez
+    integer :: iu,numreg,numglu
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -71,7 +71,7 @@ contains
 
     iu  = cdata%i(iac_cdatai_logunit)
     numreg = cdata%i(iac_cdatai_gcam_nreg)
-    numaez = cdata%i(iac_cdatai_gcam_naez)
+    numglu = cdata%i(iac_cdatai_gcam_nglu)
 
 
     cdata%l(iac_cdatal_glm_present) = .true.
@@ -82,7 +82,7 @@ contains
 
     ! Already allocated by gcam_init_mod
     !allocate(glmi(iac_glmi_nflds,glm_data_size))
-    allocate(glmi_wh(numreg*numaez))
+    allocate(glmi_wh(numglu))
     allocate(glmo(iac_glmo_nflds,glm_data_size))
 
     glmi = iac_spval
