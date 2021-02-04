@@ -15,6 +15,7 @@ module gcam_comp_mod
   use iac_data_mod, only : iac_ctl
   use shr_kind_mod,      only: CX => SHR_KIND_CX
   use iac_spmd_mod, only : masterproc
+  use gcam_var_mod
 
   implicit none
   SAVE
@@ -34,45 +35,7 @@ module gcam_comp_mod
 ! Author: T Craig
 ! Author: JET - added interface files for cesm/gcam communication
 
-
 ! !PRIVATE DATA MEMBERS:
-! namelist values, to be used in the gcam functions
-  ! probably need to be moved to the gcam_var_mod.f90 module or
-  ! something, but for now i'll define them up here - they are only
-  ! used within the gcam_comp_mod functions anyway.
-  character(len=CX) ::  case_name
-  character(len=CX) ::  gcam_config
-  character(len=CX) ::  base_co2_file
-  character(len=CX) ::  gcam2elm_co2_mapping_file
-  character(len=CX) ::  gcam2elm_luc_mapping_file
-  character(len=CX) ::  gcam2elm_woodharvest_mapping_file
-  character(len=CX) ::  elm2gcam_mapping_file
-
-  logical :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
-
-  logical :: read_elm_from_file = .TRUE. ! if .FALSE., elm data (npp,
-  ! hr, area, pft weight) are passed from e3sm.
-
-  logical :: write_co2 = .TRUE. ! gridded co2 emissions will be
-  ! written to a file (in addition to passed in code).
-  
-  logical :: write_scalars = .TRUE. ! scalars will be written to a file.
-  
-  ! define coupling control variables
-  ! these booleans define what is passed between gcam & e3sm.
-  logical :: elm_iac_carbon_scaling = .TRUE.; ! if .TRUE., changes in
-  ! land productivity from elm are used in gcam.
-  logical :: iac_elm_co2_emissions = .TRUE.; ! if .TRUE., energy system
-  ! co2 is passed from gcam to eam.
-    
-  ! define size control variables
-  ! these integers define the length of the various arrays used in the coupling
-  integer ::  num_lat = 180; ! number of horizontal grid cells
-  integer ::  num_lon = 360; ! number of vertical grid cells
-  integer ::  num_pft = 16;  ! number of pfts in elm
-  integer ::  num_gcam_energy_regions = 32;
-  integer ::  num_gcam_land_regions = 384;
-  integer ::  num_iac2elm_landtypes = 9;
 
 !EOP
 !===============================================================
@@ -107,6 +70,7 @@ contains
     logical      :: lexist
     character(len=128) :: nlfilename_in
 
+
 ! !REVISION HISTORY:
 ! Author: T Shippert - modified heavily for E3SM/GCAM coupling
 
@@ -114,60 +78,21 @@ contains
 ! Namelist variables
 !---------------------------------------------------------------------
 
-    namelist /iac_inparm/ &
-         case_name,gcam_config,base_co2_file, &
-         gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
-         gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
-         read_scalars,read_elm_from_file, write_co2, write_scalars,&
-         elm_iac_carbon_scaling, iac_elm_co2_emissions
-
-    ! These might get renamed or removed - control values that might
-    ! be duplicated elsewhere (maybe)
-    namelist /iac_inparm/ &
-         num_lat,num_lon,num_pft,num_gcam_energy_regions, &
-         num_gcam_land_regions,num_iac2elm_landtypes
-    
-    ! Read in namelist
-    ! Note: no concat with instance number, because we only have one
-    ! instance (proc) currently
-    nlfilename_in = "gcam_in"
-
-    inquire (file = trim(nlfilename_in), exist = lexist)
-    if ( .not. lexist ) then
-       write(iulog,*) subname // ' ERROR: nlfilename_in does NOT exist:'&
-            //trim(nlfilename_in)
-       call shr_sys_abort(trim(subname)//' ERROR nlfilename_rof does not exist')
-    end if
-  
-    if (masterproc) then
-       unitn = shr_file_getunit()
-       write(iulog,*) 'Read in iac_inparm namelist from: ', trim(nlfilename_in)
-       open( unitn, file=trim(nlfilename_in), status='old' )
-       ier = 1
-       do while ( ier /= 0 )
-          read(unitn, iac_inparm, iostat=ier)
-          if (ier < 0) then
-             call shr_sys_abort( subname//' encountered end-of-file on iac_inparm read' )
-          endif
-       end do
-       close(unitn)
-       call shr_file_freeUnit(unitn)
-    end if
-
     ! Here is where we put our namelist inputs into the gdata structure
     ! (remember, we call it cdata in gcam-space, but it's not the same
     ! as teh cdata_z structure used in e3sm-space).  This is how we
     ! transmit the namelist variables downstream to all the gcam and
     ! gcam/coupling functions that need them - through gdata.
+    allocate(gcamo(iac_gcamo_nflds,gdata%i(iac_cdatai_gcamo_size)))
+    allocate(gcamoemis(iac_gcamoemis_nemis,gdata&
+         %i(iac_cdatai_gcamoemis_size)))
 
-    allocate(gcamo(iac_gcamo_nflds,cdata%i(iac_cdatai_gcamo_size)))
-    allocate(gcamoemis(iac_gcamoemis_nemis,cdata%i(iac_cdatai_gcamoemis_size)))
-    
     ! create CCSM_GCAM_interface Object 
-    call initCCSMInterface()
+    call inite3sminterface()
     
-    ! Call initcGCAM method of CCSM/GCAM Interface 
-    call initcGCAM()
+    ! Call initcGCAM method of e3sm/GCAM Interface 
+    call initcGCAM(case_name, gcam_config, gcam2elm_co2_mapping_file,&
+         gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file)
     
   end subroutine gcam_init_mod
 
@@ -306,7 +231,7 @@ contains
   call finalizecGCAM()
 
   !  Cleanup CCSM Interface Object 
-  call deleteCCSMInterface()
+  call deletee3sminterface()
 
   end subroutine gcam_final_mod
 

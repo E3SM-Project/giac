@@ -95,6 +95,47 @@ module gcam_var_mod
   ! Some sizes
   integer, public :: gcam_nlon, gcam_nlat
 
+  ! Namelist variables for use in gcam
+  ! Namelist variables
+  character(len=256), public ::  case_name
+  character(len=256), public ::  gcam_config
+  character(len=256), public ::  base_co2_file
+  character(len=256), public ::  base_npp_file
+  character(len=256), public ::  base_hr_file
+  character(len=256), public ::  gcam2elm_co2_mapping_file
+  character(len=256), public ::  gcam2elm_luc_mapping_file
+  character(len=256), public ::  gcam2elm_woodharvest_mapping_file
+  character(len=256), public ::  elm2gcam_mapping_file
+
+  logical, public :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
+
+  logical, public :: read_elm_from_file = .TRUE. ! if .FALSE., elm data (npp,
+  ! hr, area, pft weight) are passed from e3sm.
+
+  logical, public :: write_co2 = .TRUE. ! gridded co2 emissions will be
+  ! written to a file (in addition to passed in code).
+  
+  logical, public :: write_scalars = .TRUE. ! scalars will be written to a file.
+  
+  ! define coupling control variables
+  ! these booleans define what is passed between gcam & e3sm.
+  logical, public :: elm_iac_carbon_scaling = .TRUE.; ! if .TRUE., changes in
+  ! land productivity from elm are used in gcam.
+  logical, public :: iac_elm_co2_emissions = .TRUE.; ! if .TRUE., energy system
+  ! co2 is passed from gcam to eam.
+    
+  ! define size control variables
+  ! these integers define the length of the various arrays used in the coupling
+  integer, public ::  num_lat = 192; ! number of horizontal grid cells
+  integer, public ::  num_lon = 288; ! number of vertical grid cells
+  integer, public ::  num_pft = 17;  ! number of pfts in elm
+  integer, public ::  num_gcam_energy_regions = 32;
+  integer, public ::  num_gcam_land_regions = 392;
+  integer, public ::  num_iac2elm_landtypes = 9;
+  integer, public ::  num_emiss_sectors = 2;
+  integer, public ::  num_emiss_regions = 1;
+  character(len=256), public :: gcam_gridfile
+
 contains
 
   subroutine gcam_var_set(caseid_in, ctitle_in,brnch_retain_casename_in, &
