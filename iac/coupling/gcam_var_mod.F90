@@ -106,6 +106,7 @@ module gcam_var_mod
   character(len=256), public ::  gcam2elm_luc_mapping_file
   character(len=256), public ::  gcam2elm_woodharvest_mapping_file
   character(len=256), public ::  elm2gcam_mapping_file
+  character(len=256), public ::  gcam_gridfile
 
   logical, public :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
 
@@ -134,7 +135,6 @@ module gcam_var_mod
   integer, public ::  num_iac2elm_landtypes = 9;
   integer, public ::  num_emiss_sectors = 2;
   integer, public ::  num_emiss_regions = 1;
-  character(len=256), public :: gcam_gridfile
 
 contains
 

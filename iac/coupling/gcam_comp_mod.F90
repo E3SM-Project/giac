@@ -65,7 +65,6 @@ contains
 ! !LOCAL VARIABLES:
     character(len=*),parameter :: subname='(gcam_init_mod)'
     character(len=128) :: casename
-    integer,save :: iulog = 6
     integer      :: i, unitn, ier
     logical      :: lexist
     character(len=128) :: nlfilename_in
@@ -91,6 +90,9 @@ contains
     call inite3sminterface()
     
     ! Call initcGCAM method of e3sm/GCAM Interface 
+    write (iulog, *) case_name, gcam_config, gcam2elm_co2_mapping_file,&
+         gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file
+         
     call initcGCAM(case_name, gcam_config, gcam2elm_co2_mapping_file,&
          gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file)
     

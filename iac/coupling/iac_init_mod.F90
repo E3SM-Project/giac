@@ -35,9 +35,8 @@ contains
     character(len=32) :: subname = 'iac_init'
 
     ! GCAM namelist
-    namelist /gcam_inparm/ gcam_gridfile
-
     namelist /gcam_inparm/ &
+         gcam_gridfile, gcam_config,&
          case_name, gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
          gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
          base_co2_file, base_npp_file, base_hr_file, &
@@ -71,8 +70,6 @@ contains
     end if
 
     ! Just make sure that worked
-    write(iulog, *) gcam_gridfile
-    write(iulog, *) case_name
 
     ! Don't need to mpi_bcast the namelist, because we don't have other procs
     ! to communitate with.  But if we did, we'd mpi_bcast them around
@@ -81,6 +78,30 @@ contains
     if (masterproc) then
        write(iulog,*) 'define GCAM run:'
        ! write out namelist stuff here
+       write(iulog, '(A,A)') "base_co2_file = ", trim(base_co2_file )
+       write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
+       write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
+       write(iulog, '(A,A)') "case_name = ", trim(case_name)
+       write(iulog, '(A,A)') "elm2gcam_mapping_file = ", trim(elm2gcam_mapping_file)
+       write(iulog, '(A,L)') "elm_iac_carbon_scaling = ", elm_iac_carbon_scaling
+       write(iulog, '(A,A)') "gcam2elm_co2_mapping_file = ", trim(gcam2elm_co2_mapping_file )
+       write(iulog, '(A,A)') "gcam2elm_luc_mapping_file = ", trim(gcam2elm_luc_mapping_file)
+       write(iulog, '(A,A)') "gcam2elm_woodharvest_mapping_file = ", trim(gcam2elm_woodharvest_mapping_file)
+       write(iulog, '(A,A)') "gcam_config = ", trim(gcam_config)
+       write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
+       write(iulog, '(A,L)') "iac_elm_co2_emissions = ", iac_elm_co2_emissions
+       write(iulog, '(A,I)') "num_emiss_regions = ",num_emiss_regions
+       write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
+       write(iulog, '(A,I)') "num_gcam_energy_regions = ",num_gcam_energy_regions
+       write(iulog, '(A,I)') "num_gcam_land_regions = ",num_gcam_land_regions
+       write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
+       write(iulog, '(A,I)') "num_lat = ",num_lat
+       write(iulog, '(A,I)') "num_lon = ",num_lon
+       write(iulog, '(A,I)') "num_pft = ",num_pft
+       write(iulog, '(A,L)') "read_elm_from_file = ",read_elm_from_file
+       write(iulog, '(A,L)') "read_scalars = ",read_scalars
+       write(iulog, '(A,L)') "write_co2 = ",write_co2
+       write(iulog, '(A,L)') "write_scalars = ",write_scalars
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)
