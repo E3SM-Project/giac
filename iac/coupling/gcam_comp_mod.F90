@@ -90,8 +90,11 @@ contains
     call inite3sminterface()
     
     ! Call initcGCAM method of e3sm/GCAM Interface 
-    write (iulog, *) case_name, gcam_config, gcam2elm_co2_mapping_file,&
-         gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file
+    write (iulog, *) trim(case_name), &
+         trim(gcam_config),&
+         trim(gcam2elm_co2_mapping_file),&
+         trim(gcam2elm_luc_mapping_file), & 
+         trim(gcam2elm_woodharvest_mapping_file)
          
     call initcGCAM(case_name, gcam_config, gcam2elm_co2_mapping_file,&
          gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file)
