@@ -108,6 +108,11 @@ module gcam_var_mod
   character(len=256), public ::  elm2gcam_mapping_file
   character(len=256), public ::  gcam_gridfile
 
+  !glm variables
+  character(len=256), public :: gcam2glm_baselu
+  character(len=256), public :: gcam2glm_glumap
+  character(len=256), public :: gcam2glm_basebiomass
+
   logical, public :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
 
   logical, public :: read_elm_from_file = .TRUE. ! if .FALSE., elm data (npp,

@@ -20,8 +20,9 @@
 #define NCCODE 192       /* number of countries 192 */
 #define NEWNT 2         /* 102, 62, or 32 */   //jt add
 #define NPHB 50   /* filelength of probability of harvest given biomass */
-#define NREG 14
-#define NAEZ 18
+#define NREG 31
+#define NAEZ 37				// this is the current max glu per region for allocation
+#define NAEZ_ORIG 18		// this is to deal with existing woodharvest files for standalone glm
 #define NX 720           /* 360 or 720 */
 #define NY 360           /* 180 or 360 */
 #define NZ 31            /* Number of z dims tracked 31 (z is distance from managed cells) */
@@ -199,7 +200,7 @@ struct c_data {
 } cdata[NCCODE];
 
 struct r_data {
-  int rcode, continent_code;  
+  int rcode, continent_code, num_glu;
   int smart_flow_option, converted_forest_land_option;
   int zdis_option, adjust_smart_flow_option, harvest_option;
 } rdata[NREG];
@@ -211,7 +212,9 @@ struct aez_data {
 } aezdata[NREG][NAEZ];
 
 struct other_data {
-  int usflag, gcode, newgcode, continent_code, fnf, rcode, newrcode, shiftcult;
+  int usflag, gcode, newgcode, continent_code, fnf, rcode, newrcode;
+  double shiftcult;
+  double ref_crop;
   double vba, vnppa;
   int aez_region_code, aez_zone_code;
 } dstatic[NY][NX];
@@ -406,7 +409,7 @@ void initialize(){
   size_t count[] = {1, NY, NX};
   size_t start[] = {0, 0, 0}; /* start at first value */
   
-  printf("\n\nPROGRAM: 2005-2100 GLM\n\n");
+  printf("\n\nPROGRAM: 2015-2100 GLM\n\n");
 
   /* Load up parser file */
   ini = iniparser_load("glm.fut.conf");
@@ -585,7 +588,7 @@ void initialize(){
       rztdata[i][iz].vb=ZEROVALUE;
     }
   }
-  hist_reg_wh[NREG+1]=ZEROVALUE;
+  hist_reg_wh[NREG]=ZEROVALUE;
   for (i=0;i<NCCODE;i++) {
     ctdata[i].wh=ZEROVALUE;
     ctdata[i].whr=ZEROVALUE;
@@ -668,7 +671,8 @@ void initialize(){
 	dstatic[k][m].fnf=0;
 	dstatic[k][m].vba=ZEROVALUE;
 	dstatic[k][m].vnppa=ZEROVALUE;
-	dstatic[k][m].shiftcult=0;
+	dstatic[k][m].shiftcult=ZEROVALUE;
+		dstatic[k][m].ref_crop=ZEROVALUE;
         dstatic[k][m].aez_region_code=0;
         dstatic[k][m].aez_zone_code=0;
 
@@ -741,6 +745,24 @@ void initialize(){
   
   status = nc_close(ncid_state);
 
+	/* need to read in the 2015 initial crop data regardless of restart */
+	/* read it from the initial file */
+	/* this is a reference value for shifting cultivation */
+	strcpy(new_path,updated_initial_state);
+	printf("crop ref values in ... %s\n",new_path);
+	status = nc_open(new_path, NC_NOWRITE, &ncid_state);
+	check_err(status,__LINE__,__FILE__);
+	status = nc_inq_varid (ncid_state, "gcrop", &varidrst_crop);
+	check_err(status,__LINE__,__FILE__);
+	
+	for (k=0;k<NY;k++){
+		for (m=0;m<NX;m++){
+			status = nc_get_vara_double(ncid_state, varidrst_crop, &start[0], &count[0], &dstatic[k][m].ref_crop);
+			check_err(status,__LINE__,__FILE__);
+			dstatic[k][m].ref_crop=fround(dstatic[k][m].ref_crop,6);
+		}
+	}
+	status = nc_close(ncid_state);
 
   return;
 }
@@ -761,7 +783,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
   char country_name[50], continent_name[50], regional_name[50];
 
   curryear=*year;
-  printf("curryear=%ld start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
+  printf("curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
   if (curryear >=start_year && curryear<=stop_year){
 
     if (initialrun && curryear==start_year) {
@@ -804,7 +826,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
 	  //    }
     ij=-1;
     for (i=0;i<NREG;i++){
-      for (j=0;j<NAEZ;j++){
+      for (j=0;j<rdata[i].num_glu;j++){
 	ij+=1;
 	if(logging_option == 0) {
 	  aez_tdata[i][j].wh=ZEROVALUE;
@@ -834,7 +856,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
     }
     }
     for (i=0;i<NREG;i++){
-      for (j=0;j<NAEZ;j++){
+      for (j=0;j<rdata[i].num_glu;j++){
 	printf("aez_tdata %lf i %d j %d\n",aez_tdata[i][j].wh,i,j);
       }
     }
@@ -908,15 +930,16 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       output_lu(curryear); 
     }
     if (output_netcdf) {
-      if (output_updated_states) output_updated_states_nc(curryear,FALSE);
-      if (output_lu) output_lu_nc(curryear);
+	  // write output states each year
+      output_updated_states_nc(curryear,FALSE);
+      output_lu_nc(curryear);
     }
-    
-    country_primeflow_print(curryear);
-    
-    // write restarts
-    output_updated_states_nc(curryear,TRUE);
-  } 
+	  
+	// these must get cleaned up if it isn't a restart year
+	output_updated_states_nc(curryear,TRUE);
+	  
+    //country_primeflow_print(curryear);
+    }
 
   // Fill glmo output array - the outputs for state fractions happen at a different
   // timelevel (n+1) from the outputs of the transitions (timelevel n)
@@ -1058,7 +1081,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       }    
     }
   }
-  hist_reg_wh[NREG+1]=ZEROVALUE;
+  hist_reg_wh[NREG]=ZEROVALUE;
   for (i=0;i<NCCODE;i++) {
     
     
@@ -1103,7 +1126,7 @@ void step(int *year){
   int country_code, continent_code, regional_code,curryear;
   char country_name[50], continent_name[50], regional_name[50];
   curryear=*year;
-  printf("curryear=%ld start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
+  printf("curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
   if (curryear >=start_year && curryear<=stop_year){
     
     if (initialrun && curryear==start_year) {
@@ -1201,14 +1224,13 @@ void step(int *year){
       output_lu(curryear); 
     }
     if (output_netcdf) {
-      if (output_updated_states) output_updated_states_nc(curryear,FALSE);
-      if (output_lu) output_lu_nc(curryear);
+		// write output states each year
+		output_updated_states_nc(curryear,FALSE);
+		output_lu_nc(curryear);
     }
     
-    if (country_primeflow_print) country_primeflow_print(curryear);
+    //country_primeflow_print(curryear);
 
-    // write restarts
-    output_updated_states_nc(curryear,TRUE);
   } 
   return;
 }
@@ -1263,7 +1285,7 @@ void read_future_contructed_states_nc(int curryear){
   size_t start1[] = {0}; /* start at first value */
   size_t start[] = {0, 0, 0}; /* start at first value */
 
-  printf("\nreading data for future runs, 2005 and beyond...\n");
+  printf("\nreading data for future runs, 2015 and beyond...\n");
   strcpy(new_path,PATH1); 
   strcat(new_path,future_crop_constructed_states); 
 
@@ -1319,7 +1341,7 @@ void read_future_contructed_states_nc(int curryear){
   // just alternates between 0 and 1 at the end of every timestep. 
 
   /* read in constructed future states */
-  if (curryear==start_year) {
+	if (curryear==start_year) {		/* this depends on config file */
     for (it = 0;it<2;it++) {
       //start reading at current year index
       start[0]=curryear-first_year+it; 
@@ -1356,7 +1378,17 @@ void read_future_contructed_states_nc(int curryear){
 	}
       }
     }
-  }else {
+		/* also store 2015 crop data */
+		start[0] = 2015-first_year;
+		for (k=0;k<NY;k++){
+			for (m=0;m<NX;m++){
+				status = nc_get_vara_double(ncid_crop, varid_crop, &start[0], count1, &dstatic[k][m].ref_crop);
+				check_err(status,__LINE__,__FILE__);
+				dstatic[k][m].ref_crop=fround(dstatic[k][m].ref_crop,6);
+			}
+		}
+		
+  }else { /* this happens each year, assuming initialization happens each year also */
     for (k=0;k<NY;k++){
       for (m=0;m<NX;m++){   
 	newdata[0].c[k][m]=newdata[1].c[k][m];
@@ -1409,12 +1441,19 @@ void read_future_contructed_states_nc(int curryear){
       status = nc_get_vara_double(ncid_urbn, varid_urbn, start, count, &newdata[1].u[0][0]);
       check_err(status,__LINE__,__FILE__);
     }
-    for (k=0;k<NY;k++){
-      for (m=0;m<NX;m++){   
-	newdata[1].c[k][m]=fround(newdata[1].c[k][m],6);
-	newdata[1].p[k][m]=fround(newdata[1].p[k][m],6);
-	newdata[1].v[k][m]=fround(newdata[1].v[k][m],6);
-	if (use_urban) newdata[1].u[k][m]=fround(newdata[1].u[k][m],6);
+	  
+	/* also store 2015 crop data */
+	  start[0] = 2015-first_year;
+	  for (k=0;k<NY;k++){
+		  for (m=0;m<NX;m++){
+	  		status = nc_get_vara_double(ncid_crop, varid_crop, &start[0], count1, &dstatic[k][m].ref_crop);
+	  		check_err(status,__LINE__,__FILE__);
+	  
+			newdata[1].c[k][m]=fround(newdata[1].c[k][m],6);
+			newdata[1].p[k][m]=fround(newdata[1].p[k][m],6);
+			newdata[1].v[k][m]=fround(newdata[1].v[k][m],6);
+			dstatic[k][m].ref_crop=fround(dstatic[k][m].ref_crop,6);
+			if (use_urban) newdata[1].u[k][m]=fround(newdata[1].u[k][m],6);
       }
     }
     //	 don't need to get dat for ice and water always same
@@ -1422,8 +1461,7 @@ void read_future_contructed_states_nc(int curryear){
     
   //  if this is the 1st step of run then overwrite 
   //  time[0] with future initial state, time[1] filled in from boundary data above.
-  
-  //  if(!initialrun && start_year==curryear){
+  //  because the sma and smb need to be initialized
   if(start_year==curryear){
     //    strcpy(new_path,PATH1); 
     strcpy(new_path,updated_initial_state); 
@@ -1443,12 +1481,12 @@ void read_future_contructed_states_nc(int curryear){
       status = nc_get_vara_double(ncid_state, varidrst_urbn, start, count, &newdata[0].u[0][0]);
       check_err(status,__LINE__,__FILE__);
     }
-    
+	  
     status = nc_inq_varid (ncid_state, "gsecd", &varidrst_secd);
     check_err(status,__LINE__,__FILE__);
     status = nc_get_vara_double(ncid_state, varidrst_secd, start, count, &newdata[0].s[0][0]);
     check_err(status,__LINE__,__FILE__);
-
+		  
     status = nc_inq_varid (ncid_state, "gcrop", &varidrst_crop);
     check_err(status,__LINE__,__FILE__);
     status = nc_get_vara_double(ncid_state, varidrst_crop, start, count, &newdata[0].c[0][0]);
@@ -1811,7 +1849,7 @@ void read_country_codes(){
     
     for (k=0;k<NY;k++){
       for (m=0;m<NX;m++){
-	fscanf(cinfile,"%d\n",&dstatic[k][m].shiftcult);
+	fscanf(cinfile,"%lf\n",&dstatic[k][m].shiftcult);
       }
     }
     fclose(cinfile);
@@ -1904,7 +1942,7 @@ void read_regional_codes(){
     fprintf(stderr, "read_regional_codes: cannot open %s\n", new_path);
   }
 
-  for (i=0;i<NREG;i++) fscanf(cinfile,"%d\n",&rdata[i].rcode);
+  for (i=0;i<NREG;i++) fscanf(cinfile,"%d %d\n",&rdata[i].rcode, &rdata[i].num_glu);
   fclose(cinfile);
 
  /* strcpy(new_path,PATH1); */
@@ -2616,7 +2654,8 @@ void read_woodharvest_data_nc(int curryear){
 /********************************************************************/
 void read_woodharvest_data_aez_nc(int curryear){
   //need to just malloc ctdatawh after getting country code size
-  double first_year,aeztdatawh[NREG][NAEZ];
+	// these files have the original 14 aez format
+  double first_year,aeztdatawh[NREG][NAEZ_ORIG];
   size_t rnum,anum;
   int wh_multiplier=1.0;
   int ncid,i,region_code,ia;            /* netCDF ID */
@@ -2665,12 +2704,12 @@ void read_woodharvest_data_aez_nc(int curryear){
   start3[2]=0;
   count3[0]=1;
   count3[1]=NREG;
-  count3[2]=NAEZ;
+  count3[2]=NAEZ_ORIG;
   status = nc_get_vara_double(ncid, varid_wh, start3, count3, &aeztdatawh[0][0]);
   check_err(status,__LINE__,__FILE__);
 
   for (i=0;i<NREG;i++) {
-    for (ia=0;ia<NAEZ;ia++) {
+    for (ia=0;ia<NAEZ_ORIG;ia++) {
       if(logging_option == 0) {
 	aez_tdata[i][ia].wh=ZEROVALUE;
       }else{
@@ -2867,7 +2906,7 @@ void country_primeflow_print(int curryear){
 
 /********************************************************************/
 /** newdata= yearly interpolated data where it=0 is 1700
-    transitions are computed here where it=1 is transition from 1700 to 1701
+    transitions are computed here where it=0 is transition from 1700 to 1701
 **/
 
 void transitions(int curryear){
@@ -2891,8 +2930,10 @@ void transitions(int curryear){
 	   
 	      
 	if (BEST_CASE){
-	      
-	  if((dstatic[k][m].continent_code == 3) || (dstatic[k][m].continent_code == 4)){
+		
+	  /* use primary priority for transitions for all regions to be consistent with GLM2 */
+	  if(FALSE){
+	  /* if((dstatic[k][m].continent_code == 3) || (dstatic[k][m].continent_code == 4)){ */
 		
 	    /* minimum flows, secondary priority, Eurasia only */ 
 		
@@ -2915,7 +2956,8 @@ void transitions(int curryear){
 	      if((lat[k] <= 23.5) && (lat[k] >= -23.5)) adjust_smart_flow1(k,m,it,i);
 	    }
 	    if (BEST_CASE_MIN_FLOWS_T5){   /*abandonment in shiftcult map */
-	      if(dstatic[k][m].shiftcult==1) adjust_smart_flow1(k,m,it,i);
+		  /* shiftcult is now the fraction of shifting cultivation */
+	      if(dstatic[k][m].shiftcult>0.0) adjust_smart_flow1(k,m,it,i);
 	    }		  
 	  }
 
@@ -2960,7 +3002,8 @@ void transitions(int curryear){
 	    }
 	    else if (rdata[i].adjust_smart_flow_option == 5){
 	      alternative_smart_flow1(k,m,it);
-	      if(dstatic[k][m].shiftcult==1) adjust_smart_flow1(k,m,it,i);
+		  /* shiftcult is now the fraction of shifting cultivation */
+	      if(dstatic[k][m].shiftcult>0.0) adjust_smart_flow1(k,m,it,i);
 
 	    }
 		
@@ -6985,9 +7028,11 @@ void output_updated_states_nc(int curryear,int restart){
   char state_file[256];
   //  static long start[] = {0, 0, 0};   /* start at first value */
   //  static long count[] = {1, NY, NX};
+	char command[512];
   size_t start[] = {0, 0, 0};   /* start at first value */
   size_t count[] = {1, NY, NX};
 
+	/* for iesm this is writing the output states at labelled year curryear */
 
     /* dimension ids */
 
@@ -7684,6 +7729,19 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_close(ncid_state);
     check_err(stat,__LINE__,__FILE__);
 
+	// copy restart file to regular state file for completeness
+
+	if (restart) {
+		sprintf(curryearc, "%d", curryear);
+		strcpy(command,"cp ");
+		strcat(command,state_file);
+		strcat(command," ");
+		strcat(command,casename);
+		strcat(command,".glm.state.");
+		strcat(command,strcat(curryearc,".nc"));
+		system(command);
+	}
+	
     return;
 }
 
@@ -7695,6 +7753,8 @@ void output_lu_nc(int curryear){
   size_t count[] = {1, NY, NX};
   double f_sbh[NY][NX],f_sbh2[NY][NX],f_vbh[NY][NX],f_vbh2[NY][NX],f_sbh3[NY][NX],curryeard;
 
+	/* for iesm this is writing the flows for the year prior to curryear */
+	
     /* dimension ids */
     int lat_dim;
     int lon_dim;
@@ -7788,7 +7848,7 @@ void output_lu_nc(int curryear){
 
     printf("output land change netcdf file \n");
  
-    sprintf(curryearc, "%d", curryear);
+    sprintf(curryearc, "%d", curryear-1);
     //jt fix the casename
     strcpy(lu_file,"test.glm.lu.");
     strcat(lu_file,strcat(curryearc,".nc"));
@@ -9081,13 +9141,13 @@ void alternative_smart_flow2(int k, int m, int it){
 	if(newdata[it].flowsc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
 	if(newdata[it].flowcs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
 	if(newdata[it].flowvs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu);newdata[it].flowcu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu);newdata[it].flowpu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu);newdata[it].flowvu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu);newdata[it].flowsu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc);newdata[it].flowuc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup);newdata[it].flowup[k][m] = ZEROVALUE;}
-	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus);newdata[it].flowus[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
+	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
 
 
   }
@@ -9098,6 +9158,8 @@ void alternative_smart_flow2(int k, int m, int it){
 }
 
 /********************************************************************/
+	/* adjusted to use fractional shifting cult map and to match GLM2 algorithm */
+	/* this also means that only cropland is subject to shifting cult */
 void adjust_smart_flow1(int k, int m, int it, int i){
 
   double vtotal=ZEROVALUE, stotal=ZEROVALUE, vstotal=ZEROVALUE;
@@ -9118,69 +9180,85 @@ void adjust_smart_flow1(int k, int m, int it, int i){
   past=newdata[it].p[k][m]-newdata[it].flowps[k][m]-newdata[it].flowpc[k][m]-newdata[it].flowpu[k][m];
 
  
-  if((crop+past) > ZEROVALUE){
+  //if((crop+past) > ZEROVALUE){
+	if((crop) > ZEROVALUE){
 
 
-    /* abandonment of crop of pasture */
+    /* abandonment of crop only */
 
-    /* best case method, desired abandonment = 1/15 per year */
-    /* determine time_k */
-    time_k=1.0/15.0;
-    flowcs_prime=crop*time_k; 
-    flowps_prime=past*time_k;
+    /* best case method, default abandonment = 1/15 per year */
+    /* when using shifting cultivation use the input fractions */
+	if(BEST_CASE_MIN_FLOWS_T5 || (rdata[i].smart_flow_option == 1 && rdata[i].adjust_smart_flow_option == 5)) {
+		time_k=dstatic[k][m].shiftcult;
+	}
+	else {
+    	time_k=1.0/15.0;
+	}
+	/* use minimum of reference crop area and current crop area to determine flow */
+		if(dstatic[k][m].ref_crop < crop) {
+			flowcs_prime=dstatic[k][m].ref_crop*time_k;
+		}
+		else {
+			flowcs_prime=crop*time_k;
+		}
+		
+    //flowps_prime=past*time_k;
+	// set this to zero so some lines below don't have to change
+	flowps_prime=0;
     //jt    printf("asf1 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
     //jt    printf("asf1 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
 
   
-  
+    // recall that thus function assumes primary land priority
     if((flowcs_prime+flowps_prime) <= vstotal){
 
-      if((flowcs_prime+flowps_prime) <= vtotal) {
+	  if(stotal < 10*crop*time_k) {
+			
+         if((flowcs_prime+flowps_prime) <= vtotal) {
+	        flowvc_prime=flowcs_prime;
+		    //flowvp_prime=flowps_prime;
+         }
+         else { /* not enough v, but enough v+s */
 
-	flowvc_prime=flowcs_prime;
-	flowvp_prime=flowps_prime;
-    
-      }
-      else { /* not enough v, but enough v+s */
-
-	flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
-	flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+	        flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
+	        //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+	        flowsc_prime=flowcs_prime-flowvc_prime;
+	        //flowsp_prime=flowps_prime-flowvp_prime;
 	
-	flowsc_prime=flowcs_prime-flowvc_prime;
-	flowsp_prime=flowps_prime-flowvp_prime;
-	
-      }
-
-    }
+         }
+      } // end if small s
+	  else { // large s - there will always be enough s here
+		  flowsc_prime=flowcs_prime;
+	  }
+	} // end it flow within v+s
     else{ /* not enough v+s, take all v+s (everything) that is possible */
 
       flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
-      flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+      //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
       
       flowsc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*stotal;
-      flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
-      
-
+      //flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
+		
       /* re-define desired abandonment (flowcs_prime and flowps_prime) to be what is available */
 
       flowcs_prime=flowvc_prime+flowsc_prime; 
-      flowps_prime=flowvp_prime+flowsp_prime;
+      //flowps_prime=flowvp_prime+flowsp_prime;
 
     }
 
     rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
     //jt    printf("asf1 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
-    rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
     rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
     rtdata[i].flowcs_prime+=flowcs_prime*garea[k][m]/1000./1000.;  
 
-    newdata[it].flowvp[k][m]+=flowvp_prime;
+    //newdata[it].flowvp[k][m]+=flowvp_prime;
     newdata[it].flowvc[k][m]+=flowvc_prime;
-    newdata[it].flowsp[k][m]+=flowsp_prime;
+    //newdata[it].flowsp[k][m]+=flowsp_prime;
     newdata[it].flowsc[k][m]+=flowsc_prime;
-    newdata[it].flowps[k][m]+=flowps_prime;
+    //newdata[it].flowps[k][m]+=flowps_prime;
     newdata[it].flowcs[k][m]+=flowcs_prime;
 
 
@@ -9193,6 +9271,7 @@ void adjust_smart_flow1(int k, int m, int it, int i){
   
 }
 /********************************************************************/
+	/* modify this for completeness, but it isn't called for shifting cultivation anymore because all shift cult priorities are primary */
 void adjust_smart_flow2(int k, int m, int it, int i){
 
   double vtotal=ZEROVALUE, stotal=ZEROVALUE, vstotal=ZEROVALUE;
@@ -9216,34 +9295,50 @@ void adjust_smart_flow2(int k, int m, int it, int i){
   past=newdata[it].p[k][m]-newdata[it].flowps[k][m]-newdata[it].flowpc[k][m]-newdata[it].flowpu[k][m];
 #endif
  
-  if((crop+past) > ZEROVALUE){
-
-    /* abandonment of crop of pasture */
-
-    /* best case method, desired abandonment = 1/15 per year */
-    /* determine time_k */
-    time_k=1.0/15.0;
-    flowcs_prime=crop*time_k; 
-    flowps_prime=past*time_k;
+	//if((crop+past) > ZEROVALUE){
+	if((crop) > ZEROVALUE){
+		
+		
+		/* abandonment of crop only */
+		
+		/* best case method, default abandonment = 1/15 per year */
+		/* when using shifting cultivation use the input fractions */
+		if(BEST_CASE_MIN_FLOWS_T5 || (rdata[i].smart_flow_option == 1 && rdata[i].adjust_smart_flow_option == 5)) {
+			time_k=dstatic[k][m].shiftcult;
+		}
+		else {
+			time_k=1.0/15.0;
+		}
+		/* use minimum of reference crop area and current crop area to determine flow */
+		if(dstatic[k][m].ref_crop < crop) {
+			flowcs_prime=dstatic[k][m].ref_crop*time_k;
+		}
+		else {
+			flowcs_prime=crop*time_k;
+		}
+		
+		//flowps_prime=past*time_k;
+		// set this to zero so some lines below don't have to change
+		flowps_prime=0;
     //jt    printf("asf2 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
     //jt    printf("asf2 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
 
-  
+    // recall that this function assumes secondary priority
     if((flowcs_prime+flowps_prime) <= vstotal){
 
       if((flowcs_prime+flowps_prime) <= stotal) {
 
 	flowsc_prime=flowcs_prime;
-	flowsp_prime=flowps_prime;
+	//flowsp_prime=flowps_prime;
 	//jt        printf("1 \n");
       }
       else { /* not enough s, but enough v+s */
 
 	flowsc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*stotal;
-	flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
+	//flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
 	
 	flowvc_prime=flowcs_prime-flowsc_prime;
-	flowvp_prime=flowps_prime-flowsp_prime;
+	//flowvp_prime=flowps_prime-flowsp_prime;
 	//jt        printf("2 \n");
 	
       }
@@ -9252,15 +9347,15 @@ void adjust_smart_flow2(int k, int m, int it, int i){
     else{ /* not enough v+s, take all v+s (everything) that is possible */
 
       flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
-      flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+      //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
       
       flowsc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*stotal;
-      flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;     
+      //flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
 
       /* re-define desired abandonment (flowcs_prime and flowps_prime) to be what is available */
 
       flowcs_prime=flowvc_prime+flowsc_prime; 
-      flowps_prime=flowvp_prime+flowsp_prime;
+      //flowps_prime=flowvp_prime+flowsp_prime;
       //jt      printf("3 \n");
 
       
@@ -9268,17 +9363,17 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 
     rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
     //jt    printf("asf2 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
-    rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
     rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
+    //rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
     rtdata[i].flowcs_prime+=flowcs_prime*garea[k][m]/1000./1000.; 
 
-    newdata[it].flowvp[k][m]+=flowvp_prime;
+    //newdata[it].flowvp[k][m]+=flowvp_prime;
     newdata[it].flowvc[k][m]+=flowvc_prime;
-    newdata[it].flowsp[k][m]+=flowsp_prime;
+    //newdata[it].flowsp[k][m]+=flowsp_prime;
     newdata[it].flowsc[k][m]+=flowsc_prime;
-    newdata[it].flowps[k][m]+=flowps_prime;
+    //newdata[it].flowps[k][m]+=flowps_prime;
     newdata[it].flowcs[k][m]+=flowcs_prime;
 
 
@@ -9937,13 +10032,13 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", ffname);
   }
 
-  printf("opening outfile outstat= %d\n",outstat);
+  printf("opening outfile outstat= %s\n",outstat);
 
   if ((outfile2=fopen("global.primeflow.txt",outstat))==NULL) {
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", "global.primeflow.txt");
   }
 
-  printf("opening outfile2 outstat= %d\n",outstat);
+  printf("opening outfile2 outstat= %s\n",outstat);
 
   it=0;
 
@@ -9951,7 +10046,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
     
   for (k=0;k<NY;k++){
     for (m=0;m<NX;m++){   
-      
+		
       
       if(dstatic[k][m].gcode > 0){ 		
 	
@@ -10216,17 +10311,18 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   strcat(ffname,".regional.test");
 
 
-  if(strcmp("tone",trun) == 0) 
-    //jt    outfile=fopen(ffname,"w");
-    if ((  outfile=fopen(ffname,"w"))==NULL) {
-      fprintf(stderr, "regional_tester: cannot open %s\n", ffname);
-    }
+	if(strcmp("tone",trun) == 0) {
+    	//jt    outfile=fopen(ffname,"w");
+    	if ((  outfile=fopen(ffname,"w"))==NULL) {
+      	fprintf(stderr, "regional_tester: cannot open %s\n", ffname);
+    	}
 
-  else
-    //jt    outfile=fopen(ffname,"a");
-    if ((  outfile=fopen(ffname,"a"))==NULL) {
-      fprintf(stderr, "regional_tester: cannot open %s\n", ffname);
-    }
+	} else {
+		//jt    outfile=fopen(ffname,"a");
+    	if ((  outfile=fopen(ffname,"a"))==NULL) {
+    	  fprintf(stderr, "regional_tester: cannot open %s\n", ffname);
+    	}
+	}
 
 
 
@@ -10925,17 +11021,18 @@ void loop_call_for_country_final_stats(int curryear){
   initialize_checker(country_code);
 
 
-  if((strcmp("tone",trun) == 0) && (istart == 0))
-    //jt    outfile=fopen("country.final.stats.txt","w");
+ if((strcmp("tone",trun) == 0) && (istart == 0)) {
+	//jt    outfile=fopen("country.final.stats.txt","w");
     if ((  outfile=fopen("country.final.stats.txt","w"))==NULL) {
       fprintf(stderr, "country_final_stats: cannot open %s\n", "country.final.stats.txt");
     }
 
-  else
-    //jt    outfile=fopen("country.final.stats.txt","a");  
-    if ((  outfile=fopen("country.final.stats.txt","a"))==NULL) {
-      fprintf(stderr, "country_final_stats: cannot open %s\n", "country.final.stats.txt");
-    }
+ } else {
+    	//jt    outfile=fopen("country.final.stats.txt","a");
+    	if ((  outfile=fopen("country.final.stats.txt","a"))==NULL) {
+    	  fprintf(stderr, "country_final_stats: cannot open %s\n", "country.final.stats.txt");
+    	}
+	}
 
 
   it=0;
@@ -12563,7 +12660,7 @@ ctdata[i].fh_vbh2+=flowvs_add*dstatic[k][m].vba*garea[k][m]/1000.;
 char * strcatjt(char *dest, const char *src) {
   if (strlen(src) + 1 >
       sizeof(dest) - strlen(dest))
-    err(1, "dest would be truncated");
+    fprintf(stderr, "dest would be truncated\n");
   (void)strncat(dest, src,sizeof(dest) - strlen(dest) - 1);
   return dest;
 }
@@ -12573,7 +12670,8 @@ int open2 (char *str1, char *str2, int flags, int mode)
   char *name = (char *) alloca (strlen (str1) + strlen (str2) + 1);
   strcpy (name, str1);
   strcat (name, str2);
-  return open (name, flags, mode);
+	return 1;
+  //return open(name, flags, mode);
 }
 /********************************************************************/
 void create_restart_inifile(int curryear)
@@ -12634,7 +12732,7 @@ void read_restart_pointer(void)
     $Id: iniparser.c,v 2.18 2008-01-03 18:35:39 ndevilla Exp $
     $Revision: 2.18 $
     $Date: 2008-01-03 18:35:39 $
-
+*/
 /*---------------------------- License ------------------------------------*/
 /*
     Copyright (c) 2000-2011 by Nicolas Devillard.

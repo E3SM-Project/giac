@@ -80,8 +80,8 @@ contains
     cdata%i(iac_cdatai_glm_ny) = iac_glm_ny
     cdata%i(iac_cdatai_glm_size) = iac_glm_nx * iac_glm_ny
 
-    ! Already allocated by gcam_init_mod
-    !allocate(glmi(iac_glmi_nflds,glm_data_size))
+    ! Already allocated by gcam_init_mod - I think.
+    allocate(glmi(iac_glmi_nflds,glm_data_size))
     allocate(glmi_wh(numglu))
     allocate(glmo(iac_glmo_nflds,glm_data_size))
 

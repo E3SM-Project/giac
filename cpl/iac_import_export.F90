@@ -57,8 +57,8 @@ contains
        ! Now loop over our global index...
        ! g=1,ngrid - one domain.
        do g=iac_ctl%begg,iac_ctl%endg
-          i=iac_ctl%lon(g)
-          j=iac_ctl%lat(g)  ! extract lat, lon indeces from g
+          i=iac_ctl%ilon(g)
+          j=iac_ctl%jlat(g)  ! extract lat, lon indeces from g
 
           ! i (lon) varies fastest, p slowest:
           ! n=i+nlon*(j-1)+nlat*nlon*(p-1)
@@ -100,8 +100,8 @@ contains
 
     ! g=1,ngrid - one domain.
     do g=iac_ctl%begg,iac_ctl%endg
-       i=iac_ctl%lon(g)
-       j=iac_ctl%lat(g)  ! extract lat, lon indeces from g
+       i=iac_ctl%ilon(g)
+       j=iac_ctl%jlat(g)  ! extract lat, lon indeces from g
 
        ! Co2flux to atm
        ! Convention has fluxes negative from lnd to atm, so we

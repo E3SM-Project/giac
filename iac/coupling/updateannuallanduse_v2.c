@@ -7,13 +7,16 @@
  	For iESM, the standalone code will not be compiled
  	Unused functions have been commented out
  	This update was formed by merging the standalone code (see below) with the original iESM file
- 	I removed timestamps from file names to be consistent with iESM
+ 	I removed timestamps from iESM file names to be consistent with iESM
  	I added a future/historical flag to the main function to automatically set the LUH read-in lengths for the standalone code
  	The harvest data are normalized to the beginning of the model year area, as was done in iESM - the original standalone code normalized harvest to end of year area
  
  	Note that land use areas are for the beginning of the labelled output year, and as such facilitate transitions during the model year, which is the previous year
  		and that the harvest areas stored in the output-year labelled files are also for the model year, which is the previous year
  		for example, 2014 harvest data are stored in the 2015 labelled file because these data are actually applied to the 2014 model year
+ 
+ 	Note that for the standalone version the paths to the files are hardcoded relative to the directory that this compiled program is in. The historical files are in
+ 		./historical_files and the future files are in ./future_files, with the output template and the potential veg file in ./
  
  this is the compile line on my machine:
  gcc -g -lnetcdf -L/usr/local/lib -I/usr/local/include -lm updateannuallanduse_v2.c -o ualu_v2
@@ -181,8 +184,10 @@
 #include <time.h>
 #include <netcdf.h>
 
+////////////////////////////////////////////////
 // use this to compile for standalone operation
 //#define STANDALONE 1
+///////////////////////////////////////////////
 
 // use this to output extra stuff to the terminal or to the log file (via printf statements)
 // in iESM, these statements are captured in a log file
@@ -2500,6 +2505,7 @@ copyplo(float array[MAXOUTPIX * MAXOUTLIN], int index, float plodata[][PLONFLDS]
 // the standalone version needs 'float** glmo' to compile, but I don't know if this will work for iESM
 // so only compile this function for the iESM function because it is not used in standalone
 #ifndef STANDALONE
+void
 copyglmo(float array[MAXOUTPIX * MAXOUTLIN], int index, float glmo[][GLMONFLDS]) {
 	
     float value;
@@ -5320,6 +5326,10 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	// some values that determine limits - so that changing them is done here
 	int min_year = 1850; 			// can't run with outyear prior to this value
 	int max_year = 2100;			// can't run with outyear after this values
+	// use 1849 model year for special run case to get updated initial files
+	// this means that output year is 1850
+	// this should be a single year run, or it could be a spinup-style run, as long as it doesn't think it is continuing to 1850 and beyond
+	int model_year_1849 = 1849;
 	// note that these two initial years assume that the luh data start in these same years in the respective files - this is checked below
 	int initial_hist_year = 1850;		// this is the initial model year for historical runs - used to get set up dynamic lut files and to calculate index for hurtt data
 	int initial_future_year = 2015;		// this is the initial model year for future runs - used to get set up dynamic lut files and to calculate index for hurtt data
@@ -5331,6 +5341,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	modyear = outyear - 1;
 	printf("outyear in updateannuallanduse = %li, and modyear = %li \n", outyear, modyear);
 	
+	// this allows model year 1849
 	if (outyear < min_year || outyear > max_year) {
 		printf("Invalid Year %li not in range %i - %i\n", outyear, min_year, max_year);
 		exit(0);
@@ -5348,15 +5359,15 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	system(msg);
 	
 	// output file base names for updated LUH-PFT data for mksrfdat - the output year and the creation date are appended
-	const char out_hist_land_filebase[] = "LUT_LUH2_historical_test";
-	const char out_future_land_filebase[] = "LUT_LUH2_SSP5_RCP85_test";
+	const char out_hist_land_filebase[] = "LUT_LUH2_historical";
+	const char out_future_land_filebase[] = "LUT_LUH2_SSP5_RCP85";
 	
 	// initial historic dynamic lut file names - so that changing them is done here
-	const char initial_hist_dyn_luh_file[] = "./historical_files/iESM_Ref_CropPast1850_c04022014.nc";
-	const char initial_hist_dyn_pft_file[] = "./historical_files/surfdata_360x720_mcrop1850_c04022014.nc";
+	const char initial_hist_dyn_luh_file[] = "./historical_files/iESM_Ref_CropPast1850_c10142019.nc";
+	const char initial_hist_dyn_pft_file[] = "./historical_files/surfdata_360x720_mcrop1850_c10142019.nc";
 	// initial future dynamic lut file names
-	const char initial_future_dyn_luh_file[] = "./future_files/iESM_Ref_CropPast2015_c07252019.nc";
-	const char initial_future_dyn_pft_file[] = "./future_files/surfdata_360x720_mcrop2015_c07252019.nc";
+	const char initial_future_dyn_luh_file[] = "./future_files/iESM_Ref_CropPast2015_c10142019.nc";
+	const char initial_future_dyn_pft_file[] = "./future_files/surfdata_360x720_mcrop2015_c10142019.nc";
 	
 	// input luh data file names
 	const char luh_hist_file[] = "./historical_files/iESM_Expt_rs_Ref_gfrac.nc";		// this is luh2 1850-2015 in luh format
@@ -5369,14 +5380,17 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	// reference files for historic dynamic calculations
 	// the dynamic files are used for future calculations with the previous year (modyear) as a reference
 	//    but the reference year and file can be changed in the code
-	const char luh_hist_ref_file[] = "./historical_files/iESM_Ref_CropPast2000_c03282014.nc";
+	// the crop-past file has been updated for LUH2
+	// the surfdata pft file is based on satellite data and remains valid
+	// these are the files that are copied to names without the time stamp for iESM
+	const char luh_hist_ref_file[] = "./historical_files/iESM_Ref_CropPast2000_c10142019.nc";
 	const char pft_hist_ref_file[] = "./historical_files/surfdata_360x720_mcrop2000_c03062014.nc";
 	// useful files
 	const char pot_veg_file[] = "./surfdata_360x720_potveg.nc";
 	
 	// create the dynamic crop/pasture file and the dynamic pft file for 1850 start
 	// label the file with the date
-	if (modyear == initial_hist_year) {
+	if (modyear == initial_hist_year || model_year_1849) {
 		printf("***************\n");
 		t = time(NULL);
 		tm = localtime(&t);
@@ -5418,6 +5432,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	}
 	
 	if (modyear < initial_future_year){
+		// this will get the 1850 data for an 1849 model run to generate updated initial files
 		hurttyear = outyear - initial_hist_year;	// use this line for historical simulations
 	}
 	else {
@@ -5435,7 +5450,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 			printf("LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
-		// check that the initial luh year matches the respective start year
+		// check that the initial luh year matches the respective initial year (1850 is still the initial year for 1849 run)
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_hist_year) {
 			printf("LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
@@ -5448,7 +5463,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 			printf("LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
-		// check that the initial luh year matches the respective start year
+		// check that the initial luh year matches the respective initial year
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_future_year) {
 			printf("LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
@@ -5477,7 +5492,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 		exit(0);
 	}
 	
-	if (modyear == initial_hist_year || initial_future_year) {
+	if (modyear == initial_hist_year || model_year_1849 || initial_future_year) {
 		// set the creation date if this is the first model year
 		t = time(NULL);
 		tm = localtime(&t);
@@ -5499,7 +5514,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 			printf("LUH harvest file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
-		// check that the initial luh harvest year matches the respective start year
+		// check that the initial luh harvest year matches the respective initial year (1850 is still the initial year for 1849 run)
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_hist_year) {
 			printf("LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
@@ -5515,7 +5530,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 		// check that the initial luh harvest year matches the respective start year
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_future_year) {
-			printf("LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
+			printf("LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
 			exit(0);
 		}
 	}
@@ -5558,13 +5573,13 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	// do this here because it doesn't depend on any processing
 	/* now write the output year glm crop and pasture and primary and secondary data to the dynamic pl hurtt file */
 	/* this function add a record to the time dimension */
-	sprintf(filenamestr, dyn_luh_file);
+	strcpy(filenamestr, dyn_luh_file);
 	if (opennetcdf(filenamestr) == 0) {
 		printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 		exit(0);
 	}
 
-	if (modyear == initial_hist_year || initial_future_year) {
+	if (modyear == initial_hist_year || model_year_1849 || initial_future_year) {
 		// set the creation date if this is the first model year
 		t = time(NULL);
 		tm = localtime(&t);
@@ -5642,13 +5657,20 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 	/* first need to read the previous year primary and secondary data to normalize the harvest area */
 	/* these data go into the prevprimary and prevsecondary arrays */
 	/* this could also be normalized by the outyear area, which is the area at the end of the harvest year */
+	// for an 1849 model year (1850 ouput year) ensure that 1850 data are read in
+	// 	because there are no 1849 data in these files and the harvest normalization is currently set to the previous year (output year minus 1)
 	strcpy(filenamestr, dyn_luh_file);
 	if (opennetcdf(filenamestr) == 0) {
 		printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 		exit(0);
 	}
-	readhurttdynprimary(modyear);
-	readhurttdynsecondary(modyear);
+	if (modyear == model_year_1849) {
+		readhurttdynprimary(initial_hist_year);
+		readhurttdynsecondary(initial_hist_year);
+	} else {
+		readhurttdynprimary(modyear);
+		readhurttdynsecondary(modyear);
+	}
 
 	if (closenetcdf(filenamestr) == 0) {                       
 		exit(0);
@@ -5775,7 +5797,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 		sprintf(filenamestr, "%s/%s_%i_%s.nc", out_dir, out_hist_land_filebase, *inyear, buf);  // use this naming structure for historical simulations
 	}
 	else {
-		sprintf(filenamestr, "%s/%s_%i_%s.nc", out_dir, out_hist_land_filebase, *inyear, buf); // use this naming structure for future simulations
+		sprintf(filenamestr, "%s/%s_%i_%s.nc", out_dir, out_future_land_filebase, *inyear, buf); // use this naming structure for future simulations
 	}
 	
 	sprintf(msg, "cp -f %s ", out_land_template_file);
@@ -5815,7 +5837,7 @@ updateannuallanduse_main(float glmo[][GLMONFLDS], float plodata[][PLONFLDS], int
 		exit(0);
 	}
 	
-	if (modyear == initial_hist_year || initial_future_year) {
+	if (modyear == initial_hist_year || model_year_1849 || initial_future_year) {
 		// set the creation date if this is the first model year
 		t = time(NULL);
 		tm = localtime(&t);
@@ -5875,7 +5897,7 @@ int main(int argc, char **argv) {
 	char out_dir[1000];
 	
 	if(argc < 2 || argc > 3){
-		printf("Usage:\nThere is one requried argument for output file years:\n\thistorical = 1851 to 2015\n\tfuture = 2016 to 2100\nand one optional argument for a full output path:\n\tthe default output path is ./output");
+		printf("Usage:\nThere is one requried argument for output file years:\n\t1850 = a single-year 1849 run\n\thistorical = 1851 to 2015\n\tfuture = 2016 to 2100\nand one optional argument for a full output path:\n\tthe default output path is ./output\n");
 		exit(0);
 	}
 	
@@ -5897,6 +5919,7 @@ int main(int argc, char **argv) {
     fprintf(stdout, "\nProgram started at %s\n", asctime(tm));
     
     // note that these input values are inyear/outyear, which is modelyear+1
+	// the second input is ISFUTURE, which = 1 for the future and 0 for historical and 1849
 	if (!strcmp(argv[1], "historical")){
     	for (i = 1851; i < 2016; i++) { // use this line for historical simulation
 			t = time(NULL);
@@ -5913,7 +5936,18 @@ int main(int argc, char **argv) {
 		
 			updateannuallanduse(&i, 1, out_dir);
 		}
-    }
+	} else if (!strcmp(argv[1], "1850")){
+		for (int i = 1850; i < 1851; i++) { // use this line for single-year 1849 run
+			t = time(NULL);
+			tm = localtime(&t);
+			fprintf(stdout, "\ninyear %i started at %s\n", i, asctime(tm));
+			
+			updateannuallanduse(&i, 0, out_dir);
+		}
+	} else {
+		printf("Usage:\nUse one of these three valid arguments for output file years:\n\t1850 = a single-year 1849 run\n\thistorical = 1851 to 2015\n\tfuture = 2016 to 2100\n");
+		exit(0);
+	}
     
     t = time(NULL);
     tm = localtime(&t);

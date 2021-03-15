@@ -44,7 +44,8 @@ contains
          elm_iac_carbon_scaling, iac_elm_co2_emissions, num_lat,&
          num_lon, num_pft, num_gcam_energy_regions,&
          num_gcam_land_regions, num_iac2elm_landtypes,&
-         num_emiss_sectors, num_emiss_regions
+         num_emiss_sectors, num_emiss_regions,&
+         gcam2glm_baselu, gcam2glm_basebiomass, gcam2glm_glumap
 
     nlfilename_iac = "gcam_in"
 

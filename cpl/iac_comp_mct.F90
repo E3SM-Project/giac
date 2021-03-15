@@ -212,7 +212,10 @@ contains
     ! arrays. 
     call gcam_init_mod(iac2gcam_data,gcam_emis_data)
     call gcam2glm_init_mod()
-    call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
+    call glm_init_mod(glmi_data, glm_wh_data, glm2lnd_data)
+    ! Was:
+    !call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
+    ! But glm_init_mod calls it glmi, so...
 
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begg,endg domain

@@ -15,6 +15,7 @@ Module gcam2glm_mod
   use iac_data_mod, only : cdata => gdata, EClock => GClock
   use iac_data_mod
   use shr_file_mod, only: shr_file_getunit, shr_file_freeunit
+  use gcam_var_mod
   use shr_cal_mod
   use shr_sys_mod
   use shr_kind_mod, only : r8 => shr_kind_r8,r4 => shr_kind_r4
@@ -34,10 +35,11 @@ Module gcam2glm_mod
 
 ! !PUBLIC DATA MEMBERS: 
     integer, parameter :: kdp = selected_real_kind(15)
-    real(r8), dimension(:, :), allocatable :: hydeGCROP2005,&
-         hydeGPAST2005,   &
-         hydeGWH2005,     &
-         hydeGOTHR2005,   &
+    real(r8), dimension(:, :), allocatable :: hydeGCROP2015,&
+         hydeGPAST2015,   &
+         hydeGWH2015,     &
+         hydeGOTHR2015,   &
+		 hydeGSECD2015,	  &
          cellarea,        &
          cellarea_forest, &
          cellarea_nonforest,&
@@ -62,7 +64,7 @@ Module gcam2glm_mod
          cumsum_sorted_farea
 
     real(r8), dimension(:, :), allocatable,save :: gcam_wh, &
-         pctland_in2005,glu_weights_rev,sortsitesup,sortsitesdn
+         pctland_in2015,glu_weights_rev,sortsitesup,sortsitesdn
 
     integer, dimension(:,:), allocatable      ::  rglus
     real(r8), dimension(:, :, :), allocatable,save :: glm_crop, &
@@ -130,11 +132,10 @@ contains
     logical :: initial_run
     integer :: iu,iun,tmpyears(2)
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
-    character(len=512) :: gcam2glm_basecrop
-    character(len=512) :: gcam2glm_basepast
-    character(len=512) :: gcam2glm_baseothr
-    character(len=512) :: gcam2glm_glumap
-    character(len=512) :: gcam2glm_basebiomass
+
+    !character(len=512) :: gcam2glm_baselu
+    !character(len=512) :: gcam2glm_glumap
+    !character(len=512) :: gcam2glm_basebiomass
 
     character(len=512) :: dum
 
@@ -151,15 +152,19 @@ contains
 #endif
     restart_run  = cdata%l(iac_cdatal_rest)
     !gcamsize = cdata%i(iac_cdatai_gcam_naez)*cdata%i(iac_cdatai_gcam_nreg)
-    nregions = cdata%i(iac_cdatai_gcam_nreg)
-    nglu = cdata%i(iac_cdatai_gcam_nglu) 
+    !nregions = cdata%i(iac_cdatai_gcam_nreg)
+    !nglu = cdata%i(iac_cdatai_gcam_nglu) 
+
+    nregions=num_gcam_energy_regions
+    nglu=num_gcam_land_regions
+
     gcamsize=nglu
     initial_run = cdata%l(iac_cdatal_initrun)
-    gcam2glm_basecrop = trim(cdata%c(iac_cdatac_gcam2glm_basecrop))
-    gcam2glm_basepast = trim(cdata%c(iac_cdatac_gcam2glm_basepast))
-    gcam2glm_baseothr = trim(cdata%c(iac_cdatac_gcam2glm_baseothr))
-    gcam2glm_glumap   = trim(cdata%c(iac_cdatac_gcam2glm_glumap))
-    gcam2glm_basebiomass = trim(cdata%c(iac_cdatac_gcam2glm_basebiomass))
+
+    ! namelist vars in gcam_var_mod now
+    !gcam2glm_baselu = trim(cdata%c(iac_cdatac_gcam2glm_baselu))
+    !gcam2glm_glumap   = trim(cdata%c(iac_cdatac_gcam2glm_glumap))
+    !gcam2glm_basebiomass = trim(cdata%c(iac_cdatac_gcam2glm_basebiomass))
 
 ! initialize two level time indexes 
 
@@ -167,11 +172,11 @@ contains
     np1=2
 
 ! Variable to keep track of when to calculate the next GCAM time step.
-! Initialize this with the year passed in via EClock ... 2005 for now
+! Initialize this with the year 2015 data - from the single glm initial file
 
-    status= nf90_open(gcam2glm_basecrop,nf90_nowrite,ncid)
+    status= nf90_open(gcam2glm_baselu,nf90_nowrite,ncid)
     if(status /= nf90_NoErr) call handle_err(status)
-    status = nf90_inq_varid(ncid, "cropland", GCROPVarId)
+    status = nf90_inq_varid(ncid, "gcrop", GCROPVarId)
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_inquire_variable(ncid, GCROPVarId, dimids = dimIDs)
     if(status /= nf90_NoErr) call handle_err(status)
@@ -195,10 +200,11 @@ contains
     status = nf90_get_var(ncid,varid,lat)
     if(status /= nf90_NoErr) call handle_err(status)
     
-    allocate(hydeGCROP2005(numLons, numLats))
-    allocate(hydeGPAST2005(numLons, numLats))
-    allocate(hydeGOTHR2005(numLons, numLats))
-    allocate(hydeGWH2005(numLons, numLats))
+    allocate(hydeGCROP2015(numLons, numLats))
+    allocate(hydeGPAST2015(numLons, numLats))
+    allocate(hydeGOTHR2015(numLons, numLats))
+	allocate(hydeGSECD2015(numLons, numLats))
+    allocate(hydeGWH2015(numLons, numLats))
     allocate(cellarea(numLons, numLats))
     allocate(cellarea_forest(numLons, numLats))
     allocate(cellarea_nonforest(numLons, numLats))
@@ -214,7 +220,7 @@ contains
     allocate(pot_veg(numLons, numLats))
     allocate(pot_veg_rev(numLats, numLons))
     allocate(crop_area(numLons, numLats))
-    allocate(pctland_in2005(numLons, numLats))
+    allocate(pctland_in2015(numLons, numLats))
     allocate(sortsitesup(numLons, numLats))
     allocate(sortsitesdn(numLons, numLats))
     allocate(datearr(numTimes))
@@ -241,14 +247,15 @@ contains
     glm_past=iac_spval
     avail_land0=iac_spval
     avail_landA=iac_spval
-    hydeGCROP2005=iac_spval
-    hydeGPAST2005=iac_spval
-    hydeGOTHR2005=iac_spval
-    hydeGWH2005=iac_spval
+    hydeGCROP2015=iac_spval
+    hydeGPAST2015=iac_spval
+    hydeGOTHR2015=iac_spval
+    hydeGSECD2015=iac_spval
+    hydeGWH2015=iac_spval
     cellarea=iac_spval
     cellarea_forest=iac_spval
     cellarea_nonforest=iac_spval
-    pctland_in2005=iac_spval
+    pctland_in2015=iac_spval
     datearr=iac_spval
 
 
@@ -260,28 +267,27 @@ contains
     count3(1)=numLons
     start3(2)=1
     count3(2)=numLats
-    tmp=MAXLOC(datearr,mask=datearr.EQ.2005)
+    tmp=MAXLOC(datearr,mask=datearr.EQ.2015)
     start3(3)=tmp(1)
     count3(3)=1
     start2=1
     count2(1)=numLons
     count2(2)=numLats
-! read in hyde data
+! read in hyde data - now from the single glm init file
 
-    status = nf90_inq_varid(ncid,'cropland',varid)
-    status = nf90_get_var(ncid,varid,hydeGCROP2005,start3,count3)
-    status = nf90_close(ncid)
-    status = nf90_open(gcam2glm_basepast,nf90_nowrite,ncid)
-    status = nf90_inq_varid(ncid,'pasture',varid)
-    status = nf90_get_var(ncid,varid,hydeGPAST2005,start3,count3)
-    status = nf90_close(ncid)
-
-    status = nf90_open(gcam2glm_baseothr,nf90_nowrite,ncid)
-    status = nf90_inq_varid(ncid,'primary',varid)
-    status = nf90_get_var(ncid,varid,hydeGOTHR2005,start3,count3)
+    status = nf90_inq_varid(ncid,'gcrop',varid)
+    status = nf90_get_var(ncid,varid,hydeGCROP2015,start3,count3)
+    status = nf90_inq_varid(ncid,'gpast',varid)
+    status = nf90_get_var(ncid,varid,hydeGPAST2015,start3,count3)
+! need to add together the primary (gothr) and secondary (gsecd) from the initial file to get total other
+    status = nf90_inq_varid(ncid,'gothr',varid)
+    status = nf90_get_var(ncid,varid,hydeGOTHR2015,start3,count3)
+    status = nf90_inq_varid(ncid,'gsecd',varid)
+    status = nf90_get_var(ncid,varid,hydeGSECD2015,start3,count3)
     status = nf90_inq_varid(ncid,'cell_area',varid)
     status = nf90_get_var(ncid,varid,cellarea,start3,count3)
     status = nf90_close(ncid)
+    hydeGOTHR2015 = hydeGOTHR2015 + hydeGSECD2015
     cellarea=cellarea/1.e6
 
     status = nf90_open(gcam2glm_basebiomass,nf90_nowrite,ncid)
@@ -314,7 +320,7 @@ contains
           exit
        endif
 
-       ! Need to find the lon and lat index for these x,y
+       ! Need to find the lon and lat index for these x,y (which are lon,lat values at center of cell)
        ! Probably should do some idiot checking to see if 
        !lonx=findloc(lon,x)
        !laty=findloc(lat,y)
@@ -338,7 +344,7 @@ contains
           write(iu,*) subname,' ERROR: multiple weights for ',g,lonx,latx
           call shr_sys_abort(subname//' ERROR: weights file')
        endif
-       glu_weights(g,lon,lat) = weight
+       glu_weights(g,lonx,latx) = weight
 
        ! Find region of glus for each r
        if (g .lt. rgmin(r)) rgmin(r) = g
@@ -351,12 +357,12 @@ contains
     cellarea_nonforest(:,:)=0.
     cellarea_forest(:,:)=0.
     pot_veg=pot_veg*0.75
-    pctland_in2005(:,:) = 0.    
-    pctland_in2005=hydeGCROP2005+hydeGPAST2005+hydeGOTHR2005
+    pctland_in2015(:,:) = 0.
+    pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
 
     if (.not.restart_run) then
-       glm_crop(:,:,1)=hydeGCROP2005;
-       glm_past(:,:,1)=hydeGPAST2005;
+       glm_crop(:,:,1)=hydeGCROP2015;
+       glm_past(:,:,1)=hydeGPAST2015;
     else
        ! read restart and set crop and past
        
@@ -532,12 +538,12 @@ contains
     !   glm_crop(:,:,np1)=0
     !   glm_past(:,:,np1)=0
     !elsewhere
-    !   glm_crop(:,:,np1)=hydeGCROP2005;
-    !   glm_past(:,:,np1)=hydeGPAST2005;
+    !   glm_crop(:,:,np1)=hydeGCROP2015;
+    !   glm_past(:,:,np1)=hydeGPAST2015;
     !end where
 
-    glm_crop(:,:,np1)=hydeGCROP2005;
-    glm_past(:,:,np1)=hydeGPAST2005;
+    glm_crop(:,:,np1)=hydeGCROP2015;
+    glm_past(:,:,np1)=hydeGPAST2015;
 
     do g=1,nglu
        where (glm_crop(:,:,np1) == 0 .or. glu_weights(g,:,:) > 0)
@@ -567,16 +573,12 @@ contains
     write(6,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
 #endif     
     ! Unpack gcamo field
-    ! Copy previous values to second slot
-    gcam_crop(:,1) = gcam_crop(:,0)
-    gcam_past(:,1) = gcam_past(:,0)
-    gcam_wh(:,1) = gcam_wh(:,0)
-    gcam_forest_area(:,1) = gcam_forest_area(:,1)
-
-    gcam_crop(:,0) = gcamo(iac_gcamo_crop,:)
-    gcam_past(:,0) = gcamo(iac_gcamo_pasture,:)
-    gcam_wh(:,0) = gcamo(iac_gcamo_woodharv,:)
-    gcam_forest_area(:,0) = gcamo(iac_gcamo_forest,:)
+    ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
+    ! move the next field to the previous field at end of this function
+    gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
+    gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
+    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
+    gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
 
 #ifdef DEBUG
     write(iu,*) subname,' year1 year2 ',year1,year2
@@ -642,8 +644,8 @@ contains
        crop_nfarea =sum(glm_crop(:,:,n)*cellarea_nonforest)
        past_farea =sum(glm_past(:,:,n)*cellarea_forest)
        past_nfarea =sum(glm_past(:,:,n)*cellarea_nonforest)
-       GLM_nfarea = sum((pctland_in2005 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_nonforest)
-       GLM_farea = sum((pctland_in2005 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_forest)
+       GLM_nfarea = sum((pctland_in2015 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_nonforest)
+       GLM_farea = sum((pctland_in2015 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_forest)
        totrglus=sum(rglus)
        if (allocated(v1u)) deallocate(v1u)
        if (allocated(v2u)) deallocate(v2u)
@@ -851,7 +853,7 @@ contains
        ! crop_pos_nf
        avail_land0 = 0
        where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_crop(:,:,np1)>0.)
-          avail_land0=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+          avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        endwhere
        sumavail_land0=sum(avail_land0)
 
@@ -868,7 +870,7 @@ contains
        else
           avail_landA = 0.
           where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
-             avail_landA=(pctland_in2005 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+             avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
           if (crop_pos_nf - sumavail_landA < 1e-6) then
@@ -889,7 +891,7 @@ contains
        ! past_pos_nf
        avail_land0 = 0
        where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_past(:,:,np1)>0.)
-          avail_land0=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+          avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        end where
        sumavail_land0=sum(avail_land0)
        if ( sumavail_land0 >= past_pos_nf .or. abs(past_pos_nf)<=1e-6) then
@@ -905,7 +907,7 @@ contains
        else
           avail_landA = 0
           where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
-             avail_landA=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+             avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
           if ( sumavail_landA >= past_pos_nf) then
@@ -934,7 +936,7 @@ contains
        ! crop_pos_f
        avail_land0 = 0
        where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_crop(:,:,np1)>0.)
-          avail_land0=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
+          avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
        end where
        sumavail_land0=sum(avail_land0)
        if (abs(crop_pos_f)>1e-6) then
@@ -969,7 +971,7 @@ contains
           else
              avail_landA = 0.
              where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
-                avail_landA=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
+                avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
              end where
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >=crop_pos_f) then
@@ -1017,7 +1019,7 @@ contains
        ! past_pos_f
        avail_land0 = 0.
        where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_past(:,:,np1)>0.)
-          avail_land0=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
+          avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
        end where
        sumavail_land0=sum(avail_land0)
        if (abs(past_pos_f)>1e-6) then 
@@ -1053,7 +1055,7 @@ contains
           else
              avail_landA = 0.
              where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
-                avail_landA=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
+                avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
              end where
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >= past_pos_f) then 
@@ -1144,8 +1146,8 @@ contains
 
              ! May need to zero-init all these each loop, becasue we
              ! now have variable nglu per region.
-             avail_farea(g1) = sum((pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
-             avail_nfarea(g1) = sum((pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest)
+             avail_farea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
+             avail_nfarea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest)
              avail_ag_farea(g1) = sum((glm_crop(:,:,np1)+glm_past(:,:,np1))*cellarea_forest)
              reassign_ag(g1) = min(avail_ag_farea(aez), avail_nfarea(aez), regional_farea_needed)
              unmet_aez_farea(g1) = regional_farea_needed - reassign_ag(g1)
@@ -1284,7 +1286,7 @@ contains
                 avail_land0 = 0.
                 
                 where ( aez_regions .EQ. r .and. aez_zones .EQ. z.and.(glm_crop(:,:,np1)>0..or.glm_past(:,:,np1)>0.))
-                   avail_land0=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+                   avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
                 end where
                 sumavail_land0=sum(avail_land0)
                 if (sumavail_land0 >=reassign_ag(z)) then 
@@ -1300,7 +1302,7 @@ contains
                 else
                    avail_landA = 0.
                    where ( aez_regions .EQ. r .and. aez_zones .EQ. z)
-                      avail_landA=(pctland_in2005-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+                      avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
                    end where
                    sumavail_landA=sum(avail_landA)
                    if (reassign_ag(z) > sumavail_landA) then 
@@ -1364,7 +1366,7 @@ contains
 ! use eclock year year for interpolating crop past and othr
     glm_crop_ann(:,:)=glm_crop(:,:,n)*fact1+glm_crop(:,:,np1)*fact2
     glm_past_ann(:,:)=glm_past(:,:,n)*fact1+glm_past(:,:,np1)*fact2
-    glm_othr_ann(:,:)=pctland_in2005-glm_past_ann-glm_crop_ann
+    glm_othr_ann(:,:)=pctland_in2015-glm_past_ann-glm_crop_ann
 
 ! use previous year for fractions fact1 and fact2 for woodharvest
     glm_wh_ann(:)=gcam_wh(:,n)*fact1yrm1+gcam_wh(:,np1)*fact2yrm1
@@ -1416,10 +1418,12 @@ contains
 !
 ! If we are at the boundary year of the gcam data. Need to move np1 info
 ! into timelevel n to calculate the next set of years.
-!
+! this should always be true now that gcam is at annual time step
     if (eclockyr==year2) then 
        glm_crop(:,:,n)=glm_crop(:,:,np1)
        glm_past(:,:,n)=glm_past(:,:,np1)
+       gcam_wh(:,n)=gcam_wh(:,np1)
+       gcam_forest_area(:,n)=gcam_forest_area(:,np1)
     end if
 
     ! lets write a restart every time this routine is called
@@ -1556,10 +1560,11 @@ contains
 !    iu  = nint(cdata(iac_cdata_logunit))
 !    write(iu,*) trim(subname)
 
-    deallocate(hydeGCROP2005)
-    deallocate(hydeGPAST2005)
-    deallocate(hydeGOTHR2005)
-    deallocate(hydeGWH2005)
+    deallocate(hydeGCROP2015)
+    deallocate(hydeGPAST2015)
+    deallocate(hydeGOTHR2015)
+    deallocate(hydeGSECD2015)
+    deallocate(hydeGWH2015)
     deallocate(cellarea)
     deallocate(cellarea_forest)
     deallocate(cellarea_nonforest)
@@ -1575,7 +1580,7 @@ contains
     deallocate(pot_veg)
     deallocate(pot_veg_rev)
     deallocate(crop_area)
-    deallocate(pctland_in2005)
+    deallocate(pctland_in2015)
     deallocate(sortsitesup)
     deallocate(sortsitesdn)
     deallocate(rglus)

@@ -56,6 +56,10 @@ contains
 ! !USES:
     !use gcam_var, only : NLFilename_in
     use iac_data_mod
+
+    ! To null-terminate the strings we pass into C++
+    use iso_c_binding
+
     implicit none
 
 ! !ARGUMENTS:
@@ -65,7 +69,7 @@ contains
 ! !LOCAL VARIABLES:
     character(len=*),parameter :: subname='(gcam_init_mod)'
     character(len=128) :: casename
-    integer      :: i, unitn, ier
+    integer      :: i, unitn, ier, len
     logical      :: lexist
     character(len=128) :: nlfilename_in
 
@@ -95,9 +99,30 @@ contains
          trim(gcam2elm_co2_mapping_file),&
          trim(gcam2elm_luc_mapping_file), & 
          trim(gcam2elm_woodharvest_mapping_file)
-         
-    call initcGCAM(case_name, gcam_config, gcam2elm_co2_mapping_file,&
-         gcam2elm_luc_mapping_file, gcam2elm_woodharvest_mapping_file)
+
+    ! Null terminate
+    len = len_trim(case_name)
+    case_name(len+1:len+1) = c_null_char
+    len = len_trim(gcam_config)
+    gcam_config(len+1:len+1) = c_null_char
+    len = len_trim(gcam2elm_co2_mapping_file)
+    gcam2elm_co2_mapping_file(len+1:len+1) = c_null_char
+    len = len_trim(gcam2elm_luc_mapping_file)
+    gcam2elm_luc_mapping_file(len+1:len+1) = c_null_char
+    len = len_trim(gcam2elm_woodharvest_mapping_file)
+    gcam2elm_woodharvest_mapping_file(len+1:len+1) = c_null_char
+
+    call initcGCAM(trim(case_name), &
+         trim(gcam_config),&
+         trim(gcam2elm_co2_mapping_file),&
+         trim(gcam2elm_luc_mapping_file),&
+         trim(gcam2elm_woodharvest_mapping_file))
+
+    !call initcGCAM(trim(case_name) + c_null_char, &
+    !     trim(gcam_config) + c_null_char,&
+    !     trim(gcam2elm_co2_mapping_file) + c_null_char,&
+    !     trim(gcam2elm_luc_mapping_file) + c_null_char,&
+    !     trim(gcam2elm_woodharvest_mapping_file)+c_null_char)
     
   end subroutine gcam_init_mod
 
