@@ -20,7 +20,7 @@
 #define NCCODE 192       /* number of countries 192 */
 #define NEWNT 2         /* 102, 62, or 32 */   //jt add
 #define NPHB 50   /* filelength of probability of harvest given biomass */
-#define NREG 31
+#define NREG 32
 #define NAEZ 37				// this is the current max glu per region for allocation
 #define NAEZ_ORIG 18		// this is to deal with existing woodharvest files for standalone glm
 #define NX 720           /* 360 or 720 */
@@ -696,9 +696,8 @@ void initialize(){
     printf("read in restart data... %s\n",restart_filename);
     strcpy(new_path,restart_filename); 
   }else{
-    //    strcpy(new_path,PATH1); 
-    printf("read in initial data... %s\n",new_path);
     strcpy(new_path,updated_initial_state);
+    printf("read in initial data... %s\n",new_path);
   } 
 
   start[0]=start[1]=start[2]=0;
@@ -754,10 +753,14 @@ void initialize(){
 	check_err(status,__LINE__,__FILE__);
 	status = nc_inq_varid (ncid_state, "gcrop", &varidrst_crop);
 	check_err(status,__LINE__,__FILE__);
+
+	count[0]=count[1]=count[2]=1;
 	
 	for (k=0;k<NY;k++){
 		for (m=0;m<NX;m++){
-			status = nc_get_vara_double(ncid_state, varidrst_crop, &start[0], &count[0], &dstatic[k][m].ref_crop);
+		  start[1]=k;
+		  start[2]=m;
+			status = nc_get_vara_double(ncid_state, varidrst_crop, start, count, &dstatic[k][m].ref_crop);
 			check_err(status,__LINE__,__FILE__);
 			dstatic[k][m].ref_crop=fround(dstatic[k][m].ref_crop,6);
 		}
