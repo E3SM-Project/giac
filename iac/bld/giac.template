@@ -41,7 +41,7 @@ if ($LND_GRID =~ 0.9x1.25* ) then
   # this is for 1850 start
   #set mksurfout_init = "surfdata.pftdyn_192x288_iESM112_simyear1850_c04232014.nc"
   # this is an older 2005 file, probably need a new one; the original is surfdata.pftdyn_192x288_iESM112_simyear2005_FC12Hist_c05292014
-  set mksurfout_init = "surfdata.pftdyn_0.9x1.25_simyr2005_Expt1.2_c130808.nc"
+  set mksurfout_init = "landuse.timeseries_0.9x1.25_HIST_simyr2015_c201021.nc"
   set gcam2glm_baselu = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/initial_state_LUH2_2015_v3.nc"
   set gcam2glm_basebiomass = "iac/giac/glm/inputs/vba_LUH1format.nc"
   set gcam2glm_glumap = "iac/giac/glm/inputs/gcam2glm_mapping.csv"
