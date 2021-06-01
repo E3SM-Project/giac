@@ -370,7 +370,7 @@ subroutine mkpft(ldomain, mapfname, fpft, firrig, ndiag, &
         do m = 0,numpft
            wst_sum = wst_sum + pctpft_o(no,m)
         enddo
-        if (abs(wst_sum-100.) > 0.000001_r8) then
+        if (abs(wst_sum-100.) > 0.00001_r8) then
            write (6,*) 'MKPFT error: pft = ', &
                 (pctpft_o(no,m), m = 0, numpft), &
                 ' do not sum to 100. at no = ',no,' but to ', wst_sum
