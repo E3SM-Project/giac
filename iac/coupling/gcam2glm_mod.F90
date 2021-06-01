@@ -46,8 +46,6 @@ Module gcam2glm_mod
          glm_crop_ann,    &
          glm_past_ann,    &
          glm_othr_ann,    &
-         aez_regions,     &
-         aez_zones,       &
          fnfforest,       &
          fnfnonforest,    &
          pot_veg,         &
@@ -206,8 +204,6 @@ contains
     allocate(glm_othr_ann(numLons, numLats))
     allocate(cumsum_sorted_farea(numLons*numLats))
     allocate(glm_wh_ann(nglu))
-    allocate(aez_regions(numLons, numLats))
-    allocate(aez_zones(numLons, numLats))
     allocate(fnfforest(numLons, numLats))
     allocate(fnfnonforest(numLons, numLats))
     allocate(pot_veg(numLons, numLats))
@@ -291,13 +287,6 @@ contains
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_close(ncid)
     if(status /= nf90_NoErr) call handle_err(status)
-
-    !status = nf90_open(gcam2glm_aezmap,nf90_nowrite,ncid)
-    !status = nf90_inq_varid(ncid,'aez_regions',varid)
-    !status = nf90_get_var(ncid,varid,aez_regions,start2,count2)
-    !status = nf90_inq_varid(ncid,'aez_zones',varid)
-    !status = nf90_get_var(ncid,varid,aez_zones,start2,count2)
-    !status = nf90_close(ncid)
 
     ! Read in glumap csv file
     glu_weights=0.
@@ -1597,8 +1586,6 @@ contains
     deallocate(glm_othr_ann)
     deallocate(cumsum_sorted_farea)
     deallocate(glm_wh_ann)
-    deallocate(aez_regions)
-    deallocate(aez_zones)
     deallocate(fnfforest)
     deallocate(fnfnonforest)
     deallocate(pot_veg)
