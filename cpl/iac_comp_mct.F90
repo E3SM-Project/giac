@@ -21,10 +21,10 @@ module iac_comp_mct
   use iac_data_mod        ! including gdata, GClock
   use iac_init_mod
   use iac_import_export
-  !use iac2gcam_mod
   use gcam_comp_mod
   use glm_comp_mod
   use gcam2glm_mod
+  use glm2iac_mod
   use gcam_var_mod        , only : gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
@@ -49,15 +49,10 @@ module iac_comp_mct
 ! I'm naming these with a _data suffix to differentiate between these
   ! and the lnd2iac_vars, which are AVects.
 
-  real*8, pointer :: lnd2iac_data(:,:)
-  real*8, pointer :: iac2gcam_data(:,:)
-  real*8, pointer :: gcam2glm_data(:,:)  ! gcam output for gcam
+  real*8, pointer :: gcam2glm_data(:,:)  ! gcam output for glm, set by gcam, passed to gcam2glm
   real*8, pointer :: gcam_emis_data(:,:) ! co2 flux output for atm
-  real*8, pointer :: glm2atm_data(:,:)
   real*8, pointer :: glmi_data(:,:)      ! glm input, converted from gcam2glm_data
-  real*8, pointer :: glmo_data(:,:)      ! glm output
-  real*8, pointer :: glm2lnd_data(:,:)   ! or maybe this is glm output
-  real(r8), pointer :: glm_data(:,:)
+  real*8, pointer :: glm2lnd_data(:,:)   ! This is used for glm output, but it is called glmo in subroutines that use it
   real*8, pointer :: glm_wh_data(:)
 
   !
@@ -210,12 +205,10 @@ contains
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 
-    call gcam_init_mod(iac2gcam_data,gcam_emis_data)
+    call gcam_init_mod(gcam2glm_data,gcam_emis_data)
     call gcam2glm_init_mod()
     call glm_init_mod(glmi_data, glm_wh_data, glm2lnd_data)
-    ! Was:
-    !call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
-    ! But glm_init_mod calls it glmi, so...
+    call glm2iac_init_mod(glm2lnd_data)
 
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begg,endg domain
@@ -376,11 +369,14 @@ contains
     call gcam_run_mod(gcam2glm_data, gcam_emis_data)
 
     ! Set up to run glm
-    call gcam2glm_run_mod(gcam2glm_data, glm_data, glm_wh_data)
+    call gcam2glm_run_mod(gcam2glm_data, glmi_data, glm_wh_data)
 
     ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod(glm_data, glm_wh_data, glm2lnd_data)
+    call glm_run_mod(glmi_data, glm_wh_data, glm2lnd_data)
     
+    ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
+    call glm2iac_run_mod(glm2lnd_data)
+
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock
     ! Again, may need time manager module with these kind of functions
@@ -416,8 +412,9 @@ contains
     type(mct_aVect)  , intent(inout) :: z2x_z     ! Export state from iac model
     !-----------------------------------------------------
 
-    ! fill this in
-    ! For now, no cleanup - we'll see later on
+    ! KVC: do we need to call more finalize subroutines?
+    call gcam_final_mod()
+    call gcam2glm_final_mod()
   end subroutine iac_final_mct
 
 !================================================================================
