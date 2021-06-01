@@ -14,6 +14,7 @@ Module glm_comp_mod
 
   use iac_data_mod, only : cdata => gdata, EClock => GClock
   use iac_data_mod
+  use gcam_var_mod
 
   implicit none
   SAVE
@@ -52,6 +53,7 @@ contains
 ! Initialize interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -70,8 +72,8 @@ contains
 !-----------------------------------------------------------------------
 
     iu  = cdata%i(iac_cdatai_logunit)
-    numreg = cdata%i(iac_cdatai_gcam_nreg)
-    numglu = cdata%i(iac_cdatai_gcam_nglu)
+    numreg = num_gcam_energy_regions
+    numglu = num_gcam_land_regions
 
 
     cdata%l(iac_cdatal_glm_present) = .true.
