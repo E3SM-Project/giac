@@ -446,7 +446,7 @@ contains
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
     integer :: row,g,t,y
     integer :: iu,iun,iyr
-    integer :: ymd, tod, dt,naez,nreg,ii,ntime,year,mon,day
+    integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
     logical :: restart_now,gcam_alarm
     real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
     real(r8)  :: gcam_crop_tmp(2,18,14),gcam_past_tmp(2,18,14),gcam_forest_area_tmp(2,18,14)
@@ -488,7 +488,6 @@ contains
     
     nglu=num_gcam_land_regions
     nreg=num_gcam_energy_regions
-    ntime=cdata%i(iac_cdatai_gcamo_ntime)
 
     ! Maxiumum number of glus in a region
     max_nglu=cdata%i(iac_cdatai_gcam_max_nglu)
