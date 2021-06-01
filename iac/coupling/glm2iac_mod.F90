@@ -12,7 +12,8 @@ Module glm2iac_mod
 !
 ! !USES:
 
-  use iac_data_mod
+  use iac_data_mod, only : cdata => gdata, EClock => GClock
+  use gcam_var_mod
   use shr_cal_mod
   use netcdf
 
@@ -49,19 +50,17 @@ contains
 ! !IROUTINE: glm2iac_init_mod
 
 ! !INTERFACE:
-  subroutine glm2iac_init_mod( EClock, cdata, glmo, iaci)
+  subroutine glm2iac_init_mod( glmo )
 
 ! !DESCRIPTION:
 ! Initialize interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
     real*8, pointer :: glmo(:,:)
-    real*8, pointer :: iaci(:,:)
 
 ! !LOCAL VARIABLES:
 
@@ -96,7 +95,7 @@ contains
 ! !IROUTINE: glm2iac_run_mod
 
 ! !INTERFACE:
-  subroutine glm2iac_run_mod( EClock, cdata, glmo, iaci)
+  subroutine glm2iac_run_mod( glmo )
 
 ! !DESCRIPTION:
 ! Run interface for glm
@@ -106,10 +105,7 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    integer, pointer :: EClock(:)
-    type(iac_cdata_type) :: cdata
     real*8, pointer :: glmo(:,:)
-    real*8, pointer :: iaci(:,:)
 
 ! !LOCAL VARIABLES:
     logical :: restart_now
@@ -151,7 +147,7 @@ contains
 
     call shr_cal_date2ymd(ymd,myear,mon,day)
 
-    casename = trim(cdata%c(iac_cdatac_casename))
+    casename = trim(case_name)
     write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hglmo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
     write(iu,*) trim(subname),' writing history file ',trim(hfile)
@@ -195,7 +191,7 @@ contains
     enddo
 #endif
 
-    casename = trim(cdata%c(iac_cdatac_casename))
+    casename = trim(case_name)
     write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hplo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
     write(iu,*) trim(subname),' writing history file ',trim(hfile)
