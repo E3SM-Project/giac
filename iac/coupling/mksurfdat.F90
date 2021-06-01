@@ -398,10 +398,10 @@ contains
     ! ----------------------------------------------------------------------
 
     ! Make irrigated area fraction [pctirr] from [firrig] dataset if requested in namelist
-
+    ! Allocate memory regardless, since it is passed to subroutines
+    allocate ( pctirr(ns_o) )
+    pctirr(:) = spval
     if (mksrf_firrig /= ' ') then
-       allocate ( pctirr(ns_o) )
-       pctirr(:) = spval
        call mkirrig(ldomain, mapfname=map_firrig, datfname=mksrf_firrig,&
             ndiag=ndiag, irrig_o=pctirr)
     endif
@@ -863,7 +863,7 @@ contains
 
           ! Output pctpft data for current year
 
-          call check_ret(nf_inq_varid(ncid, 'PCT_PFT', varid), subname)
+          call check_ret(nf_inq_varid(ncid, 'PCT_NAT_PFT', varid), subname)
           call check_ret(nf_inq_varndims(ncid, varid, ndims), subname)
           call check_ret(nf_inq_vardimid(ncid, varid, dimids), subname)
           beg(1:ndims-1) = 1
@@ -919,8 +919,8 @@ contains
                pctgla            , & 
                pctlak            , & 
                pctwet            , & 
-               pcturb            )
-    if (mksrf_firrig /= ' ') deallocate(pctirr)
+               pcturb            , & 
+               pctirr            )
 
     ! ----------------------------------------------------------------------
     ! Close diagnostic dataset
