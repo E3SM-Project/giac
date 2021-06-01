@@ -123,6 +123,7 @@ contains
 ! Initialize interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -151,20 +152,12 @@ contains
      write(iu,*) subname,' starting subroutine '
 #endif
     restart_run  = cdata%l(iac_cdatal_rest)
-    !gcamsize = cdata%i(iac_cdatai_gcam_naez)*cdata%i(iac_cdatai_gcam_nreg)
-    !nregions = cdata%i(iac_cdatai_gcam_nreg)
-    !nglu = cdata%i(iac_cdatai_gcam_nglu) 
 
     nregions=num_gcam_energy_regions
     nglu=num_gcam_land_regions
 
     gcamsize=nglu
     initial_run = cdata%l(iac_cdatal_initrun)
-
-    ! namelist vars in gcam_var_mod now
-    !gcam2glm_baselu = trim(cdata%c(iac_cdatac_gcam2glm_baselu))
-    !gcam2glm_glumap   = trim(cdata%c(iac_cdatac_gcam2glm_glumap))
-    !gcam2glm_basebiomass = trim(cdata%c(iac_cdatac_gcam2glm_basebiomass))
 
 ! initialize two level time indexes 
 
@@ -203,7 +196,7 @@ contains
     allocate(hydeGCROP2015(numLons, numLats))
     allocate(hydeGPAST2015(numLons, numLats))
     allocate(hydeGOTHR2015(numLons, numLats))
-	allocate(hydeGSECD2015(numLons, numLats))
+    allocate(hydeGSECD2015(numLons, numLats))
     allocate(hydeGWH2015(numLons, numLats))
     allocate(cellarea(numLons, numLats))
     allocate(cellarea_forest(numLons, numLats))
@@ -212,7 +205,7 @@ contains
     allocate(glm_past_ann(numLons, numLats))
     allocate(glm_othr_ann(numLons, numLats))
     allocate(cumsum_sorted_farea(numLons*numLats))
-    allocate(glm_wh_ann(gcamsize))
+    allocate(glm_wh_ann(nglu))
     allocate(aez_regions(numLons, numLats))
     allocate(aez_zones(numLons, numLats))
     allocate(fnfforest(numLons, numLats))
@@ -327,13 +320,13 @@ contains
 
        ! If findloc isn't available (it's f2008 standard), do it the
        ! 70s way
-       do lonx=1,nlon
+       do lonx=1,numLons
           if (x .eq. lon(lonx)) then 
              exit
           endif
        end do
        
-       do latx=1,nlat
+       do latx=1,numLats
           if (y .eq. lat(latx)) then 
              exit
           endif
@@ -429,10 +422,12 @@ contains
 ! Run interface for glm
 
 ! !USES:
+    use iac_data_mod
     implicit none
 
 ! !ARGUMENTS:
     real(r8), pointer :: gcamo(:,:)
+    real(r8), pointer :: gcamo_base(:,:)
     real(r8), pointer :: glmi(:,:)
     real(r8), pointer :: glmi_wh(:)
 
@@ -445,13 +440,15 @@ contains
 
 ! !LOCAL VARIABLES:
 
+    charachter(len=512) :: dum
     character*4 :: yearc
     character(256) :: filename
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
+    integer :: row,g,t,y
     integer :: iu,iun,iyr
     integer :: ymd, tod, dt,naez,nreg,ii,ntime,year,mon,day
     logical :: restart_now,gcam_alarm
-    real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d
+    real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
     real(r8)  :: gcam_crop_tmp(2,18,14),gcam_past_tmp(2,18,14),gcam_forest_area_tmp(2,18,14)
     real(r8)  :: fact1,fact2,eclockyr,fact1yrm1, fact2yrm1,delyr,eclockyrm1
     real(r8)  :: tmp0
@@ -489,8 +486,8 @@ contains
     year1=cdata%i(iac_cdatai_gcam_yr1)
     year2=cdata%i(iac_cdatai_gcam_yr2)
     
-    nglu=cdata%i(iac_cdatai_gcam_nglu)
-    nreg=cdata%i(iac_cdatai_gcam_nreg)
+    nglu=num_gcam_land_regions
+    nreg=num_gcam_energy_regions
     ntime=cdata%i(iac_cdatai_gcamo_ntime)
 
     ! Maxiumum number of glus in a region
@@ -515,6 +512,7 @@ contains
     allocate(unmet_aez_farea(max_nglu))
     allocate(cumsum_sorted_reassign_ag(max_nglu))
     allocate(unmet_regional_farea(nreg))
+    allocate(gcamo_base(num_iac2elm_landtypes,nglu))
 
     avail_farea=0.
     avail_nfarea=0.
@@ -552,6 +550,22 @@ contains
        end where
     enddo
 
+
+    ! Read in gcam outputs for previous year 
+    open(5,file='./gcamo_base.csv')
+    ! Read header
+    read(5,*) dum
+    do
+       read(5,*,iostat=io) g,t,y,v
+       if (io < 0) then
+          exit
+       endif
+       gcamo_base(t,g) = v
+
+    end do
+
+    close(5)
+
 #ifdef notdef
     ! Ugly triple loop
     do g=1,nglu
@@ -579,6 +593,12 @@ contains
     gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
     gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
     gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
+
+    ! Set previous year GCAM land
+    gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
+    gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
+    gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
+    gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
 
 #ifdef DEBUG
     write(iu,*) subname,' year1 year2 ',year1,year2
@@ -852,7 +872,7 @@ contains
 
        ! crop_pos_nf
        avail_land0 = 0
-       where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_crop(:,:,np1)>0.)
+       where ( glu_weights(g,:,:)>0. .and. glm_crop(:,:,np1)>0. )
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        endwhere
        sumavail_land0=sum(avail_land0)
@@ -869,7 +889,7 @@ contains
           end where
        else
           avail_landA = 0.
-          where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
+          where ( glu_weights(g,:,:) > 0 )
              avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
@@ -890,7 +910,7 @@ contains
 
        ! past_pos_nf
        avail_land0 = 0
-       where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_past(:,:,np1)>0.)
+       where ( glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        end where
        sumavail_land0=sum(avail_land0)
@@ -906,7 +926,7 @@ contains
           end where
        else
           avail_landA = 0
-          where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
+          where ( glu_weights(g,:,:) > 0 )
              avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
@@ -935,7 +955,7 @@ contains
 
        ! crop_pos_f
        avail_land0 = 0
-       where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_crop(:,:,np1)>0.)
+       where ( glu_weights(g,:,:) > 0 .and.glm_crop(:,:,np1)>0.)
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
        end where
        sumavail_land0=sum(avail_land0)
@@ -970,7 +990,7 @@ contains
                   fnfforest(v1u(sortind(1)),v2u(sortind(1)))/cellarea(v1u(sortind(1)),v2u(sortind(1))))
           else
              avail_landA = 0.
-             where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
+             where ( glu_weights(g,:,:) > 0 )
                 avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
              end where
              sumavail_landA=sum(avail_landA)
@@ -1018,7 +1038,7 @@ contains
 
        ! past_pos_f
        avail_land0 = 0.
-       where ( aez_regions .EQ. r .and. aez_zones .EQ. aez.and.glm_past(:,:,np1)>0.)
+       where ( glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
        end where
        sumavail_land0=sum(avail_land0)
@@ -1054,7 +1074,7 @@ contains
                   cellarea(v1u(sortind(1)),v2u(sortind(1))))
           else
              avail_landA = 0.
-             where ( aez_regions .EQ. r .and. aez_zones .EQ. aez)
+             where ( glu_weights(g,:,:) > 0 )
                 avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
              end where
              sumavail_landA=sum(avail_landA)
@@ -1149,7 +1169,7 @@ contains
              avail_farea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
              avail_nfarea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest)
              avail_ag_farea(g1) = sum((glm_crop(:,:,np1)+glm_past(:,:,np1))*cellarea_forest)
-             reassign_ag(g1) = min(avail_ag_farea(aez), avail_nfarea(aez), regional_farea_needed)
+             reassign_ag(g1) = min(avail_ag_farea(g1), avail_nfarea(g1), regional_farea_needed)
              unmet_aez_farea(g1) = regional_farea_needed - reassign_ag(g1)
           end do
           
@@ -1285,7 +1305,7 @@ contains
                 
                 avail_land0 = 0.
                 
-                where ( aez_regions .EQ. r .and. aez_zones .EQ. z.and.(glm_crop(:,:,np1)>0..or.glm_past(:,:,np1)>0.))
+                where ( glu_weights(g,:,:) > 0 .and.(glm_crop(:,:,np1)>0..or.glm_past(:,:,np1)>0.))
                    avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
                 end where
                 sumavail_land0=sum(avail_land0)
@@ -1301,7 +1321,7 @@ contains
                    end where
                 else
                    avail_landA = 0.
-                   where ( aez_regions .EQ. r .and. aez_zones .EQ. z)
+                   where ( glu_weights(g,:,:) > 0 )
                       avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
                    end where
                    sumavail_landA=sum(avail_landA)
@@ -1329,6 +1349,11 @@ contains
        end do !  end r loop
     end if   ! ! if regional_unmet_reassign
  end if
+
+ if (allocated(v1u)) deallocate(v1u)
+ if (allocated(v2u)) deallocate(v2u)
+ if (allocated(v1d)) deallocate(v1d)
+ if (allocated(v2d)) deallocate(v2d)
 
 #ifdef DEBUG
     write(6,*) 'sum final gcrop/gpast n'
