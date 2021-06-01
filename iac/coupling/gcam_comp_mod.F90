@@ -86,9 +86,8 @@ contains
     ! as teh cdata_z structure used in e3sm-space).  This is how we
     ! transmit the namelist variables downstream to all the gcam and
     ! gcam/coupling functions that need them - through gdata.
-    allocate(gcamo(iac_gcamo_nflds,gdata%i(iac_cdatai_gcamo_size)))
-    allocate(gcamoemis(iac_gcamoemis_nemis,gdata&
-         %i(iac_cdatai_gcamoemis_size)))
+    allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions))
+    allocate(gcamoemis(num_emiss_sectors,num_emiss_regions))
 
     ! create CCSM_GCAM_interface Object 
     call inite3sminterface()
@@ -117,12 +116,6 @@ contains
          trim(gcam2elm_co2_mapping_file),&
          trim(gcam2elm_luc_mapping_file),&
          trim(gcam2elm_woodharvest_mapping_file))
-
-    !call initcGCAM(trim(case_name) + c_null_char, &
-    !     trim(gcam_config) + c_null_char,&
-    !     trim(gcam2elm_co2_mapping_file) + c_null_char,&
-    !     trim(gcam2elm_luc_mapping_file) + c_null_char,&
-    !     trim(gcam2elm_woodharvest_mapping_file)+c_null_char)
     
   end subroutine gcam_init_mod
 
@@ -144,7 +137,6 @@ contains
     implicit none
 
 ! !ARGUMENTS:
-    real*8, pointer :: gcami(:,:)
     real*8, pointer :: gcamo(:,:)
     real*8, pointer :: gcamoemis(:,:)
 
@@ -163,7 +155,6 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    gcami = iac_spval
     gcamo = iac_spval
     gcamoemis = iac_spval
     
@@ -225,8 +216,7 @@ contains
 
   write(iu,*) trim(subname),' date= ',ymd,tod
 
-  !  Call setdensity method of CCSM Interface 
-  !call setdensitycGCAM(ymd,tod,gcami,size(gcami,dim=1),size(gcami,dim=2))
+  !  Call setdensity method of GCAM-E3SM Interface 
   call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
        lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
        iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
