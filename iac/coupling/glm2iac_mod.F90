@@ -64,7 +64,6 @@ contains
 
 ! !LOCAL VARIABLES:
 
-    integer :: iu
     integer :: nflds, nsize
     character(len=*),parameter :: subname='(glm2iac_init_mod)'
 
@@ -73,8 +72,6 @@ contains
 
 !EOP
 !-----------------------------------------------------------------------
-
-    iu  = cdata%i(iac_cdatai_logunit)
 
     nflds = iac_iac_npfts + 7
     nsize = cdata%i(iac_cdatai_glm_size)
@@ -85,7 +82,7 @@ contains
     plodata = 0.0
 
 #ifdef DEBUG
-    write(iu,*) trim(subname),' allocate plodata ',nflds,nsize
+    write(iulog,*) trim(subname),' allocate plodata ',nflds,nsize
 #endif
   end subroutine glm2iac_init_mod
 
@@ -110,7 +107,6 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt
-    integer :: iu
     integer :: i,j,n,ij,ierr,nmode
     integer :: dimid(3),varid,ncid
     real*8, pointer :: array3d(:,:,:)
@@ -124,15 +120,13 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    iu  = cdata%i(iac_cdatai_logunit)
-
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
 
 #ifdef DEBUG
     do j = 1,iac_glmo_nflds
-       write(iu,*) trim(subname),' glmo minmax ',j,minval(glmo(j,:)),maxval(glmo(j,:))
+       write(iulog,*) trim(subname),' glmo minmax ',j,minval(glmo(j,:)),maxval(glmo(j,:))
     enddo
 #endif
 
@@ -150,7 +144,7 @@ contains
     casename = trim(case_name)
     write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hglmo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
-    write(iu,*) trim(subname),' writing history file ',trim(hfile)
+    write(iulog,*) trim(subname),' writing history file ',trim(hfile)
 #endif
     nmode = ior(NF90_CLOBBER,NF90_64BIT_OFFSET)
     ierr = nf90_create(trim(hfile),nmode,ncid)
@@ -174,8 +168,8 @@ contains
     ierr = nf90_close(ncid)
 
 #ifdef DEBUG
-    write(iu,*) trim(subname),' date= ',ymd,tod
-    write(iu,*) trim(subname),' myear = ',myear
+    write(iulog,*) trim(subname),' date= ',ymd,tod
+    write(iulog,*) trim(subname),' myear = ',myear
 #endif
 
     plodataf=plodata
@@ -187,14 +181,14 @@ contains
 
 #ifdef DEBUG
     do j = 1,size(plodata,dim=1)
-       write(iu,*) trim(subname),' plodata minmax ',j,minval(plodata(j,:)),maxval(plodata(j,:))
+       write(iulog,*) trim(subname),' plodata minmax ',j,minval(plodata(j,:)),maxval(plodata(j,:))
     enddo
 #endif
 
     casename = trim(case_name)
     write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hplo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
-    write(iu,*) trim(subname),' writing history file ',trim(hfile)
+    write(iulog,*) trim(subname),' writing history file ',trim(hfile)
 #endif
     nmode = ior(NF90_CLOBBER,NF90_64BIT_OFFSET)
     ierr = nf90_create(trim(hfile),nmode,ncid)
@@ -239,7 +233,6 @@ contains
 ! !ARGUMENTS:
 
 ! !LOCAL VARIABLES:
-    integer :: iu
     character(len=*),parameter :: subname='(glm2iac_final_mod)'
 
 ! !REVISION HISTORY:

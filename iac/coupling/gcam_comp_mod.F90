@@ -143,7 +143,6 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt
-    integer :: iu
     integer :: i,j
     character(len=*),parameter :: subname='(gcam_run_mod)'
 
@@ -159,13 +158,12 @@ contains
     gcamoemis = iac_spval
     
   restart_now = cdata%l(iac_cdatal_rest)
-  iu  = cdata%i(iac_cdatai_logunit)
 
   ymd = EClock(iac_eclock_ymd)
   tod = EClock(iac_eclock_tod)
   dt  = EClock(iac_eclock_dt)
 
-  write(iu,*) trim(subname),' date= ',ymd,tod
+  write(iulog,*) trim(subname),' date= ',ymd,tod
 
   !  Call runcGCAM method of E3SM Interface 
   call runcGCAM(ymd,gcamo,gcamoemis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
@@ -195,7 +193,6 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt, yyyymmdd
-    integer :: iu
     integer :: i,j
     character(len=*),parameter :: subname='(gcam_setdensity_mod)'
 
@@ -208,13 +205,12 @@ contains
 !-----------------------------------------------------------------------
 
   restart_now = cdata%l(iac_cdatal_rest)
-  iu  = cdata%i(iac_cdatai_logunit)
 
   ymd = EClock(iac_eclock_ymd)
   tod = EClock(iac_eclock_tod)
   dt  = EClock(iac_eclock_dt)
 
-  write(iu,*) trim(subname),' date= ',ymd,tod
+  write(iulog,*) trim(subname),' date= ',ymd,tod
 
   !  Call setdensity method of GCAM-E3SM Interface 
   call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &

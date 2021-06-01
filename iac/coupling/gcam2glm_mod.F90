@@ -129,7 +129,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
     logical :: initial_run
-    integer :: iu,iun,tmpyears(2)
+    integer :: iun,tmpyears(2)
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
 
     !character(len=512) :: gcam2glm_baselu
@@ -145,9 +145,8 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    iu  = cdata%i(iac_cdatai_logunit)
 #ifdef DEBUG
-     write(iu,*) subname,' starting subroutine '
+     write(iulog,*) subname,' starting subroutine '
 #endif
     restart_run  = cdata%l(iac_cdatal_rest)
 
@@ -323,7 +322,7 @@ contains
      
        ! Basic checking
        if (glu_weights(g,lonx,latx) .ne. 0.) then
-          write(iu,*) subname,' ERROR: multiple weights for ',g,lonx,latx
+          write(iulog,*) subname,' ERROR: multiple weights for ',g,lonx,latx
           call shr_sys_abort(subname//' ERROR: weights file')
        endif
        glu_weights(g,lonx,latx) = weight
@@ -352,7 +351,7 @@ contains
        if (lexist) then
           
 #ifdef DEBUG
-           write(iu,*) subname,' read_restart rpointer ',trim(gcam2glm_rpointer)
+           write(iulog,*) subname,' read_restart rpointer ',trim(gcam2glm_rpointer)
 #endif
           
           iun = shr_file_getunit()
@@ -362,12 +361,12 @@ contains
           call shr_file_freeunit(iun)
           
 #ifdef DEBUG
-           write(iu,*) subname,' read_restart file ',trim(filename)
+           write(iulog,*) subname,' read_restart file ',trim(filename)
 #endif
           
           inquire(file=trim(filename),exist=lexist)
           if (.not.lexist) then
-             write(iu,*) subname,' ERROR: missing file ',trim(filename)
+             write(iulog,*) subname,' ERROR: missing file ',trim(filename)
              call shr_sys_abort(subname//' ERROR: missing file')
           endif
           
@@ -393,7 +392,7 @@ contains
           status = nf90_get_var(ncid,varid,glm_past)
           if(status /= nf90_NoErr) call handle_err(status)
        else
-          write(iu,*) subname,' read_restart rpointer NOT found ',trim(gcam2glm_rpointer)
+          write(iulog,*) subname,' read_restart rpointer NOT found ',trim(gcam2glm_rpointer)
           call shr_sys_abort(subname//' ERROR: missing file')
        end if ! rpointer exist
     end if ! restart run
@@ -434,7 +433,7 @@ contains
     character(256) :: filename
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
     integer :: row,g,t,y
-    integer :: iu,iun,iyr
+    integer :: iun,iyr
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
     logical :: restart_now,gcam_alarm
     real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
@@ -463,13 +462,12 @@ contains
 !EOP
 !-----------------------------------------------------------------------
     regional_unmet_reassign=1
-    iu  = cdata%i(iac_cdatai_logunit)
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
     gcam_alarm=(EClock(iac_EClock_Agcam)==1)
 #ifdef DEBUG
-    write(iu,*) trim(subname),' date= ',ymd,tod
+    write(iulog,*) trim(subname),' date= ',ymd,tod
 #endif
 
     year1=cdata%i(iac_cdatai_gcam_yr1)
@@ -589,9 +587,9 @@ contains
     gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
 
 #ifdef DEBUG
-    write(iu,*) subname,' year1 year2 ',year1,year2
+    write(iulog,*) subname,' year1 year2 ',year1,year2
 #endif
-    call shr_sys_flush(iu)
+    call shr_sys_flush(iulog)
     ind=0
 
     !do r = 1,nreg
@@ -1374,7 +1372,7 @@ contains
     fact2=(eclockyr-year1)/delyr
 
 #ifdef DEBUG
-     write(iu,*)'crop interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
+     write(iulog,*)'crop interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
 #endif
 ! use eclock year year for interpolating crop past and othr
     glm_crop_ann(:,:)=glm_crop(:,:,n)*fact1+glm_crop(:,:,np1)*fact2
@@ -1450,8 +1448,8 @@ contains
     close(iun)
     call shr_file_freeunit(iun)
 
-    write(iu,*) subname,' write_restart rpointer ',trim(gcam2glm_rpointer)
-    write(iu,*) subname,' write_restart file     ',trim(filename)
+    write(iulog,*) subname,' write_restart rpointer ',trim(gcam2glm_rpointer)
+    write(iulog,*) subname,' write_restart file     ',trim(filename)
 
     status= nf90_create(filename,nf90_clobber,ncid)
     if(status /= nf90_NoErr) call handle_err(status)
@@ -1560,7 +1558,6 @@ contains
 ! !ARGUMENTS:
 
 ! !LOCAL VARIABLES:
-    integer :: iu
     character(len=*),parameter :: subname='(gcam2glm_final_mod)'
 
 ! !REVISION HISTORY:
@@ -1569,9 +1566,6 @@ contains
 !EOP
 
 !---------------------------------------------------------------------------
-
-!    iu  = nint(cdata(iac_cdata_logunit))
-!    write(iu,*) trim(subname)
 
     deallocate(hydeGCROP2015)
     deallocate(hydeGPAST2015)

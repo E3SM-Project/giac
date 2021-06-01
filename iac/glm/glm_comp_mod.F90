@@ -62,7 +62,7 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    integer :: iu,numreg,numglu
+    integer :: numreg,numglu
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -71,7 +71,6 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    iu  = cdata%i(iac_cdatai_logunit)
     numreg = num_gcam_energy_regions
     numglu = num_gcam_land_regions
 
@@ -116,7 +115,6 @@ contains
     logical :: restart_now
     integer :: ymd, tod, dt
     integer :: i,j,ij,n,ni
-    integer :: iu
     integer :: glmyear
     character(len=*),parameter :: subname='(glm_run_mod)'
 
@@ -128,13 +126,12 @@ contains
 !-----------------------------------------------------------------------
 
     restart_now = cdata%l(iac_cdatal_rest)
-    iu  = cdata%i(iac_cdatai_logunit)
 
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
 
-    write(iu,*) trim(subname),' date= ',ymd,tod
+    write(iulog,*) trim(subname),' date= ',ymd,tod
 
 !-- import ---
 !    do n = 1,iac_glmi_nflds
@@ -181,7 +178,6 @@ contains
 ! !ARGUMENTS:
 
 ! !LOCAL VARIABLES:
-    integer :: iu
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -190,8 +186,6 @@ contains
 !EOP
 !---------------------------------------------------------------------------
 
-!    iu  = cdata%i(iac_cdatai_logunit)
-!    write(iu,*) 'trim(subname)
      call finalizeGLM()
   end subroutine glm_final_mod
 
