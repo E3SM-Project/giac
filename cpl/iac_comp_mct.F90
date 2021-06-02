@@ -361,7 +361,9 @@ contains
     ! This pushes the carbon densities to gcam.  The lnd2iac_vars
     ! structure holds most of what we want, I think - the rest should
     ! be in iac_cdata_mod somewhere.
-    call gcam_setdensity_mod(lnd2iac_vars)
+    if ( elm_iac_carbon_scaling ) then
+       call gcam_setdensity_mod(lnd2iac_vars)
+    end if
 
     ! Run GCAM, for this timestep.  
     ! Inputs taken care of by gcam_setdensity_mod(), so both of these
