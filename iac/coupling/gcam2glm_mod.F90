@@ -84,7 +84,7 @@ Module gcam2glm_mod
     real(r4)  :: miss_val = 1.0e36
 
     integer :: n,np1,nflds,gcamsize,nglu,nregions,io,r,g,g1
-    integer :: nlon,nlat,lonx,latx,max_nglu
+    integer :: lonx,latx,max_nglu
     real(r8) :: x,y,weight
     character(256) :: region_name, glu_name ! dummy vars to read csv
     integer, dimension(3) :: start3,count3
@@ -479,9 +479,6 @@ contains
     ! Maxiumum number of glus in a region
     max_nglu=cdata%i(iac_cdatai_gcam_max_nglu)
 
-    nlon=cdata%i(iac_cdatai_iac_nx)
-    nlat=cdata%i(iac_cdatai_iac_ny)
-
     allocate(indxup(numLons*numLats))
     allocate(indxdn(numLons*numLats))
     allocate(sortlatsup(numLons*numLats))
@@ -555,8 +552,8 @@ contains
 #ifdef notdef
     ! Ugly triple loop
     do g=1,nglu
-       do lonx=1,nlon
-          do latx,1,nlat
+       do lonx=1,numLons
+          do latx,1,numLats
              if (glu_weights(g,lonx,latx) > 0) then 
                 glm_crop(lonx,latx,np1)=0
                 glm_past(lonx,latx,np1)=0
