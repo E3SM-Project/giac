@@ -428,7 +428,7 @@ contains
 
 ! !LOCAL VARIABLES:
 
-    charachter(len=512) :: dum
+    character(len=512) :: dum
     character*4 :: yearc
     character(256) :: filename
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
@@ -1535,6 +1535,7 @@ contains
     deallocate(unmet_aez_farea)
     deallocate(cumsum_sorted_reassign_ag)
     deallocate(unmet_regional_farea)
+    deallocate(gcamo_base)
 
   end subroutine gcam2glm_run_mod
   
