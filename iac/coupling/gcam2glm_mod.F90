@@ -477,7 +477,7 @@ contains
     nreg=num_gcam_energy_regions
 
     ! Maxiumum number of glus in a region
-    max_nglu=cdata%i(iac_cdatai_gcam_max_nglu)
+    max_nglu=iac_max_nglu
 
     allocate(indxup(numLons*numLats))
     allocate(indxdn(numLons*numLats))
