@@ -2119,7 +2119,11 @@ readhurttdyncrop(long modyear) {
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         incropvalue = cropvalues[outgrid];
-        if (incropvalue >= 0.0 && incropvalue <= 1.1) {
+	// Prevent nans
+	if ( isnan(incropvalue) ) {
+	  inhurttbasecrop[outgrid] = 0.0;
+	}
+        else if (incropvalue >= 0.0 && incropvalue <= 1.1) {
             inhurttbasecrop[outgrid] = round(incropvalue * 100.0);
             if (inhurttbasecrop[outgrid] > 100.0) {
                 inhurttbasecrop[outgrid] = 100.0;
@@ -2198,7 +2202,11 @@ readhurttdynpasture(long modyear) {
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         inpasturevalue = pasturevalues[outgrid];
-        if (inpasturevalue >= 0.0 && inpasturevalue <= 1.1) {
+	// Prevent nan
+	if ( isnan(inpasturevalue) ) {
+	  inhurttbasepasture[outgrid] = 0.0;
+	}
+        else if (inpasturevalue >= 0.0 && inpasturevalue <= 1.1) {
             inhurttbasepasture[outgrid] = round(inpasturevalue * 100.0);
             if (inhurttbasepasture[outgrid] > 100.0) {
                 inhurttbasepasture[outgrid] = 100.0;
@@ -2278,7 +2286,11 @@ readhurttdynprimary(long modyear) {
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         inprimvalue = primvalues[outgrid];
-        if (inprimvalue >= 0.0 && inprimvalue <= 1.1) {
+	// Prevent nans
+	if ( isnan(inprimvalue )) {
+	    prevprimary[outgrid] = 0.0;
+	}
+        else if (inprimvalue >= 0.0 && inprimvalue <= 1.1) {
             prevprimary[outgrid] = round(inprimvalue * 100.0);
             if (prevprimary[outgrid] > 100.0) {
                 prevprimary[outgrid] = 100.0;
@@ -2357,7 +2369,11 @@ readhurttdynsecondary(long modyear) {
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         insecvalue = secvalues[outgrid];
-        if (insecvalue >= 0.0 && insecvalue <= 1.1) {
+	// Prevent nans
+	if ( isnan(insecvalue) ) {
+	  prevsecondary[outgrid] = 0.0;
+	}
+        else if (insecvalue >= 0.0 && insecvalue <= 1.1) {
             prevsecondary[outgrid] = round(insecvalue * 100.0);
             if (prevsecondary[outgrid] > 100.0) {
                 prevsecondary[outgrid] = 100.0;
@@ -2513,7 +2529,11 @@ copyglmo(float array[MAXOUTPIX * MAXOUTLIN], int index, float glmo[][GLMONFLDS])
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         value = glmo[outgrid][index];
-        if (value >= 0.0 && value <= 1.1) {
+	// prevent nans
+	if ( isnan(value) ) {
+	  array[outgrid] = 0.0;
+	}
+        else if (value >= 0.0 && value <= 1.1) {
             array[outgrid] = (value * 100.0);
             if (index <= 3) {array[outgrid] = round(array[outgrid]);}
             if (array[outgrid] > 100.0) {
@@ -3169,7 +3189,6 @@ readcurrentpft() {
 
 void
 readcurrentpftpct(long modyear) {
-    
      float *pftpctvalues;
     float pfttotal;
     int outgrid, offsetgrid, inpft, outpftid;
@@ -3232,7 +3251,10 @@ readcurrentpftpct(long modyear) {
             offsetgrid = inpft * MAXOUTPIX * MAXOUTLIN + outgrid;
             outpftid = incurrentpftid[inpft][outgrid];
             incurrentpftval[outpftid][outgrid] = pftpctvalues[offsetgrid];
-            pfttotal = pfttotal + pftpctvalues[offsetgrid];
+	    // Prevent nans
+	    if ( !isnan(pftpctvalues[offsetgrid]) ) {
+	      pfttotal = pfttotal + pftpctvalues[offsetgrid];
+	    }
         }
     }
     
