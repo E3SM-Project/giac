@@ -111,7 +111,7 @@ contains
     integer :: dimid(3),varid,ncid
     real*8, pointer :: array3d(:,:,:)
     character(len=128) :: fname,casename,hfile
-    integer :: myear, mon, day
+    integer :: myear, mon, day, e3smyear
     character(len=*),parameter :: subname='(glm2iac_run_mod)'
 
 ! !REVISION HISTORY:
@@ -130,16 +130,12 @@ contains
     enddo
 #endif
 
-!--- temporary implementation
-
-!    fname = 'mksurf_landuse_iESM_720x360.nc'
-!    myear = ymd
-!    write(iu,*) trim(subname),' fname = ',trim(fname)
-!    write(iu,*) trim(subname),' myear = ',myear
-
-!--- proper implementation
-
-    call shr_cal_date2ymd(ymd,myear,mon,day)
+    call shr_cal_date2ymd(ymd,e3smyear,mon,day)
+    
+    ! the iac component runs ahead of E3SM by one year since it is defining                          
+    ! boundary conditions for the other E3SM components. Increment the clock by a year               
+    myear=e3smyear+1
+    write(iulog,*) 'e3smyear is ',e3smyear,' iac year is ',myear
 
     casename = trim(case_name)
     write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hglmo.',myear,'-',mon,'-',day,'.nc'

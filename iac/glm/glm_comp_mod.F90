@@ -115,7 +115,7 @@ contains
     logical :: restart_now
     integer :: ymd, tod, dt
     integer :: i,j,ij,n,ni
-    integer :: glmyear
+    integer :: glmyear,e3smyear
     character(len=*),parameter :: subname='(glm_run_mod)'
 
 
@@ -133,23 +133,10 @@ contains
 
     write(iulog,*) trim(subname),' date= ',ymd,tod
 
-!-- import ---
-!    do n = 1,iac_glmi_nflds
-!    do ij = 1,glm_data_size
-!       xxx = glmi(n,ij)
-!    enddo
-!    enddo
+    e3smyear=ymd/10000
+    glmyear=e3smyear+1
+    write(6,*)'stepping glm. GLM is one year ahead of E3SM. E3SM year',e3smyear,'GLM year',glmyear,ymd
 
-!-- advance ---
-!!$    do n = 1,iac_glmo_nflds
-!!$    do ij = 1,glm_data_size
-!!$       ni = mod(n-1,iac_glmi_nflds) + 1
-!!$       glmo(n,ij) = glmi(ni,ij) + 1000.0
-!!$    enddo
-!!$    enddo
-    glmyear=ymd/10000
-    write(6,*)'stepping glm',glmyear,ymd
-!    call stepGLM(glmyear,glmi,size(glmi,dim=1),size(glmi,dim=2),glmo,size(glmo,dim=1),size(glmo,dim=2));
     call stepGLM(glmyear,            &
                  glmi,size(glmi,dim=1),size(glmi,dim=2),  &
                  glmi_wh,size(glmi_wh,dim=1),  &
