@@ -193,7 +193,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt, yyyymmdd
-    integer :: i,j
+    integer :: i,j,r,w
     character(len=*),parameter :: subname='(gcam_setdensity_mod)'
 
 
@@ -212,11 +212,24 @@ contains
 
   write(iulog,*) trim(subname),' date= ',ymd,tod
 
+  ! convert logical to boolean for read_scalars and write_scalars                        
+  if ( read_scalars ) then
+     r = 1
+  else
+     r = 0
+  end if
+
+  if ( write_scalars ) then
+     w = 1
+  else
+     w = 0
+  end if
+
   !  Call setdensity method of GCAM-E3SM Interface 
   call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
        lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
        iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
-       read_scalars, write_scalars) 
+       iac_first_coupled_year, r, w) 
   
   end subroutine gcam_setdensity_mod
 
