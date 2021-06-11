@@ -344,6 +344,10 @@ contains
     if (.not.restart_run) then
        glm_crop(:,:,1)=hydeGCROP2015;
        glm_past(:,:,1)=hydeGPAST2015;
+
+       ! Set years 
+       cdata%i(iac_cdatai_gcam_yr1)=iac_start_year
+       cdata%i(iac_cdatai_gcam_yr2)=iac_start_year+iac_gcam_timestep
     else
        ! read restart and set crop and past
        
