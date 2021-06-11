@@ -143,6 +143,7 @@ module iac_data_mod
 
   ! maximum glus per GCAM region
   integer           , public :: iac_max_nglu = 37
+  integer           , public :: iac_first_coupled_year = 2016
   integer           , public :: iac_start_year = 2015
 
   ! indices used for glm input

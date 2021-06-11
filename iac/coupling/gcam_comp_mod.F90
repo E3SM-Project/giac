@@ -185,6 +185,7 @@ contains
 ! !USES:
    use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
    use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
+   use iac_data_mod, only : iac_first_coupled_year
     implicit none
 
 ! !ARGUMENTS:
