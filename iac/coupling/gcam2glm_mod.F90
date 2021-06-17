@@ -591,7 +591,7 @@ contains
     write(iulog,*) subname,' year1 year2 ',year1,year2
 #endif
     call shr_sys_flush(iulog)
-    ind=0
+    ind=1
 
     !do r = 1,nreg
     !   do aez = 1,naez
