@@ -6,7 +6,7 @@ Module gcam2glm_mod
 !
 ! !MODULE: gcam2glm_mod
 !
-!  Interface of the integrated assessment component in CCSM
+!  Interface of the human component in E3SM
 !
 ! !DESCRIPTION:
 !
@@ -596,9 +596,10 @@ contains
     !do r = 1,nreg
     !   do aez = 1,naez
     do g=1,nglu
-       crop_d = (gcam_crop(g,np1)-gcam_crop(g,n))*1000
-       past_d = (gcam_past(g,np1)-gcam_past(g,n))*1000
-       farea_d = (gcam_forest_area(g,np1)-gcam_forest_area(g,n))*1000
+       ! Round GCAM results to two decimal places before using as LUC
+       crop_d = (real(nint(gcam_crop(g,np1)*100)/100)-real(nint(gcam_crop(g,n)*100)/100))*1000
+       past_d = (real(nint(gcam_past(g,np1)*100)/100)-real(nint(gcam_past(g,n)*100)/100))*1000
+       farea_d = (real(nint(gcam_forest_area(g,np1)*100)/100)-real(nint(gcam_forest_area(g,n)*100)/100))*1000
 
        ! convert area changes into positive and negative changes
 
