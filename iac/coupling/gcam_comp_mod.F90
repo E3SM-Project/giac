@@ -168,6 +168,12 @@ contains
   !  Call runcGCAM method of E3SM Interface 
   call runcGCAM(ymd,gcamo,gcamoemis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
 
+  ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
+  if ( iac_elm_co2_emissions ) then
+     ! This routine needs a long list of arguments. Commenting out for now                                            
+     ! call downscaleemissionscgcam()     
+  end if
+
   end subroutine gcam_run_mod
 
 
