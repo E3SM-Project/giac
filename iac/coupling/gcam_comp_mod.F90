@@ -186,6 +186,7 @@ contains
    use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
    use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
    use iac_data_mod, only : iac_first_coupled_year
+   use iso_c_binding
     implicit none
 
 ! !ARGUMENTS:
@@ -194,7 +195,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt, yyyymmdd
-    integer :: i,j,r,w
+    integer :: i,j,r,w,len
     character(len=*),parameter :: subname='(gcam_setdensity_mod)'
 
 
@@ -225,6 +226,10 @@ contains
   else
      w = 0
   end if
+
+  ! Null terminate                                           
+  len = len_trim(elm2gcam_mapping_file)
+  elm2gcam_mapping_file(len+1:len+1) = c_null_char
 
   !  Call setdensity method of GCAM-E3SM Interface 
   call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
