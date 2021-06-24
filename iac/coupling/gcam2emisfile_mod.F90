@@ -17,6 +17,7 @@ Module gcam2emisfile_mod
   ! !USES:
 
   use iac_data_mod
+  use gcam_var_mod
   use shr_file_mod, only: shr_file_getunit, shr_file_freeunit
   use shr_cal_mod
   use shr_sys_mod

@@ -98,6 +98,7 @@ contains
 ! Run interface for glm
 
 ! !USES:
+    use iac_data_mod
     use mksurfdat, only: mksurfdat_run
     implicit none
 
