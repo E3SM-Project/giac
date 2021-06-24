@@ -337,9 +337,10 @@ contains
     GClock(iac_eclock_ymd) = ymd
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
-    
-    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
-         atm_present=atm_present) 
+ 
+! KVC: Temporarily comment out   
+!    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
+!         atm_present=atm_present) 
 
     ! Import from land model
     !call t_startf('iac_import')
@@ -526,7 +527,8 @@ contains
     call mct_gGrid_importRAttr(dom_z,"area" ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"aream",data,lsize) 
     idata(:) = 0.0 
-    call mct_gGrid_importIAttr(dom_z,"mask" ,idata,lsize) 
+! KVC: Temporarily comment this out
+!    call mct_gGrid_importIAttr(dom_z,"mask" ,idata,lsize) 
 
     ! Determine bounds numbering consistency
     ni = 0
@@ -547,7 +549,10 @@ contains
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        i = iac_ctl%ilon(n)
-       data(ni) = iac_ctl%lon(i)
+       ! KVC: temporary fix for error with indexing
+       if (i > 0) then
+          data(ni) = iac_ctl%lon(i)
+       end if
     end do
     call mct_gGrid_importRattr(dom_z,"lon",data,lsize) 
 
@@ -556,7 +561,10 @@ contains
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        j = iac_ctl%jlat(n)
-       data(ni) = iac_ctl%lat(j)
+       ! KVC: temporary fix for error with indexing
+       if (j > 0 ) then
+          data(ni) = iac_ctl%lat(j)
+       end if
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
@@ -569,7 +577,10 @@ contains
        !If area is in radians, then we need to scale
        !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
        !But I believe it's in km^2 already (at least from clm.h1 file)
-       data(ni) = lnd2iac_vars%area(i,j) 
+       ! KVC: temporary fix for error with indexing
+       if ( j > 0 ) then
+          data(ni) = lnd2iac_vars%area(i,j) 
+       end if
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
@@ -579,7 +590,10 @@ contains
        ni = ni + 1
        i = iac_ctl%ilon(n)
        j = iac_ctl%jlat(n)
-       data(ni) = lnd2iac_vars%landfrac(i,j)
+        ! KVC: temporary fix for error with indexing
+       if (j > 0) then
+          data(ni) = lnd2iac_vars%landfrac(i,j)
+       end if
     end do
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
 
@@ -589,7 +603,8 @@ contains
        ni = ni + 1
        idata(ni) = iac_ctl%iacmask(n)
     end do
-    call mct_gGrid_importIattr(dom_z,"mask",idata,lsize) 
+! KVC: Temporarily comment this out
+!    call mct_gGrid_importIattr(dom_z,"mask",idata,lsize) 
 
     deallocate(data)
     deallocate(idata)

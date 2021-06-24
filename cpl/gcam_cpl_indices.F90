@@ -85,6 +85,8 @@ contains
     call mct_aVect_init(z2x, rList=seq_flds_z2x_fields, lsize=1)
     nflds_z2x = mct_avect_nRattr(z2x)
 
+    ! KVC NOTE: iac_ctl%npft is not set at this point, so the loop below isn't run
+    ! If I set it here, then I get an error in the loop saying it can't find 'Sz_pct_pft0'
     ! Loop over pfts and get a tag to concat with
     do p=1,iac_ctl%npft
 
