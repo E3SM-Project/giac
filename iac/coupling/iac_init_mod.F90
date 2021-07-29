@@ -168,7 +168,7 @@ contains
     ! dimension to (lon,lat) dimensions.
     do j=1,iac_ctl%nlat
        do i=1,iac_ctl%nlon
-          n = (j-1)*iac_ctl%nlat + i
+          n = (j-1)*iac_ctl%nlon + i
           iac_ctl%gindex(n)=n  ! Dumb, but allows decomp someday, maybe
           iac_ctl%ilon(n)=i
           iac_ctl%jlat(n)=j

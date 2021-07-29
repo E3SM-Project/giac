@@ -62,12 +62,9 @@ contains
 
           ! i (lon) varies fastest, p slowest:
           ! n=i+nlon*(j-1)+nlat*nlon*(p-1)
-          ! KVC: Temp fix for indexing issues
-          if (index_x2z_Sl_hr(p) > 0 .and. index_x2z_Sl_hr(p) < 52 ) then
-             lnd2iac_vars%hr(i,j,p) = x2z(index_x2z_Sl_hr(p),g)
-             lnd2iac_vars%npp(i,j,p) = x2z(index_x2z_Sl_npp(p),g)
-             lnd2iac_vars%pftwgt(i,j,p) = x2z(index_x2z_Sl_pftwgt(p),g)
-          end if
+          lnd2iac_vars%hr(i,j,p) = x2z(index_x2z_Sl_hr(p),g)
+          lnd2iac_vars%npp(i,j,p) = x2z(index_x2z_Sl_npp(p),g)
+          lnd2iac_vars%pftwgt(i,j,p) = x2z(index_x2z_Sl_pftwgt(p),g)
        end do ! global index g
     end do ! pft index p
 
@@ -109,18 +106,12 @@ contains
        ! Co2flux to atm
        ! Convention has fluxes negative from lnd to atm, so we
        ! assume for iac to atm as well
-       ! KVC: Temp fix for indexing issues
-       if (j > 0) then
-          z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
-       end if
+       z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
 
        ! Now the 17 iac->lnd vars
-       ! KVC: Temp fix for indexing issues
        do p=1,iac_ctl%npft
-          if (index_z2x_Sz_pct_pft(p) > 0 .and. index_z2x_Sz_pct_pft(p) < 18 ) then
-             z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
-          end if
-       enddo ! pft index p
+          z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
+       end do ! pft index p
 
     end do ! global index g
 
