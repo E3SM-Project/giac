@@ -338,7 +338,7 @@ contains
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
  
-! KVC: Temporarily comment out   
+! KVC: Temporarily comment out
 !    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
 !         atm_present=atm_present) 
 
@@ -549,10 +549,7 @@ contains
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        i = iac_ctl%ilon(n)
-       ! KVC: temporary fix for error with indexing
-       if (i > 0) then
-          data(ni) = iac_ctl%lon(i)
-       end if
+       data(ni) = iac_ctl%lon(i)
     end do
     call mct_gGrid_importRattr(dom_z,"lon",data,lsize) 
 
@@ -561,10 +558,7 @@ contains
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        j = iac_ctl%jlat(n)
-       ! KVC: temporary fix for error with indexing
-       if (j > 0 ) then
-          data(ni) = iac_ctl%lat(j)
-       end if
+       data(ni) = iac_ctl%lat(j)
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
@@ -590,10 +584,7 @@ contains
        ni = ni + 1
        i = iac_ctl%ilon(n)
        j = iac_ctl%jlat(n)
-        ! KVC: temporary fix for error with indexing
-       if (j > 0) then
-          data(ni) = lnd2iac_vars%landfrac(i,j)
-       end if
+       data(ni) = lnd2iac_vars%landfrac(i,j)
     end do
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
 
