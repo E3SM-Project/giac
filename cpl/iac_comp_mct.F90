@@ -309,8 +309,6 @@ contains
     real(r8)     :: calday               ! calendar day for nstep
     real(r8)     :: recip                ! reciprical
     logical,save :: first_call = .true.  ! first call work
-    logical      :: atm_present
-    logical      :: lnd_present
     type(seq_infodata_type),pointer :: infodata             ! CESM information from the driver
     type(mct_gGrid),        pointer :: dom_z                ! iac model domain data
     !type(bounds_type)               :: bounds               ! bounds
@@ -338,10 +336,6 @@ contains
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
  
-! KVC: Temporarily comment out
-!    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
-!         atm_present=atm_present) 
-
     ! Import from land model
     !call t_startf('iac_import')
     call iac_import(x2z_z%rattr, lnd2iac_vars)
@@ -356,12 +350,9 @@ contains
     ! call advance_timestep()
 
     ! Run gcam.  
-    ! Check input/output sequence.  Also, I probably need some timing
-    ! and logging information surrounding all these.
 
     ! This pushes the carbon densities to gcam.  The lnd2iac_vars
-    ! structure holds most of what we want, I think - the rest should
-    ! be in iac_cdata_mod somewhere.
+    ! structure holds most of what we want
     if ( elm_iac_carbon_scaling ) then
        call gcam_setdensity_mod(lnd2iac_vars)
     end if
@@ -571,10 +562,7 @@ contains
        !If area is in radians, then we need to scale
        !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
        !But I believe it's in km^2 already (at least from clm.h1 file)
-       ! KVC: temporary fix for error with indexing
-       if ( j > 0 ) then
-          data(ni) = lnd2iac_vars%area(i,j) 
-       end if
+       data(ni) = lnd2iac_vars%area(i,j) 
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
