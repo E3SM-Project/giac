@@ -438,6 +438,10 @@ contains
     begg  = iac_ctl%begg
     endg  = iac_ctl%endg
 
+! KVC: need gcam_nlon and gcam_nlat set before this is called
+gcam_nlon = 288
+gcam_nlat = 192
+
     lsize = iac_ctl%endg - iac_ctl%begg + 1
     gsize = gcam_nlon*gcam_nlat
 
@@ -517,9 +521,8 @@ contains
     call mct_gGrid_importRAttr(dom_z,"lon"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"area" ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"aream",data,lsize) 
-    idata(:) = 0.0 
-! KVC: Temporarily comment this out
-!    call mct_gGrid_importIAttr(dom_z,"mask" ,idata,lsize) 
+    data(:) = 0.0_R8
+    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     ! Determine bounds numbering consistency
     ni = 0
@@ -582,8 +585,9 @@ contains
        ni = ni + 1
        idata(ni) = iac_ctl%iacmask(n)
     end do
-! KVC: Temporarily comment this out
-!    call mct_gGrid_importIattr(dom_z,"mask",idata,lsize) 
+
+    data(:) = 0.0_R8
+    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     deallocate(data)
     deallocate(idata)
