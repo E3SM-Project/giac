@@ -568,6 +568,8 @@ contains
     unmet_farea=0.
     gcamo_base=0.
 
+    ! KVC: This does not appear to be set. Manually setting for now
+    gcam_alarm = .true.
     if (gcam_alarm) then
 
     ! TRS refactor
