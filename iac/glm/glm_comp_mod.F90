@@ -54,6 +54,7 @@ contains
 
 ! !USES:
     use iac_data_mod
+    use mct_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -62,7 +63,7 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    integer :: numreg,numglu
+    integer :: numreg,numglu,ier
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -82,9 +83,12 @@ contains
     cdata%i(iac_cdatai_glm_size) = iac_glm_nx * iac_glm_ny
 
     ! Already allocated by gcam_init_mod - I think.
-    allocate(glmi(iac_glmi_nflds,glm_data_size))
-    allocate(glmi_wh(numglu))
-    allocate(glmo(iac_glmo_nflds,glm_data_size))
+    allocate(glmi(iac_glmi_nflds,glm_data_size), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmi',ier)
+    allocate(glmi_wh(numglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmi_wh',ier)
+    allocate(glmo(iac_glmo_nflds,glm_data_size), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmo',ier)
 
     glmi = iac_spval
     glmo = iac_spval

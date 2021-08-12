@@ -122,6 +122,7 @@ contains
 
 ! !USES:
     use iac_data_mod
+    use mct_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -129,7 +130,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
     logical :: initial_run
-    integer :: iun,tmpyears(2)
+    integer :: iun,tmpyears(2),ier
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
 
     !character(len=512) :: gcam2glm_baselu
@@ -176,9 +177,10 @@ contains
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_inquire_dimension(ncid, dimIDs(3), len = numTimes)
     if(status /= nf90_NoErr) call handle_err(status)
-
-    allocate(lon(numLons))
+    allocate(lon(numLons), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate lon',ier)
     allocate(lat(numLats))
+    if(ier/=0) call mct_die(subName,'allocate lat',ier)
     
     status = nf90_inq_varid(ncid, "lon", varid)
     if(status /= nf90_NoErr) call handle_err(status)
@@ -190,46 +192,84 @@ contains
     status = nf90_get_var(ncid,varid,lat)
     if(status /= nf90_NoErr) call handle_err(status)
     
-    allocate(hydeGCROP2015(numLons, numLats))
-    allocate(hydeGPAST2015(numLons, numLats))
-    allocate(hydeGOTHR2015(numLons, numLats))
-    allocate(hydeGSECD2015(numLons, numLats))
-    allocate(hydeGWH2015(numLons, numLats))
-    allocate(cellarea(numLons, numLats))
-    allocate(cellarea_forest(numLons, numLats))
-    allocate(cellarea_nonforest(numLons, numLats))
-    allocate(glm_crop_ann(numLons, numLats))
-    allocate(glm_past_ann(numLons, numLats))
-    allocate(glm_othr_ann(numLons, numLats))
-    allocate(cumsum_sorted_farea(numLons*numLats))
-    allocate(glm_wh_ann(nglu))
-    allocate(fnfforest(numLons, numLats))
-    allocate(fnfnonforest(numLons, numLats))
-    allocate(pot_veg(numLons, numLats))
-    allocate(pot_veg_rev(numLats, numLons))
-    allocate(crop_area(numLons, numLats))
-    allocate(pctland_in2015(numLons, numLats))
-    allocate(sortsitesup(numLons, numLats))
-    allocate(sortsitesdn(numLons, numLats))
-    allocate(datearr(numTimes))
-    allocate(glm_crop(numLons, numLats, 2))
-    allocate(glm_past(numLons, numLats, 2))
-    allocate(gcam_crop(gcamsize, 2))
-    allocate(gcam_wh(gcamsize, 2))
-    allocate(gcam_past(gcamsize, 2))
-    allocate(gcam_forest_area(gcamsize, 2))
-    allocate(unmet_neg_past(gcamsize))
-    allocate(unmet_neg_crop(gcamsize))
-    allocate(unmet_farea(gcamsize))
-    allocate(avail_land0(numLons, numLats))
-    allocate(avail_landA(numLons, numLats))
+    allocate(hydeGCROP2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate hydeGCROP2015',ier)
+    allocate(hydeGPAST2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate hydeGPAST2015',ier)
+    allocate(hydeGOTHR2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate hydeGOTHR2015',ier)
+    allocate(hydeGSECD2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate hydeGSECD2015',ier)
+    allocate(hydeGWH2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate hydeGWH2015',ier)
+    allocate(cellarea(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate cellarea',ier)
+    allocate(cellarea_forest(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate cellarea_forest',ier)
+    allocate(cellarea_nonforest(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate cellarea_nonforest',ier)
+    allocate(glm_crop_ann(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_crop_ann',ier)
+    allocate(glm_past_ann(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_past_ann',ier)
+    allocate(glm_othr_ann(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_othr_ann',ier)
+    allocate(cumsum_sorted_farea(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate cumsum_sorted_farea',ier)
+    allocate(glm_wh_ann(nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_wh_ann',ier)
+    allocate(fnfforest(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate fnfforest',ier)
+    allocate(fnfnonforest(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate fnfnonforest',ier)
+    allocate(pot_veg(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate pot_veg',ier)
+    allocate(pot_veg_rev(numLats, numLons), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate pot_veg_rev',ier)
+    allocate(crop_area(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate crop_area',ier)
+    allocate(pctland_in2015(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate pctland_in2015',ier)
+    allocate(sortsitesup(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortsitesup',ier)
+    allocate(sortsitesdn(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortsitesdn',ier)
+    allocate(datearr(numTimes), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate datearr',ier)
+    allocate(glm_crop(numLons, numLats, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_crop',ier)
+    allocate(glm_past(numLons, numLats, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glm_past',ier)
+    allocate(gcam_crop(gcamsize, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_crop',ier)
+    allocate(gcam_wh(gcamsize, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_wh',ier)
+    allocate(gcam_past(gcamsize, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_past',ier)
+    allocate(gcam_forest_area(gcamsize, 2), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_forest_ara',ier)
+    allocate(unmet_neg_past(gcamsize), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate unmet_neg_past',ier)
+    allocate(unmet_neg_crop(gcamsize), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate unmet_neg_crop',ier)
+    allocate(unmet_farea(gcamsize), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate unmet_farea',ier)
+    allocate(avail_land0(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate avail_land0',ier)
+    allocate(avail_landA(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate avail_landA',ier)
 
-    allocate(glu_weights(gcamsize, numLons, numLats))
-    allocate(glu_weights_rev(numLats, numLons))
-    allocate(rglus(numLons, numLats))
+    allocate(glu_weights(gcamsize, numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glu_weights',ier)
+    allocate(glu_weights_rev(numLats, numLons), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glu_weights_rev',ier)
+    allocate(rglus(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate rglus',ier)
 
-    allocate(rgmin(nregions))
-    allocate(rgmax(nregions))
+    allocate(rgmin(nregions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate rgmin',ier)
+    allocate(rgmax(nregions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate rgmax',ier)
 
     glm_crop=iac_spval
     glm_past=iac_spval
@@ -415,6 +455,7 @@ contains
 
 ! !USES:
     use iac_data_mod
+    use mct_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -437,7 +478,7 @@ contains
     character(256) :: filename
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
     integer :: row,g,t,y
-    integer :: iun,iyr
+    integer :: iun,iyr,ier
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
     logical :: restart_now,gcam_alarm
     real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
@@ -482,24 +523,40 @@ contains
 
     ! Maxiumum number of glus in a region
     max_nglu=iac_max_nglu
-
-    allocate(indxup(numLons*numLats))
-    allocate(indxdn(numLons*numLats))
-    allocate(sortlatsup(numLons*numLats))
-    allocate(sortlatsdn(numLons*numLats))
-    allocate(sortlonsup(numLons*numLats))
-    allocate(sortlonsdn(numLons*numLats))
-    allocate(tmparr(numLons*numLats))
-    allocate(indxa(max_nglu))
-    allocate(indxadn(max_nglu))
-    allocate(avail_farea(max_nglu))
-    allocate(avail_nfarea(max_nglu))
-    allocate(avail_ag_farea(max_nglu))
-    allocate(reassign_ag(max_nglu))
-    allocate(unmet_aez_farea(max_nglu))
-    allocate(cumsum_sorted_reassign_ag(max_nglu))
-    allocate(unmet_regional_farea(nreg))
-    allocate(gcamo_base(num_iac2elm_landtypes,nglu))
+    allocate(indxup(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate indxup',ier)
+    allocate(indxdn(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate indxdn',ier)
+    allocate(sortlatsup(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortlatsup',ier)
+    allocate(sortlatsdn(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortlatsdn',ier)
+    allocate(sortlonsup(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortlonsup',ier)
+    allocate(sortlonsdn(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate sortlonsdn',ier)
+    allocate(tmparr(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate tmparr',ier)
+    allocate(indxa(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate indxa',ier)
+    allocate(indxadn(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate indxadn',ier)
+    allocate(avail_farea(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate avail_farea',ier)
+    allocate(avail_nfarea(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate avail_nfarea',ier)
+    allocate(avail_ag_farea(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate avail_ag_farea',ier)
+    allocate(reassign_ag(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate reassign_ag',ier)
+    allocate(unmet_aez_farea(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate unmet_aez_farea',ier)
+    allocate(cumsum_sorted_reassign_ag(max_nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate cumsum_sorted_reassign_ag',ier)
+    allocate(unmet_regional_farea(nreg), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate unmet_regional_farea',ier)
+    allocate(gcamo_base(num_iac2elm_landtypes,nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamo_base',ier)
 
     avail_farea=0.
     avail_nfarea=0.
@@ -508,8 +565,8 @@ contains
     unmet_aez_farea=0.
     cumsum_sorted_reassign_ag=0.
     unmet_regional_farea=0.
-
     unmet_farea=0.
+    gcamo_base=0.
 
     if (gcam_alarm) then
 
@@ -659,10 +716,15 @@ contains
        if (allocated(v2u)) deallocate(v2u)
        if (allocated(v1d)) deallocate(v1d)
        if (allocated(v2d)) deallocate(v2d)
-       allocate(v1u(totrglus))
-       allocate(v2u(totrglus))
-       allocate(v1d(totrglus))
-       allocate(v2d(totrglus))
+
+       allocate(v1u(totrglus), stat=ier)
+       if(ier/=0) call mct_die(subName,'allocate v1u',ier)
+       allocate(v2u(totrglus), stat=ier)
+       if(ier/=0) call mct_die(subName,'allocate v2u',ier)
+       allocate(v1d(totrglus), stat=ier)
+       if(ier/=0) call mct_die(subName,'allocate v1d',ier)
+       allocate(v2d(totrglus), stat=ier)
+       if(ier/=0) call mct_die(subName,'allocate v2d',ier)
        indxup(:)=(/(i,i=1,numlons*numlats)/)
        indxdn=indxup
        pot_veg_rev=transpose(pot_veg)
@@ -1237,10 +1299,15 @@ contains
                 if (allocated(v2u)) deallocate(v2u)
                 if (allocated(v1d)) deallocate(v1d)
                 if (allocated(v2d)) deallocate(v2d)
-                allocate(v1u(totrglus))
-                allocate(v2u(totrglus))
-                allocate(v1d(totrglus))
-                allocate(v2d(totrglus))
+
+                allocate(v1u(totrglus), stat=ier)
+                if(ier/=0) call mct_die(subName,'allocate v1u',ier)
+                allocate(v2u(totrglus), stat=ier)
+                if(ier/=0) call mct_die(subName,'allocate v2u',ier)
+                allocate(v1d(totrglus), stat=ier)
+                if(ier/=0) call mct_die(subName,'allocate v1d',ier)
+                allocate(v2d(totrglus), stat=ier)
+                if(ier/=0) call mct_die(subName,'allocate v2d',ier)
                 v1u=sortlonsup(numlons*numlats-totrglus+1:numlons*numlats)
                 v2u=sortlatsup(numlons*numlats-totrglus+1:numlons*numlats)
                 v1d=(sortlonsdn(:totrglus))
@@ -1376,6 +1443,7 @@ contains
 #ifdef DEBUG
      write(iulog,*)'crop interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
 #endif
+
 ! use eclock year year for interpolating crop past and othr
     glm_crop_ann(:,:)=glm_crop(:,:,n)*fact1+glm_crop(:,:,np1)*fact2
     glm_past_ann(:,:)=glm_past(:,:,n)*fact1+glm_past(:,:,np1)*fact2

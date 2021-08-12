@@ -45,11 +45,23 @@ contains
     !
     ! !DESCRIPTION:
     ! Allocate our coupler index arrays
+    !
+    ! !USES:
+    use mct_mod
+    !
+    ! !LOCAL VARIABLES:
+    integer           :: ier
+    character(len=32), parameter :: subname = 'gcam_cpl_indices_init'
+
 iac_ctl%npft=17
-    allocate(index_z2x_Sz_pct_pft(iac_ctl%npft))
+    allocate(index_z2x_Sz_pct_pft(iac_ctl%npft), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft',ier)
     allocate(index_x2z_Sl_hr(iac_ctl%npft))
+    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_hr',ier)
     allocate(index_x2z_Sl_npp(iac_ctl%npft))
+    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_npp',ier)
     allocate(index_x2z_Sl_pftwgt(iac_ctl%npft))
+    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_pftwgt',ier)
   end subroutine gcam_cpl_indices_init
 
   !-----------------------------------------------------------------------

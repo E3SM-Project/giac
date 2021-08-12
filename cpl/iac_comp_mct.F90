@@ -461,6 +461,7 @@ gcam_nlat = 192
 
     ! Determine gsmap_iac
     allocate(gindex(lsize),stat=ier)
+    if(ier/=0) call mct_die(sub,'allocate gindex',ier)
     ni = 0
     do n = begg,endg
        ni = ni + 1
@@ -494,7 +495,7 @@ gcam_nlat = 192
     type(mct_ggrid), intent(out)   :: dom_z       ! Domain information from the iac model
     !
     ! LOCAL VARIABLES
-    integer :: n, ni, i, j             ! index
+    integer :: n, ni, i, j, ier   ! index
     integer , pointer :: idata(:) ! temporary
     real(r8), pointer :: data(:)  ! temporary
     real(r8) :: re = SHR_CONST_REARTH*0.001_r8 ! radius of earth (km)
@@ -508,7 +509,8 @@ gcam_nlat = 192
       OtherChars=trim(seq_flds_dom_other), lsize=lsize )
 
     ! Allocate memory
-    allocate(data(lsize))
+    allocate(data(lsize), stat=ier)
+    if(ier/=0) call mct_die(sub,'allocate data',ier)
 
     ! Determine global gridpoint number attribute, GlobGridNum, which is set automatically by MCT
     call mct_gsMap_orderedPoints(gsMap_z, iam, idata)

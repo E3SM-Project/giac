@@ -60,6 +60,9 @@ contains
     ! To null-terminate the strings we pass into C++
     use iso_c_binding
 
+    ! For error checking
+    use mct_mod
+
     implicit none
 
 ! !ARGUMENTS:
@@ -86,8 +89,10 @@ contains
     ! as teh cdata_z structure used in e3sm-space).  This is how we
     ! transmit the namelist variables downstream to all the gcam and
     ! gcam/coupling functions that need them - through gdata.
-    allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions))
-    allocate(gcamoemis(num_emiss_sectors,num_emiss_regions))
+    allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamo',ier)
+    allocate(gcamoemis(num_emiss_sectors,num_emiss_regions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoemis',ier)
 
     ! create CCSM_GCAM_interface Object 
     call inite3sminterface()
