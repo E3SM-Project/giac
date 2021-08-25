@@ -380,7 +380,8 @@ contains
     pot_veg=pot_veg*0.75
     pctland_in2015(:,:) = 0.
     pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
-
+! KVC: Temp -- set this to false. 
+restart_run = .false.
     if (.not.restart_run) then
        glm_crop(:,:,1)=hydeGCROP2015;
        glm_past(:,:,1)=hydeGPAST2015;

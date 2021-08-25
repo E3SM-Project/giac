@@ -116,7 +116,7 @@ iac_ctl%npft=17
        !-------------------------------------------------------------
        index_x2z_Sl_hr(p) = mct_avect_indexra(x2z,trim('Sl_hr_pft' // pftstr))
        index_x2z_Sl_npp(p) = mct_avect_indexra(x2z,trim('Sl_npp_pft' // pftstr))
-       index_x2z_Sl_pftwgt(p) = mct_avect_indexra(x2z,trim('Sl_pftwtg_pft' // pftstr))
+       index_x2z_Sl_pftwgt(p) = mct_avect_indexra(x2z,trim('Sl_pftwgt_pft' // pftstr))
 
     end do
 
