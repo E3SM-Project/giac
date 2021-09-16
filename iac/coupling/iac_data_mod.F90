@@ -153,7 +153,7 @@ module iac_data_mod
   integer           , public :: iac_glmi_pasture = 3
 
   ! number of fields for glmo
-  integer           , public :: iac_glmo_nflds = 23
+  integer           , public :: iac_glmo_nflds = 9
 
 end module iac_data_mod
 

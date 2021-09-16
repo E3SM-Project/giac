@@ -6,7 +6,7 @@ module mkncdio
 ! !MODULE: mkncdio
 !
 ! !DESCRIPTION:
-! Generic interfaces to write fields to netcdf files
+! Generic interfaces to write fields to netcdf files, and other useful netcdf operations
 !
 ! !USES:
   use shr_kind_mod   , only : r8 => shr_kind_r8
@@ -19,26 +19,15 @@ module mkncdio
 
   private
 
-  public :: check_ret    ! checks return status of netcdf calls
-  public :: check_var    ! determine if variable is on netcdf file
-  public :: check_dim    ! validity check on dimension
-  public :: ncd_defvar   ! define netCDF input variable
-  public :: ncd_convl2i  ! convert logical to integer
-  public :: ncd_ioglobal ! Read/write netCDF input/output
+  public :: check_ret       ! checks return status of netcdf calls
+  public :: ncd_defvar      ! define netCDF input variable
+  public :: get_dim_lengths ! get dimension lengths of a netcdf variable
 !
 ! !REVISION HISTORY:
 !
 !
 ! !PRIVATE MEMBER FUNCTIONS:
 !
-  interface ncd_ioglobal
-     module procedure ncd_ioglobal_int_var
-     module procedure ncd_ioglobal_real_var
-     module procedure ncd_ioglobal_int_1d
-     module procedure ncd_ioglobal_real_1d
-     module procedure ncd_ioglobal_int_2d
-     module procedure ncd_ioglobal_real_2d
-  end interface
   logical  :: masterproc = .true. ! always use 1 proc
   real(r8) :: spval = 1.e36       ! special value
 
@@ -46,10 +35,13 @@ module mkncdio
   public :: nf_close
   public :: nf_write
   public :: nf_sync
+  public :: nf_inq_attlen
   public :: nf_inq_dimlen
+  public :: nf_inq_dimname
   public :: nf_inq_varid
   public :: nf_inq_varndims 
   public :: nf_inq_vardimid
+  public :: nf_get_att_double
   public :: nf_get_att_text
   public :: nf_get_var_double
   public :: nf_get_vara_double
@@ -60,112 +52,13 @@ module mkncdio
   public :: nf_put_var_int
   public :: nf_put_vara_int
   public :: nf_inq_dimid
+  public :: nf_max_name
+  public :: nf_max_var_dims
+  public :: nf_noerr
 !EOP
 !-----------------------------------------------------------------------
 
 contains
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: check_dim
-!
-! !INTERFACE:
-  subroutine check_dim(ncid, dimname, value)
-!
-! !DESCRIPTION:
-! Validity check on dimension
-!
-! !ARGUMENTS:
-    implicit none
-    integer, intent(in) :: ncid
-    character(len=*), intent(in) :: dimname
-    integer, intent(in) :: value
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-    integer :: dimid, dimlen    ! temporaries
-!EOP
-!-----------------------------------------------------------------------
-
-    call check_ret(nf_inq_dimid (ncid, trim(dimname), dimid), 'check_dim')
-    call check_ret(nf_inq_dimlen (ncid, dimid, dimlen), 'check_dim')
-    if (dimlen /= value) then
-       write (6,*) 'CHECK_DIM error: mismatch of input dimension ',dimlen, &
-            ' with expected value ',value,' for variable ',trim(dimname)
-       call abort()
-    end if
-
-  end subroutine check_dim
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_convl2i
-!
-! !INTERFACE:
-  integer function ncd_convl2i( lvar )
-!
-! !DESCRIPTION:
-! Convert a logical to integer
-!
-! !ARGUMENTS:
-    implicit none
-    logical, intent(IN) :: lvar   ! logical variable to convert to integer
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-!-----------------------------------------------------------------------
-
-     if ( lvar ) then
-        ncd_convl2i = 1
-     else
-        ncd_convl2i = 0
-     end if
-
-  end function ncd_convl2i
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: check_var
-!
-! !INTERFACE:
-  subroutine check_var(ncid, varname, varid, readvar)
-!
-! !DESCRIPTION:
-! Check if variable is on netcdf file
-!
-! !ARGUMENTS:
-    implicit none
-    integer, intent(in)          :: ncid
-    character(len=*), intent(in) :: varname
-    integer, intent(out)         :: varid
-    logical, intent(out)         :: readvar
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: ret     ! return value
-!-----------------------------------------------------------------------
-
-    readvar = .true.
-    if (masterproc) then
-       ret = nf_inq_varid (ncid, varname, varid)
-       if (ret/=NF_NOERR) then
-          write(6,*)'CHECK_VAR: variable ',trim(varname),' is not on initial dataset'
-          call shr_sys_flush(6)
-          readvar = .false.
-       end if
-    end if
-  end subroutine check_var
 
 !-----------------------------------------------------------------------
 !BOP
@@ -300,356 +193,57 @@ contains
 
   end subroutine ncd_defvar
 
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: ncd_ioglobal_int_var
+! !IROUTINE: get_dim_lengths
 !
 ! !INTERFACE:
-  subroutine ncd_ioglobal_int_var(varname, data, flag, ncid, readvar, nt)
+subroutine get_dim_lengths(ncid, varname, ndims, dim_lengths)
 !
 ! !DESCRIPTION:
-! I/O of integer variable
+! Returns the number of dimensions and an array containing the dimension lengths of a
+! variable in an open netcdf file.
+!
+! Entries 1:ndims in the returned dim_lengths array contain the dimension lengths; the
+! remaining entries in that vector are meaningless. The dim_lengths array must be large
+! enough to hold all ndims values; if not, the code aborts (this can be ensured by passing
+! in an array of length nf_max_var_dims).
+!
+! !USES:
 !
 ! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)  :: flag               ! 'read' or 'write'
-    integer         , intent(in)  :: ncid               ! input unit
-    character(len=*), intent(in)  :: varname            ! variable name
-    integer         , intent(in)  :: data               ! local decomposition data
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
+   implicit none
+   integer         , intent(in) :: ncid           ! netcdf id of an open netcdf file
+   character(len=*), intent(in) :: varname        ! name of variable of interest
+   integer         , intent(out):: ndims          ! number of dimensions of variable
+   integer         , intent(out):: dim_lengths(:) ! lengths of dimensions of variable
 !
 ! !REVISION HISTORY:
+! Author: Bill Sacks
 !
 !
 ! !LOCAL VARIABLES:
+   integer :: varid
+   integer :: dimids(size(dim_lengths))
+   integer :: i
+   character(len=*), parameter :: subname = 'get_dim_lengths'
 !EOP
-    integer :: ier                            ! error status
-    integer :: dimid(1)                       ! dimension id
-    integer :: start(1), count(1)             ! output bounds
-    integer :: varid                          ! variable id
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_INT_VAR' ! subroutine name
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------------------
+   call check_ret(nf_inq_varid(ncid, varname, varid), subname)
+   call check_ret(nf_inq_varndims(ncid, varid, ndims), subname)
 
-    if (flag == 'write') then
+   if (ndims > size(dim_lengths)) then
+      write(6,*) trim(subname), ' ERROR: dim_lengths too small'
+      call abort()
+   end if
 
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = nt; count(1) = 1
-             call check_ret(nf_put_vara_int(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_int(ncid, varid, data), subname)
-          end if
-       end if
+   call check_ret(nf_inq_vardimid(ncid, varid, dimids), subname)
 
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_int(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_int_var
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_ioglobal_real_var
-!
-! !INTERFACE:
-  subroutine ncd_ioglobal_real_var(varname, data, flag, ncid, readvar, nt)
-!
-! !DESCRIPTION:
-! I/O of real variable
-!
-
-! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)  :: flag               ! 'read' or 'write'
-    integer         , intent(in)  :: ncid               ! input unit
-    character(len=*), intent(in)  :: varname            ! variable name
-    real(r8)        , intent(in)  :: data               ! local decomposition data
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: ier                            ! error status
-    integer :: dimid(1)                       ! dimension id
-    integer :: start(1), count(1)             ! output bounds
-    integer :: varid                          ! variable id
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_REAL_VAR' ! subroutine name
-!-----------------------------------------------------------------------
-
-    if (flag == 'write') then
-
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = nt; count(1) = 1
-             call check_ret(nf_put_vara_double(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_double(ncid, varid, data), subname)
-          end if
-       end if
-
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_double(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_real_var
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_ioglobal_int_1d
-!
-! !INTERFACE:
-  subroutine ncd_ioglobal_int_1d(varname, data, flag, ncid, readvar, nt)
-!
-! !DESCRIPTION:
-! Master I/O for 1d integer data
-!
-! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)    :: flag             ! 'read' or 'write'
-    integer         , intent(in)    :: ncid             ! input unit
-    character(len=*), intent(in)    :: varname          ! variable name
-    integer         , intent(inout) :: data(:)          ! local decomposition data
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: varid                          ! netCDF variable id
-    integer :: dimid(2), ndims                ! dimension ids
-    integer :: start(2), count(2)             ! output bounds
-    integer :: ier                            ! error code
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_INT_1D' ! subroutine name
-!-----------------------------------------------------------------------
-
-    if (flag == 'write') then
-
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = 1;  count(1) = size(data)
-             start(2) = nt; count(2) = 1
-             call check_ret(nf_put_vara_int(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_int(ncid, varid, data), subname)
-          end if
-       end if
-
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_int(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_int_1d
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_ioglobal_real_1d
-!
-! !INTERFACE:
-  subroutine ncd_ioglobal_real_1d(varname, data, flag, ncid, readvar, nt)
-!
-! !DESCRIPTION:
-! Master I/O for 1d real data
-!
-! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)    :: flag             ! 'read' or 'write'
-    integer         , intent(in)    :: ncid             ! input unit
-    character(len=*), intent(in)    :: varname          ! variable name
-    real(r8)        , intent(inout) :: data(:)          ! local decomposition input data
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: varid                          ! netCDF variable id
-    integer :: ier                            ! error code
-    integer :: dimid(2), ndims                ! dimension ids
-    integer :: start(2), count(2)             ! output bounds
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_REAL_1D' ! subroutine name
-!-----------------------------------------------------------------------
-
-    if (flag == 'write') then
-
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = 1;  count(1) = size(data)
-             start(2) = nt; count(2) = 1
-             call check_ret(nf_put_vara_double(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_double(ncid, varid, data), subname)
-          end if
-       end if
-
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_double(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_real_1d
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_ioglobal_int_2d
-!
-! !INTERFACE:
-  subroutine ncd_ioglobal_int_2d(varname, data, flag, ncid, readvar, nt)
-!
-! !DESCRIPTION:
-! netcdf I/O of global 2d integer array
-!
-! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)    :: flag             ! 'read' or 'write'
-    integer         , intent(in)    :: ncid             ! input unit
-    character(len=*), intent(in)    :: varname          ! variable name
-    integer         , intent(inout) :: data(:,:)        ! local decomposition input data
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: varid                          ! netCDF variable id
-    integer :: dimid(3), ndims                ! dimension ids
-    integer :: start(3), count(3)             ! output bounds
-    integer :: ier                            ! error code
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_2D_INT_IO' ! subroutine name
-!-----------------------------------------------------------------------
-
-    if (flag == 'write') then
-
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = 1;  count(1) = size(data, dim=1)
-             start(2) = 1;  count(2) = size(data, dim=2)
-             start(3) = nt; count(3) = 1
-             call check_ret(nf_put_vara_int(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_int(ncid, varid, data), subname)
-          end if
-       end if
-
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_int(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_int_2d
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: ncd_ioglobal_real_2d
-!
-! !INTERFACE:
-  subroutine ncd_ioglobal_real_2d(varname, data, long_name, units, flag, &
-                                  ncid, readvar, nt)
-!
-! !DESCRIPTION:
-! netcdf I/O of global 2d real array
-!
-! !ARGUMENTS:
-    implicit none
-    character(len=*), intent(in)    :: flag             ! 'read' or 'write'
-    integer         , intent(in)    :: ncid             ! input unit
-    character(len=*), intent(in)    :: varname          ! variable name
-    real(r8)        , intent(inout) :: data(:,:)        ! local decomposition input data
-    character(len=*), optional, intent(in) :: long_name ! variable long name
-    character(len=*), optional, intent(in) :: units     ! variable units
-    logical         , optional, intent(out):: readvar   ! true => variable is on initial dataset (read only)
-    integer         , optional, intent(in) :: nt        ! time sample index
-!
-! !REVISION HISTORY:
-!
-!
-! !LOCAL VARIABLES:
-    integer :: varid                          ! netCDF variable id
-    integer :: ier                            ! error code
-    integer :: dimid(3), ndims                ! dimension ids
-    integer :: start(3), count(3)             ! output bounds
-    logical :: varpresent                     ! if true, variable is on tape
-    character(len=32) :: subname='NCD_IOGLOBAL_REAL_2D' ! subroutine name
-!EOP
-!-----------------------------------------------------------------------
-
-    if (flag == 'write') then
-
-       if (masterproc) then
-          call check_ret(nf_inq_varid(ncid, varname, varid), subname)
-          if (present(nt)) then
-             start(1) = 1;  count(1) = size(data, dim=1)
-             start(2) = 1;  count(2) = size(data, dim=2)
-             start(3) = nt; count(3) = 1
-             call check_ret(nf_put_vara_double(ncid, varid, start, count, data), subname)
-          else
-             call check_ret(nf_put_var_double(ncid, varid, data), subname)
-          end if
-       end if
-
-    else if (flag == 'read') then
-
-       if (masterproc) then
-          call check_var(ncid, varname, varid, varpresent)
-          if (varpresent) call check_ret(nf_get_var_double(ncid, varid, data), subname)
-       end if
-       if (present(readvar)) readvar = varpresent
-
-    end if
-
-  end subroutine ncd_ioglobal_real_2d
+   dim_lengths(:) = 0  ! pre-fill with 0 so we won't have garbage in elements past ndims
+   do i = 1, ndims
+      call check_ret(nf_inq_dimlen(ncid, dimids(i), dim_lengths(i)), subname)
+   end do
+ end subroutine get_dim_lengths
 
 end module mkncdio

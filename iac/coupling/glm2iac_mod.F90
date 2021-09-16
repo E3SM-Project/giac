@@ -16,6 +16,7 @@ Module glm2iac_mod
   use gcam_var_mod
   use shr_cal_mod
   use netcdf
+  use gcam2glm_mod, only : lon, lat, numLats
 
   implicit none
   SAVE
@@ -109,11 +110,13 @@ contains
     logical :: restart_now
     integer :: ymd, tod, dt
     integer :: i,j,n,ij,ierr,nmode
-    integer :: dimid(3),varid,ncid
+    integer :: dimid(3),varid,ncid, lat_id, lon_id, rawdims(2), rid
     real*8, pointer :: array3d(:,:,:)
     character(len=128) :: fname,casename,hfile
     integer :: myear, mon, day, e3smyear
     character(len=*),parameter :: subname='(glm2iac_run_mod)'
+
+real*8, allocatable :: lat_rev(:)
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -131,6 +134,9 @@ contains
     enddo
 #endif
 
+allocate(lat_rev(numLats))
+lat_rev = lat(numLats:1:-1)
+
     call shr_cal_date2ymd(ymd,e3smyear,mon,day)
     
     ! the iac component runs ahead of E3SM by one year since it is defining                          
@@ -139,7 +145,7 @@ contains
     write(iulog,*) 'e3smyear is ',e3smyear,' iac year is ',myear
 
     casename = trim(case_name)
-    write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hglmo.',myear,'-',mon,'-',day,'.nc'
+    write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') 'iac.hglmo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
     write(iulog,*) trim(subname),' writing history file ',trim(hfile)
 #endif
@@ -149,11 +155,22 @@ contains
     ierr = nf90_def_dim(ncid,'glmo_ny' ,iac_glm_ny,dimid(2))
     ierr = nf90_def_dim(ncid,'glmo_nf' ,size(glmo,dim=1),dimid(3))
     ierr = nf90_def_var(ncid,'glmodata',NF90_DOUBLE,dimid,varid)
+
+ierr = nf90_def_var(ncid,'lat',NF90_DOUBLE,dimid(2),lat_id)
+ierr = nf90_def_var(ncid,'lon',NF90_DOUBLE,dimid(1),lon_id)
+rawdims(1)=size(glmo,dim=1)
+rawdims(2) = size(glmo,dim=2)
+ierr = nf90_def_var(ncid,'raw_glmo',NF90_DOUBLE,rawdims,rid)
+
     ierr = nf90_enddef(ncid)
     allocate(array3d(iac_glm_nx,iac_glm_ny,size(glmo,dim=1)))
+
+! flip the latitude into this diagnostic array and also in glmo
+! GLM's origin is +90,-180, while the LUT origin is -90, -180
+
     do n = 1,size(glmo,dim=1)
     ij = 0
-    do j = 1,iac_glm_ny
+    do j = iac_glm_ny,1,-1
     do i = 1,iac_glm_nx
        ij = ij + 1
        array3d(i,j,n) = glmo(n,ij)
@@ -161,6 +178,26 @@ contains
     enddo
     enddo
     ierr = nf90_put_var(ncid,varid,array3d)
+
+ierr = nf90_put_var(ncid,lat_id,lat_rev)
+ierr = nf90_put_var(ncid,lon_id,lon) 
+
+!this isn't writing for some reason
+ierr = nf90_put_var(ncid,rid,glmo)
+
+! now refill glmo
+
+do n = 1,size(glmo,dim=1)
+    ij = 0
+    do j = 1,iac_glm_ny
+       do i = 1,iac_glm_nx
+          ij = ij + 1
+          glmo(n,ij) = array3d(i,j,n)
+       enddo
+    enddo
+enddo
+    
+
     deallocate(array3d)
     ierr = nf90_close(ncid)
 
@@ -169,12 +206,16 @@ contains
     write(iulog,*) trim(subname),' myear = ',myear
 #endif
 
-    plodataf=plodata
-    glmof=glmo
-    call updateannuallanduse(glmof,plodataf,myear)
-!jt    call updateannuallanduse(glmo,plodata,myear)
-    plodata=plodataf
-    glmo=glmof
+write(iulog,*) trim(subname),' running LUT  '
+
+! now using the doule precision code
+
+!    plodataf=plodata
+!    glmof=glmo
+!    call updateannuallanduse(glmof,plodataf,myear)
+    call updateannuallanduse(glmo,plodata,myear)
+!    plodata=plodataf
+!    glmo=glmof
 
 #ifdef DEBUG
     do j = 1,size(plodata,dim=1)
@@ -183,7 +224,7 @@ contains
 #endif
 
     casename = trim(case_name)
-    write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') trim(casename)//'.iac.hplo.',myear,'-',mon,'-',day,'.nc'
+    write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') 'iac.hplo.',myear,'-',mon,'-',day,'.nc'
 #ifdef DEBUG
     write(iulog,*) trim(subname),' writing history file ',trim(hfile)
 #endif
@@ -193,6 +234,10 @@ contains
     ierr = nf90_def_dim(ncid,'plo_ny' ,iac_glm_ny,dimid(2))
     ierr = nf90_def_dim(ncid,'plo_nf' ,size(plodata,dim=1),dimid(3))
     ierr = nf90_def_var(ncid,'plodata',NF90_DOUBLE,dimid,varid)
+
+ierr = nf90_def_var(ncid,'lat',NF90_DOUBLE,dimid(2),lat_id)
+ierr = nf90_def_var(ncid,'lon',NF90_DOUBLE,dimid(1),lon_id)
+
     ierr = nf90_enddef(ncid)
     allocate(array3d(iac_glm_nx,iac_glm_ny,size(plodata,dim=1)))
     do n = 1,size(plodata,dim=1)
@@ -206,10 +251,16 @@ contains
     enddo
     ierr = nf90_put_var(ncid,varid,array3d)
     deallocate(array3d)
+
+ierr = nf90_put_var(ncid,lat_id,lat_rev)
+ierr = nf90_put_var(ncid,lon_id,lon)
+
     ierr = nf90_close(ncid)
 
     call mksurfdat_run(myear,plodata)
 !    call mksurfdata(plodata)
+
+deallocate(lat_rev)
 
   end subroutine glm2iac_run_mod
 
