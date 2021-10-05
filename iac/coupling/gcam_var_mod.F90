@@ -102,6 +102,7 @@ module gcam_var_mod
   character(len=256), public ::  base_co2_file
   character(len=256), public ::  base_npp_file
   character(len=256), public ::  base_hr_file
+  character(len=256), public ::  base_pft_file
   character(len=256), public ::  gcam2elm_co2_mapping_file
   character(len=256), public ::  gcam2elm_luc_mapping_file
   character(len=256), public ::  gcam2elm_woodharvest_mapping_file

@@ -39,7 +39,7 @@ contains
          gcam_gridfile, gcam_config,&
          case_name, gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
          gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
-         base_co2_file, base_npp_file, base_hr_file, &
+         base_co2_file, base_npp_file, base_hr_file, base_pft_file, &
          read_scalars,read_elm_from_file, write_co2, write_scalars, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, num_lat,&
          num_lon, num_pft, num_gcam_energy_regions,&
@@ -82,6 +82,7 @@ contains
        write(iulog, '(A,A)') "base_co2_file = ", trim(base_co2_file )
        write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
        write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
+       write(iulog, '(A,A)') "base_pft_file = ", trim(base_pft_file )
        write(iulog, '(A,A)') "case_name = ", trim(case_name)
        write(iulog, '(A,A)') "elm2gcam_mapping_file = ", trim(elm2gcam_mapping_file)
        write(iulog, '(A,L)') "elm_iac_carbon_scaling = ", elm_iac_carbon_scaling
