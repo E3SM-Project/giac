@@ -171,7 +171,7 @@ contains
   write(iulog,*) trim(subname),' date= ',ymd,tod
 
   !  Call runcGCAM method of E3SM Interface 
-  call runcGCAM(ymd,gcamo,gcamoemis,base_co2_file, iac_ctl%nlon, iac_ctl%nlat, write_co2)
+  call runcGCAM(ymd,gcamo,gcamoemis)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
   if ( iac_elm_co2_emissions ) then
@@ -246,7 +246,7 @@ contains
   call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
        lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
        iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
-       iac_first_coupled_year, r, w) 
+       iac_first_coupled_year, r, w, base_npp_file, base_hr_file, base_pft_file) 
   
   end subroutine gcam_setdensity_mod
 
