@@ -54,6 +54,43 @@ module iac_comp_mct
   real*8, pointer :: glmi_data(:,:)      ! glm input, converted from gcam2glm_data
   real*8, pointer :: glm2lnd_data(:,:)   ! This is used for glm output, but it is called glmo in subroutines that use it
   real*8, pointer :: glm_wh_data(:)
+  real*8, pointer :: gcamoco2sfcjan(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcfeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcmar(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcmay(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcjun(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcjul(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcsep(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcoct(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcnov(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcdec(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2airlojan(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlofeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlomar(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airloapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlomay(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlojun(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlojul(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airloaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlosep(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlooct(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlonov(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlodec(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijan(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhifeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhimar(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhiapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhimay(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijun(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijul(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhiaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhisep(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhioct(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhinov(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
+
 
   !
   ! PUBLIC MEMBER FUNCTIONS:
@@ -205,7 +242,19 @@ contains
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 
-    call gcam_init_mod(gcam2glm_data,gcam_emis_data)
+    call gcam_init_mod(gcam2glm_data,gcam_emis_data,                          &
+          gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
     call gcam2glm_init_mod()
     call glm_init_mod(glmi_data, glm_wh_data, glm2lnd_data)
     call glm2iac_init_mod(glm2lnd_data)
@@ -360,7 +409,19 @@ contains
     ! Run GCAM, for this timestep.  
     ! Inputs taken care of by gcam_setdensity_mod(), so both of these
     ! are outputs, for input to glm and for export to atm (emis)
-    call gcam_run_mod(gcam2glm_data, gcam_emis_data)
+    call gcam_run_mod(gcam2glm_data, gcam_emis_data,                          &
+          gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
 
     ! Set up to run glm
     call gcam2glm_run_mod(gcam2glm_data, glmi_data, glm_wh_data)
@@ -407,7 +468,18 @@ contains
     !-----------------------------------------------------
 
     ! KVC: do we need to call more finalize subroutines?
-    call gcam_final_mod()
+    call gcam_final_mod(gcamoco2sfcjan, gcamoco2sfcfeb,   &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
     call gcam2glm_final_mod()
   end subroutine iac_final_mct
 

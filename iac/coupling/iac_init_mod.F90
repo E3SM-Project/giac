@@ -39,13 +39,15 @@ contains
          gcam_gridfile, gcam_config,&
          case_name, gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
          gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
-         base_co2_file, base_npp_file, base_hr_file, base_pft_file, &
+         base_co2_surface_file, base_co2_aircraft_file,&
+         base_npp_file, base_hr_file, base_pft_file, &
          read_scalars,read_elm_from_file, write_co2, write_scalars, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, num_lat,&
          num_lon, num_pft, num_gcam_energy_regions,&
          num_gcam_land_regions, num_iac2elm_landtypes,&
          num_emiss_sectors, num_emiss_regions,&
-         gcam2glm_baselu, gcam2glm_basebiomass, gcam2glm_glumap
+         gcam2glm_baselu, gcam2glm_basebiomass, gcam2glm_glumap,&
+         base_co2emis_surface, base_co2emis_aircraft
 
     nlfilename_iac = "gcam_in"
 
@@ -79,7 +81,8 @@ contains
     if (masterproc) then
        write(iulog,*) 'define GCAM run:'
        ! write out namelist stuff here
-       write(iulog, '(A,A)') "base_co2_file = ", trim(base_co2_file )
+       write(iulog, '(A,A)') "base_co2_surface_file = ", trim(base_co2_surface_file )
+       write(iulog, '(A,A)') "base_co2_aircraft_file = ", trim(base_co2_aircraft_file )
        write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
        write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
        write(iulog, '(A,A)') "base_pft_file = ", trim(base_pft_file )
@@ -104,6 +107,8 @@ contains
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,L)') "write_co2 = ",write_co2
        write(iulog, '(A,L)') "write_scalars = ",write_scalars
+       write(iulog, '(A,F)') "base_co2emis_surface = ",base_co2emis_surface
+       write(iulog, '(A,F)') "base_co2emis_aircraft = ",base_co2emis_aircraft
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)

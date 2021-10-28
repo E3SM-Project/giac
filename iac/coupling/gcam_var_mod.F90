@@ -99,7 +99,8 @@ module gcam_var_mod
   ! Namelist variables
   character(len=256), public ::  case_name
   character(len=256), public ::  gcam_config
-  character(len=256), public ::  base_co2_file
+  character(len=256), public ::  base_co2_surface_file
+  character(len=256), public ::  base_co2_aircraft_file
   character(len=256), public ::  base_npp_file
   character(len=256), public ::  base_hr_file
   character(len=256), public ::  base_pft_file
@@ -141,6 +142,10 @@ module gcam_var_mod
   integer, public ::  num_iac2elm_landtypes = 9;
   integer, public ::  num_emiss_sectors = 2;
   integer, public ::  num_emiss_regions = 1;
+
+  ! define base year levels of CO2
+  real*8, public :: base_co2emis_surface = 9663.0297;
+  real*8, public :: base_co2emis_aircraft = 102.157;
 
 contains
 
