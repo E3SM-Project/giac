@@ -82,7 +82,7 @@ module mksurfdat
     character(len=256) :: fgrddat           ! grid data file
     character(len=256) :: fsurdat           ! output surface data file name
     character(len=256) :: fsurlog           ! output surface log file name
-    character(len=256) :: fdyndat           ! dynamic landuse data file name
+    character(len=256), public :: fdyndat           ! dynamic landuse data file name
     character(len=256) :: fname             ! generic filename
     character(len=256) :: string            ! string read in
     integer  :: t1                          ! timer
@@ -587,6 +587,10 @@ subroutine mksurfdat_run(year,plodata)
 
     if (mksrf_fdynuse /= ' ') then
        write(6,*)'mksrf_fdynuse = ',trim(mksrf_fdynuse)
+    else
+       write(6,*)'mksrf_fdynuse must be in namelist and exist'
+       write(6,*)'it defines the dynamic pft grid in the iac'
+       stop
     end if
 
     ! ----------------------------------------------------------------------
@@ -1159,6 +1163,10 @@ subroutine mksurfdat_run(year,plodata)
        
        if (.not.exists) then
 
+          ! this file needs to exist, especially in the first year
+          write(6,*)'fdyndat must exist to continue:', fdyndat 
+          stop
+
           ! Define dimensions and global attributes
 
           call mkfile(ldomain, fdyndat, dynlanduse=.true.)
@@ -1237,9 +1245,14 @@ subroutine mksurfdat_run(year,plodata)
           !
           ! If pft fraction override is set, than intrepret string as PFT and harvesting override values
           ! mksrf_fdynuse is just the filler source text in the nl if an override is desired
-          ! here it is the name of the half degree grid definition file
+          ! here it is the name of the half degree grid definition file, and is
+          ! required
 
           if ( any(pft_frc > 0.0_r8 ) )then
+             write(6,*)'Single pft override not available in Z configuration'
+             write(6,*)'Please remove pft_idx and pft_frc from namelist'
+             stop
+
              fname = ' '
              call mkpft_parse_oride(mksrf_fdynuse)
              call mkharvest_parse_oride(mksrf_fdynuse)
@@ -1250,7 +1263,7 @@ subroutine mksurfdat_run(year,plodata)
           else
              !fname = string
              fname = mksrf_fdynuse
-	         write(6,*)'input pft dynamic dataset is  ',trim(fname),' year is ',year
+	         write(6,*)'input dynamic pft grid definition is ',trim(fname),' year is ',year
           end if
           !ntim = ntim + 1
 
@@ -1277,9 +1290,11 @@ subroutine mksurfdat_run(year,plodata)
                      pctlnd_pft_dyn(n), ' not equal to pctlnd_pft for surface data = ',&
                      pctlnd_pft(n),' at n= ',n
                 if ( trim(fname) == ' ' )then
-                   write(6,*) ' PFT string = ', mksrf_fdynuse
+                   write(6,*) ' PFT string = ', fname
                 else
-                   write(6,*) ' PFT file = ', fname
+                   write(6,*) ' dynamic pft grid definintion file  = ', fname
+                   write(6,*) ' pctlnd_pft file  = ', map_fpft
+                   
                 end if
                 call abort()
              end if

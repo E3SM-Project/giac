@@ -42,7 +42,7 @@ contains
          base_co2_file, base_npp_file, base_hr_file, base_pft_file, &
          read_scalars,read_elm_from_file, write_co2, write_scalars, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, num_lat,&
-         num_lon, num_pft, num_gcam_energy_regions,&
+         num_lon, num_pft, num_harvest, num_gcam_energy_regions,&
          num_gcam_land_regions, num_iac2elm_landtypes,&
          num_emiss_sectors, num_emiss_regions,&
          gcam2glm_baselu, gcam2glm_basebiomass, gcam2glm_glumap
@@ -139,6 +139,7 @@ contains
 
     ! From the namelist/config 
     iac_ctl%npft = num_pft
+    iac_ctl%nharvest = num_harvest
 
     ! Start allocating vars and control vectors
 
@@ -162,6 +163,7 @@ contains
     allocate(lnd2iac_vars%area(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(iac2lnd_vars%harvest_frac(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%nharvest))
 
     allocate(iac2atm_vars%co2emiss(iac_ctl%nlon,iac_ctl%nlat))
 

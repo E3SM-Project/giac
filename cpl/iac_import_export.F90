@@ -108,10 +108,17 @@ contains
        ! assume for iac to atm as well
        z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
 
-       ! Now the 17 iac->lnd vars
+       ! Now the 17 iac->lnd pfts
+       ! need the new pfts and the previous pfts
        do p=1,iac_ctl%npft
           z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
+          z2x(index_z2x_Sz_pct_pft_prev(p),g) = iac2lnd_vars%pct_pft_prev(i,j,p)
        end do ! pft index p
+
+       ! Now the 5 harvest fields
+       do p=1,iac_ctl%nharvest
+          z2x(index_z2x_Sz_harvest_frac(p),g) = iac2lnd_vars%harvest_frac(i,j,p)
+       end do ! harvest index p
 
     end do ! global index g
 

@@ -26,6 +26,11 @@ module gcam_cpl_indices
   ! iac -> drv
   ! The stuff we send back to the coupler (i.e. to lnd)
   integer, pointer, public ::index_z2x_Sz_pct_pft(:)      ! percent pft of vegetated land unit
+  ! previous year percent of pft vegetated land unit (for time interpolation)
+  integer, pointer, public ::index_z2x_Sz_pct_pft_prev(:)
+  ! harvest fractions
+  integer, pointer, public ::index_z2x_Sz_harvest_frac(:)
+
   integer, public ::index_z2x_Fazz_fco2_iac    ! co2 from iac to atm, flux
   integer, public ::nflds_z2x = 0
 
@@ -48,14 +53,55 @@ contains
     !
     ! !USES:
     use mct_mod
+    use shr_file_mod, only : shr_file_get, shr_file_getUnit, shr_file_freeUnit
+    use iac_spmd_mod, only : masterproc
+    use gcam_var_mod, only : iulog
     !
     ! !LOCAL VARIABLES:
-    integer           :: ier
+    integer           :: ier, unitn
     character(len=32), parameter :: subname = 'gcam_cpl_indices_init'
+    logical :: lexist
+    character(len=32) :: nlfilename_iac
+    integer :: num_pft, num_harvest
 
-iac_ctl%npft=17
+! avd - how do we get these from the namelist? they are not found until
+! the comp iac_init(), which is called after this routine in iac_init_mct()
+
+! let's try a limited namelist read-in
+    namelist /gcam_inparm/ num_pft, num_harvest
+    
+    nlfilename_iac = "gcam_in"
+
+    inquire (file = trim(nlfilename_iac), exist = lexist)
+    if ( .not. lexist ) then
+       write(iulog,*) subname // ' ERROR: nlfilename_iac does NOT exist:'&
+            //trim(nlfilename_iac)
+       call shr_sys_abort(trim(subname)//' ERROR nlfilename_iac does not exist')
+    end if
+
+    if (masterproc) then
+       unitn = shr_file_getunit()
+       write(iulog,*) 'Read in gcam_inparm num_pft, num_harvest from: ', &
+          trim(nlfilename_iac)
+       open( unitn, file=trim(nlfilename_iac), status='old' )
+       ier = 1
+       read(unitn, gcam_inparm, iostat=ier)
+       if (ier < 0) then
+          call shr_sys_abort( subname//' encountered end-of-file on &
+             gcam_inparm read' )
+       endif
+       call shr_file_freeUnit( unitn )
+    end if
+
+    iac_ctl%npft = num_pft
+    iac_ctl%nharvest = num_harvest
+
     allocate(index_z2x_Sz_pct_pft(iac_ctl%npft), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft',ier)
+    allocate(index_z2x_Sz_pct_pft_prev(iac_ctl%npft), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft_prev',ier)
+    allocate(index_z2x_Sz_harvest_frac(iac_ctl%nharvest), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_harvest_frac',ier)
     allocate(index_x2z_Sl_hr(iac_ctl%npft))
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_hr',ier)
     allocate(index_x2z_Sl_npp(iac_ctl%npft))
@@ -100,7 +146,8 @@ iac_ctl%npft=17
 
     ! KVC NOTE: iac_ctl%npft is not set at this point, setting it now
     ! Loop over pfts and get a tag to concat with
-    iac_ctl%npft=17
+    ! avd - tried setting this in iac_init
+    !iac_ctl%npft=17
     do p=1,iac_ctl%npft
        ! We zero-offset the names, with 0 being bare ground, so tag with p-1
        write(pftstr,'(I0)') p-1
@@ -110,6 +157,12 @@ iac_ctl%npft=17
        ! iac -> lnd
        !-------------------------------------------------------------
        index_z2x_Sz_pct_pft(p) = mct_avect_indexra(z2x,trim('Sz_pct_pft' // pftstr))
+       index_z2x_Sz_pct_pft_prev(p) = &
+          mct_avect_indexra(z2x,trim('Sz_pct_pft_prev' // pftstr))
+       if (p <= iac_ctl%nharvest) then
+          index_z2x_Sz_harvest_frac(p) = &
+             mct_avect_indexra(z2x,trim('Sz_harvest_frac' // pftstr))
+       end if
 
        !-------------------------------------------------------------
        ! lnd -> iac
@@ -135,6 +188,8 @@ iac_ctl%npft=17
     ! !DESCRIPTION:
     ! Dellocate our coupler index arrays
     deallocate(index_z2x_Sz_pct_pft)
+    deallocate(index_z2x_Sz_pct_pft_prev)
+    deallocate(index_z2x_Sz_harvest_frac)
     deallocate(index_x2z_Sl_hr)
     deallocate(index_x2z_Sl_npp)
     deallocate(index_x2z_Sl_pftwgt)

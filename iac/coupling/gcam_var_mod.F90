@@ -133,14 +133,15 @@ module gcam_var_mod
     
   ! define size control variables
   ! these integers define the length of the various arrays used in the coupling
-  integer, public ::  num_lat = 192; ! number of horizontal grid cells
-  integer, public ::  num_lon = 288; ! number of vertical grid cells
-  integer, public ::  num_pft = 17;  ! number of pfts in elm
-  integer, public ::  num_gcam_energy_regions = 32;
-  integer, public ::  num_gcam_land_regions = 392;
-  integer, public ::  num_iac2elm_landtypes = 9;
-  integer, public ::  num_emiss_sectors = 2;
-  integer, public ::  num_emiss_regions = 1;
+  integer, public ::  num_lat = 192 ! number of horizontal grid cells
+  integer, public ::  num_lon = 288 ! number of vertical grid cells
+  integer, public ::  num_pft = 17  ! number of pfts in elm
+  integer, public ::  num_harvest = 5 ! number of harvest fields
+  integer, public ::  num_gcam_energy_regions = 32
+  integer, public ::  num_gcam_land_regions = 392
+  integer, public ::  num_iac2elm_landtypes = 9
+  integer, public ::  num_emiss_sectors = 2
+  integer, public ::  num_emiss_regions = 1
 
 contains
 
