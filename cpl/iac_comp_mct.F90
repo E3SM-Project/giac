@@ -289,9 +289,9 @@ contains
        ! Initialize output attribute vectors
        call mct_aVect_init(z2x_z, rList=seq_flds_z2x_fields, lsize=lsize)
        call mct_aVect_zero(z2x_z) 
-       
+! avd - I don't think this belongs here       
        ! Create mct iac expxort state - try to review what this is.
-       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
+       !call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
     end if
 
     ! Fill in infodata - of course, have to review all this
@@ -431,6 +431,9 @@ contains
     
     ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
     call glm2iac_run_mod(glm2lnd_data)
+
+    ! Now export the land and atmosphere data
+    call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
 
     ! Some logging and timing checvks
     ! Check that internal clock is in sync with master clock

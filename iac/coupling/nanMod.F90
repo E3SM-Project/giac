@@ -1,9 +1,9 @@
-module mknanMod
+module nanMod
 
 !-----------------------------------------------------------------------
 !BOP
 !
-! !MODULE: mknanMod
+! !MODULE: nanMod
 !
 ! !DESCRIPTION:
 ! Set parameters for the floating point flags "inf" Infinity
@@ -38,4 +38,4 @@ module mknanMod
 !EOP
 !-----------------------------------------------------------------------
 
-end module mknanMod
+end module nanMod

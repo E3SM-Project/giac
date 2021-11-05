@@ -1,18 +1,24 @@
-module mkfileutils
+
+module fileutils
 
 !-----------------------------------------------------------------------
 !BOP
 !
-! !MODULE: mkfileutils
+! !MODULE: fileutils
 !
 ! !DESCRIPTION:
 ! Module containing file I/O utilities
 !
 ! !USES:
+  use shr_sys_mod, only : shr_sys_abort
 !
 ! !PUBLIC TYPES:
   implicit none
   save
+!
+! Unit Numbers
+!
+  integer, public :: iulog = 6        ! "stdout" log file unit number, default is 6
 !
 ! !PUBLIC MEMBER FUNCTIONS:
   public :: get_filename  !Returns filename given full pathname
@@ -37,7 +43,7 @@ contains
 ! !IROUTINE: get_filename
 !
 ! !INTERFACE:
-  character(len=256) function get_filename (fulpath)
+  character(len=512) function get_filename (fulpath)
 !
 ! !DESCRIPTION:
 ! Returns filename given full pathname
@@ -63,41 +69,8 @@ contains
     i = 0
 10  get_filename = fulpath(i+1:klen)
 
+    return
   end function get_filename
-
-!------------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: set_filename
-!
-! !INTERFACE:
-  character(len=256) function set_filename (rem_dir, loc_fn)
-!
-! !DESCRIPTION:
-!
-! !ARGUMENTS:
-!
-    implicit none
-    character(len=*), intent(in)  :: rem_dir !remote directory
-    character(len=*), intent(in)  :: loc_fn  !local full path filename
-!
-! !REVISION HISTORY:
-! Created by Mariana Vertenstein
-!
-!
-! !LOCAL VARIABLES:
-!EOP
-    integer :: i   !integer
-!------------------------------------------------------------------------
-
-    set_filename = ' '
-    do i = len_trim(loc_fn), 1, -1
-       if (loc_fn(i:i)=='/') go to 10
-    end do
-    i = 0
-10  set_filename = trim(rem_dir) // loc_fn(i+1:len_trim(loc_fn))
-
-  end function set_filename
 
 !------------------------------------------------------------------------
 !BOP
@@ -111,7 +84,6 @@ contains
 ! Obtain local copy of file
 ! First check current working directory
 ! Next check full pathname[fulpath] on disk
-! Finally check full pathname[fulpath] on archival system
 ! 
 ! !USES:
      use shr_file_mod, only: shr_file_get
@@ -129,45 +101,44 @@ contains
 !EOP
      integer i               !loop index
      integer klen            !length of fulpath character string
-     integer ierr            !error status
      logical lexist          !true if local file exists
-     character(len=len(fulpath)+5)  :: fulpath2 !Archival full pathname
 !------------------------------------------------------------------------
 
-     ! get local file name from full name: start at end. look for first "/"
+     ! get local file name from full name
 
-     klen = len_trim(fulpath)
-     do i = klen, 1, -1
-        if (fulpath(i:i).eq.'/') go to 100
-     end do
-     i = 0
-100  locfn = fulpath(i+1:klen)
+     locfn = get_filename( fulpath )
      if (len_trim(locfn) == 0) then
-	write(6,*)'(GETFIL): local filename has zero length'
-        stop
+	write(iulog,*)'(GETFIL): local filename has zero length'
+        call shr_sys_abort
      else
-        write(6,*)'(GETFIL): attempting to find local file ',trim(locfn)
+        write(iulog,*)'(GETFIL): attempting to find local file ',  &
+             trim(locfn)
      endif
 
      ! first check if file is in current working directory.
 
      inquire (file=locfn,exist=lexist)
      if (lexist) then
-        write(6,*) '(GETFIL): using ',trim(locfn),' in current working directory'
+        write(iulog,*) '(GETFIL): using ',trim(locfn), &
+             ' in current working directory'
         RETURN
      endif
 
      ! second check for full pathname on disk
+     locfn = fulpath
 
-     inquire(file=fulpath, exist=lexist)
+     inquire (file=fulpath,exist=lexist)
      if (lexist) then
-        locfn = trim(fulpath)
-        write(6,*) '(GETFIL): using ',trim(fulpath)
+        write(iulog,*) '(GETFIL): using ',trim(fulpath)
         RETURN
      else
-        write(6,*) 'GETFIL: FAILED to get '//trim(fulpath)
-        stop
-     end if
+        write(iulog,*)'(GETFIL): failed getting file from full path: ', fulpath
+        if (present(iflag) .and. iflag==0) then
+           call shr_sys_abort ('GETFIL: FAILED to get '//trim(fulpath))
+        else
+           RETURN
+        endif
+     endif
 
    end subroutine getfil
 
@@ -201,8 +172,8 @@ contains
 !------------------------------------------------------------------------
 
      if (len_trim(locfn) == 0) then
-        write(6,*)'OPNFIL: local filename has zero length'
-        stop
+        write(iulog,*)'(OPNFIL): local filename has zero length'
+        call shr_sys_abort
      endif
      if (form=='u' .or. form=='U') then
         ft = 'unformatted'
@@ -211,11 +182,12 @@ contains
      end if
      open (unit=iun,file=locfn,status='unknown',form=ft,iostat=ioe)
      if (ioe /= 0) then
-        write(6,*)'(OPNFIL): failed to open file ',trim(locfn),        &
+        write(iulog,*)'(OPNFIL): failed to open file ',trim(locfn),        &
              &     ' on unit ',iun,' ierr=',ioe
-        stop
+        call shr_sys_abort
      else
-        write(6,*)'(OPNFIL): Successfully opened file ',trim(locfn),' on unit= ',iun
+        write(iulog,*)'(OPNFIL): Successfully opened file ',trim(locfn),   &
+             &     ' on unit= ',iun
      end if
 
    end subroutine opnfil
@@ -279,4 +251,4 @@ contains
 
   end subroutine relavu
 
-end module mkfileutils
+end module fileutils

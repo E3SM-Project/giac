@@ -74,7 +74,8 @@ Module gcam2glm_mod
 
     integer,save :: year1,year2
 
-    real(r8), dimension(:), allocatable :: datearr, gcam_wh_ann, glm_wh_ann,lon,lat
+    real(r8), dimension(:), allocatable :: datearr, gcam_wh_ann, glm_wh_ann
+    real(r8), PUBLIC, dimension(:), allocatable :: lon,lat
     real(r8), dimension(:), pointer :: array1d
     real(r8)  :: forested_past, forested_past_percent
     real(r8)  :: nonforested_past, nonforested_past_percent
@@ -91,8 +92,9 @@ Module gcam2glm_mod
     integer, dimension(2) :: start2,count2
     integer :: ncid,tmp(1), &
          lonDimID, latDimId, timeDimId, &
-         numLons, numLats, numTimes,    &
+         numTimes,    &
          status,GCROPVarId,timevarid,varid
+    integer, PUBLIC :: numLats, numLons
     integer, dimension(nf90_max_var_dims) :: dimIDs
     character(len=*),parameter :: gcam2glm_restfile = 'gcam2glm_restart.'
     character(len=*),parameter :: gcam2glm_rpointer = 'rpointer.gcam2glm'
@@ -636,16 +638,27 @@ restart_run = .false.
     ! Unpack gcamo field
     ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
     ! move the next field to the previous field at end of this function
+    
+    ! gcam output wood harvest in billion m^3 of biomass, but units needed here
+    ! are MgC; the conversion factor is 0.288 tonnes C per m^3 (MgC per m^3)
+    ! so multiply the volume by 288000000 
+
     gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
     gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
-    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
+    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:) * 288000000.
     gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
 
     ! Set previous year GCAM land
     gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
     gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
-    gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
+    gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:) * 288000000.
     gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
+
+! test this by setting no change
+!gcam_crop(:,np1) = gcamo_base(iac_gcamo_crop,:)
+!    gcam_past(:,np1) = gcamo_base(iac_gcamo_pasture,:)
+!    gcam_wh(:,np1) = gcamo_base(iac_gcamo_woodharv,:)
+!    gcam_forest_area(:,np1) = gcamo_base(iac_gcamo_forest,:)
 
 #ifdef DEBUG
     write(iulog,*) subname,' year1 year2 ',year1,year2

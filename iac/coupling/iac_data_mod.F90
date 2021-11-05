@@ -35,6 +35,7 @@ module iac_data_mod
      ! Various sizes
      integer, public :: ngrid
      integer, public :: npft
+     integer, public :: nharvest
      integer, public :: nlat
      integer, public :: nlon
 
@@ -65,6 +66,9 @@ module iac_data_mod
   type, public :: iac2lnd_type
      ! Output to lnd, dimensioned (lon,lat,pft)
      real(r8), allocatable :: pct_pft(:,:,:)
+     real(r8), allocatable :: pct_pft_prev(:,:,:)
+     ! Output to lnd, dimensioned (lon, lat, harvest frac)
+     real(r8), allocatable :: harvest_frac(:,:,:)
  end type iac2lnd_type
 
   type, public :: iac2atm_type
@@ -153,7 +157,7 @@ module iac_data_mod
   integer           , public :: iac_glmi_pasture = 3
 
   ! number of fields for glmo
-  integer           , public :: iac_glmo_nflds = 23
+  integer           , public :: iac_glmo_nflds = 9
 
 end module iac_data_mod
 

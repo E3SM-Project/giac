@@ -14,6 +14,7 @@ module mkharvestMod
 ! !USES:
   use shr_kind_mod , only : r8 => shr_kind_r8, CL => shr_kind_CL
   use shr_sys_mod  , only : shr_sys_flush
+  use mkdomainMod  , only : domain_checksame
 
   implicit none
 
@@ -64,7 +65,6 @@ contains
 !              Initialization of mkharvest module.
 !
 ! !USES:
-    use mkfileutils, only : getfil
     use mkncdio 
     implicit none
 !
@@ -81,7 +81,6 @@ contains
 ! !LOCAL VARIABLES:
     character(len=*), parameter :: subname = 'mkharvest_init'
     integer  :: ncid,varid                      ! input netCDF id's
-    character(len=256) locfn                    ! local dataset file name
     integer  :: ifld                            ! indices
 !EOP
 !-----------------------------------------------------------------------
@@ -89,9 +88,7 @@ contains
     allocate(harvest(ns_o,numharv))
     harvest(:,:) = init_val
 
-    call getfil (fharvest, locfn, 0)
-    call check_ret(nf_open(locfn, 0, ncid), subname)
-
+    call check_ret(nf_open(fharvest, 0, ncid), subname)
     do ifld = 1, numharv
        call check_ret(nf_inq_varid (   ncid, mkharvest_fieldname(ifld), varid),            subname)
        call check_ret(nf_get_att_text( ncid, varid, 'long_name', harvest_longnames(ifld)), subname)
@@ -234,8 +231,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 ! the model.
 !
 ! !USES:
-  use mkfileutils , only : getfil
-  use mkdomainMod, only : domain1_type, domain1_clean, domain1_read
+  use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
   use mkvarpar	
   use mkvarctl    
@@ -243,7 +239,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 !
 ! !ARGUMENTS:
   implicit none
-  type(domain1_type), intent(in) :: ldomain
+  type(domain_type), intent(in) :: ldomain
   character(len=*)  , intent(in) :: mapfname    ! input mapping file name
   character(len=*)  , intent(in) :: datfname    ! input data file name
   integer           , intent(in) :: ndiag       ! unit number for diag out
@@ -260,7 +256,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 ! !LOCAL VARIABLES:
 !EOP
   type(gridmap_type)    :: tgridmap
-  type(domain1_type)    :: tdomain            ! local domain
+  type(domain_type)     :: tdomain            ! local domain
   real(r8), allocatable :: harv_i(:,:)        ! input grid: harvest/grazing percent
   real(r8), allocatable :: pctlnd_o(:)        ! output grid: percent land 
   real(r8) :: gharv_o(numharv)                ! output grid: global area harvesting
@@ -268,10 +264,9 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
   real(r8) :: gharv_i(numharv)                ! input grid: global area harvesting
   real(r8) :: garea_i                         ! input grid: global area
   integer  :: ifld                            ! indices
-  integer  :: i,k,n,m,ni,no,ns_i,ns_o         ! indices
+  integer  :: i,k,n,m,ni,no,ns_i,ns_o           ! indices
   integer  :: ncid,varid                      ! input netCDF id's
   integer  :: ier                             ! error status
-  character(len=256) locfn                    ! local dataset file name
 
   character(len=*), parameter :: unit = '10**6 km**2' ! Output units
   real(r8), parameter :: fac = 1.e-06_r8              ! Output factor
@@ -294,16 +289,13 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 
      ! Obtain input grid info, read HARVEST_VH1, HARVEST_VH2, ... GRAZING etc.
 
-     call getfil (datfname, locfn, 0)
-
-     call domain1_read(tdomain,locfn)
+     call domain_read(tdomain,datfname)
      ns_i = tdomain%ns
      allocate(harv_i(ns_i,1:numharv), stat=ier)
      if (ier/=0) call abort()
      ns_o = ldomain%ns
-
+     
      if (present(plodata)) then
-
         write(6,*) trim(subname)//' use plodata'
         if (size(plodata,2) .ne. ns_i) then
            write(6,*)'MKPFT: plodata size ne ns_i= ',size(plodata,2),ns_i
@@ -318,15 +310,15 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
            harv_i(i,5) = plodata(22,i)  ! SH3
            harv_i(i,6) = plodata(23,i)  ! GRAZING
         enddo
-
      else
-        call check_ret(nf_open(locfn, 0, ncid), subname)
+        write (6,*) 'Open harvest file: ', trim(datfname)
+        call check_ret(nf_open(datfname, 0, ncid), subname)
         do ifld = 1, numharv
            call check_ret(nf_inq_varid(ncid, mkharvest_fieldname(ifld), varid), subname)
            call check_ret(nf_get_var_double (ncid, varid, harv_i(:,ifld)), subname)
         end do
         call check_ret(nf_close(ncid), subname)
-     endif
+	 endif
 
      ! Area-average normalized harvest on input grid [harv_i] to output grid [harv_o]
 
@@ -334,38 +326,12 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 
      ! Error checks for domain and map consistencies
      
-     if (tdomain%ns /= tgridmap%na) then
-        write(6,*)'input domain size and gridmap source size are not the same size'
-        write(6,*)' domain size = ',tdomain%ns
-        write(6,*)' map src size= ',tgridmap%na
-        stop
-     end if
-     do n = 1,tgridmap%ns
-        ni = tgridmap%src_indx(n)
-        if (tdomain%mask(ni) /= tgridmap%mask_src(ni)) then
-           write(6,*)'input domain mask and gridmap mask are not the same at ni = ',ni
-           write(6,*)' domain  mask= ',tdomain%mask(ni)
-           write(6,*)' gridmap mask= ',tgridmap%mask_src(ni)
-           stop
-        end if
-        if (tdomain%lonc(ni) /= tgridmap%xc_src(ni)) then
-           write(6,*)'input domain lon and gridmap lon not the same at ni = ',ni
-           write(6,*)' domain  lon= ',tdomain%lonc(ni)
-           write(6,*)' gridmap lon= ',tgridmap%xc_src(ni)
-           stop
-        end if
-        if (tdomain%latc(ni) /= tgridmap%yc_src(ni)) then
-           write(6,*)'input domain lat and gridmap lat not the same at ni = ',ni
-           write(6,*)' domain  lat= ',tdomain%latc(ni)
-           write(6,*)' gridmap lat= ',tgridmap%yc_src(ni)
-           stop
-        end if
-     end do
+     call domain_checksame( tdomain, ldomain, tgridmap )
 
      ! Determine harv_o on output grid
 
      do ifld = 1,numharv
-        call gridmap_areaave(tgridmap, harv_i(:,ifld), harv_o(:,ifld))
+        call gridmap_areaave(tgridmap, harv_i(:,ifld), harv_o(:,ifld), nodata=0._r8)
      end do
 
      ! -----------------------------------------------------------------
@@ -415,7 +381,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
 
      ! Deallocate dynamic memory
 
-     call domain1_clean(tdomain) 
+     call domain_clean(tdomain) 
      call gridmap_clean(tgridmap)
      deallocate (harv_i)
 
