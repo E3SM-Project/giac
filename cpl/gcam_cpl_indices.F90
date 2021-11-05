@@ -68,6 +68,7 @@ contains
 ! the comp iac_init(), which is called after this routine in iac_init_mct()
 
 ! let's try a limited namelist read-in
+! this doesn't work for some reason
     namelist /gcam_inparm/ num_pft, num_harvest
     
     nlfilename_iac = "gcam_in"
@@ -93,8 +94,11 @@ contains
        call shr_file_freeUnit( unitn )
     end if
 
-    iac_ctl%npft = num_pft
-    iac_ctl%nharvest = num_harvest
+    !write(iulog,'(A20,a,I2,a,I1)') subname , 'num_pft=' , num_pft , &
+    !               'num_harvest=' , num_harvest
+
+    iac_ctl%npft = 17
+    iac_ctl%nharvest = 5
 
     allocate(index_z2x_Sz_pct_pft(iac_ctl%npft), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft',ier)
