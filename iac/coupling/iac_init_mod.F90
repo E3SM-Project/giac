@@ -168,6 +168,7 @@ contains
     allocate(lnd2iac_vars%area(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%harvest_frac(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%nharvest))
 
     allocate(iac2atm_vars%co2emiss(iac_ctl%nlon,iac_ctl%nlat))
