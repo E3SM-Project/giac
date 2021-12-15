@@ -344,7 +344,7 @@ contains
     integer      :: day                  ! gcam current day
     integer      :: tod                  ! gcam current time of day (sec)
     integer      :: dtime                ! time step increment (sec)
-    integer      :: nstep                ! time step index
+    integer,save :: nstep                ! time step index
     logical      :: rstwr_sync           ! .true. ==> write restart file before returning
     logical      :: rstwr                ! .true. ==> write restart file before returning
     logical      :: nlend_sync           ! Flag signaling last time-step
@@ -358,6 +358,7 @@ contains
     real(r8)     :: calday               ! calendar day for nstep
     real(r8)     :: recip                ! reciprical
     logical,save :: first_call = .true.  ! first call work
+    integer      :: rc                   ! return value from Clock functions.
     type(seq_infodata_type),pointer :: infodata             ! CESM information from the driver
     type(mct_gGrid),        pointer :: dom_z                ! iac model domain data
     !type(bounds_type)               :: bounds               ! bounds
@@ -373,12 +374,36 @@ contains
     call shr_file_getLogLevel(shrloglev)
     call shr_file_setLogUnit (iulog)
 
+    if (first_call) then
+       nstep = 1
+    else
+       nstep = nstep+1
+    endif
+
     ! Get the model time - I'm not certain what should be sync and
     ! what shouldn't, but for now we'll just follow the pattern
     call seq_timemgr_EClockGetData(EClock, &
          curr_ymd=ymd, curr_tod=tod,  &
          curr_yr=yr, curr_mon=mon, curr_day=day,&
          dtime=dtime)
+
+    ! We are going to do our time sync check up top, because iac runs
+    ! first at the top of the year.
+
+    ! Check that internal clock is in sync with master clock
+    ! Again, may need time manager module with these kind of functions
+    ! call get_curr_date( yr, mon, day, tod )
+    !ymd = yr*10000 + mon*100 + day
+    !tod = tod
+    if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
+       call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
+       write(iulog,*)' gcam ymd=',ymd     ,'  gcam tod= ',tod
+       write(iulog,*)'sync ymd=',ymd_sync,' sync tod= ',tod_sync
+       call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
+    end if
+
+    write(iulog,*) "Nstep: ", nstep
+    write(iulog,*) "EClock: ", yr,mon,day,tod, ymd, dtime
 
     ! Assign the date to GClock
     GClock(iac_eclock_ymd) = ymd
@@ -390,13 +415,9 @@ contains
     call iac_import(x2z_z%rattr, lnd2iac_vars)
     !call iac_import(x2z_z, lnd2iac_vars)
     !call t_stopf('iac_import')
-
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
     nlend = seq_timemgr_StopAlarmIsOn( EClock )
     rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
-
-    ! May need a time manager mod
-    ! call advance_timestep()
 
     ! Run gcam.  
 
@@ -435,19 +456,22 @@ contains
     ! Now export the land and atmosphere data
     call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
 
-    ! Some logging and timing checvks
-    ! Check that internal clock is in sync with master clock
-    ! Again, may need time manager module with these kind of functions
-    ! call get_curr_date( yr, mon, day, tod )
-    ymd = yr*10000 + mon*100 + day
-    tod = tod
-    if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
-       call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
-       write(iulog,*)' gcam ymd=',ymd     ,'  gcam tod= ',tod
-       write(iulog,*)'sync ymd=',ymd_sync,' sync tod= ',tod_sync
-       call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
-    end if
-    
+    ! Advance our timestep in the gcam clock to next year
+    call ESMF_ClockAdvance( EClock, rc=rc )
+    if (rc .ne. ESMF_SUCCESS) then
+       call shr_sys_abort( sub//":: GCAM clock did not advance correctly" )
+    endif
+
+    ! You know what - let's just check that
+    call seq_timemgr_EClockGetData(EClock, &
+         curr_ymd=ymd, curr_tod=tod,  &
+         curr_yr=yr, curr_mon=mon, curr_day=day,&
+         dtime=dtime)
+
+    write(iulog,*) "EClock post-iac run: ", yr,mon,day,tod, ymd, dtime
+
+    first_call = .false.
+
     ! Reset shr logging to my original values
     call shr_file_setLogUnit (shrlogunit)
     call shr_file_setLogLevel(shrloglev)

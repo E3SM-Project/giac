@@ -36,7 +36,7 @@ module mksurfdat
     use nanMod             , only : nan, bigint
     use mkncdio            , only : check_ret
     use mkdomainMod        , only : domain_type, domain_read_map, domain_read, &
-                                    domain_write
+                                    domain_write, domain_set
     use mkgdpMod           , only : mkgdp
     use mkpeatMod          , only : mkpeat
     use mkagfirepkmonthMod , only : mkagfirepkmon
@@ -396,11 +396,14 @@ subroutine mksurfdat_run(year,plodata)
     ! Determine land model grid, fractional land and land mask
     ! ----------------------------------------------------------------------
     
-    write(6,*)'calling domain_read'
-    if ( .not. domain_read_map(ldomain, fgrddat) )then
-        call domain_read(ldomain, fgrddat)
-    end if
-    write(6,*)'finished domain_read'
+    ! Only read domain map once
+    if (domain_set(ldomain) == .false.) then 
+       write(6,*)'calling domain_read'
+       if ( .not. domain_read_map(ldomain, fgrddat) )then
+          call domain_read(ldomain, fgrddat)
+       end if
+       write(6,*)'finished domain_read'
+    endif
     
     ! Invalidate mask and frac for ldomain 
 
@@ -1107,6 +1110,7 @@ subroutine mksurfdat_run(year,plodata)
     deallocate ( f0, p3, zwt0 )
     deallocate ( apatiteP, labileP, occludedP, secondaryP )
     deallocate ( grvl, slp10, ero_c1, ero_c2, ero_c3 )
+    deallocate ( topo )
 
     ! Synchronize the disk copy of a netCDF dataset with in-memory buffers
 

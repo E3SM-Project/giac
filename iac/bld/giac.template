@@ -347,6 +347,7 @@ cat >! iac_in <<EOF
  map_fglcmec_g2g= '\$DIN_LOC_ROOT/${map_landuse}'
  map_flai       = '\$DIN_LOC_ROOT/${map_landuse}'
  map_fharvest   = '\$DIN_LOC_ROOT/${map_landuse}'
+ map_fpeat      = '\$DIN_LOC_ROOT/${map_landuse}'
  map_flanwat    = '\$DIN_LOC_ROOT/${map_flanwat}'
  map_fvocef     = '\$DIN_LOC_ROOT/${map_fvocef}'
  map_fsoitex    = '\$DIN_LOC_ROOT/${map_fsoitex}'

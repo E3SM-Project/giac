@@ -11,6 +11,7 @@ module mkdomainMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use mkvarpar    , only : re
   use nanMod      , only : nan, bigint
+  use gcam_var_mod        , only : iulog
 !
 ! !PUBLIC TYPES:
   implicit none
@@ -49,6 +50,7 @@ module mkdomainMod
   public domain_read_map
   public domain_write         
   public domain_checksame
+  public domain_set        ! See if the domain is set or not
 !
 !
 ! !REVISION HISTORY:
@@ -101,21 +103,29 @@ contains
     if (domain%set == set) then
        call domain_clean(domain)
     endif
-    
-    allocate(domain%mask(ns), &
-             domain%frac(ns), &
-             domain%latc(ns), &
-             domain%lonc(ns), &
-             domain%lats(ns), &
-             domain%latn(ns), &
-             domain%lonw(ns), &
-             domain%lone(ns), &
-             domain%area(ns), stat=ier)
+
+    ! So the clean will overwrite ns if the call was
+    ! domain_init(domain, domain%ns).  This is why we saved ns to ne in
+    ! the first place, but then we use ns to allocate - so we are
+    ! allocating an arbitrary number of elements, which we do not want.
+    ! So, use ne to allocate
+    ! 
+
+    allocate(domain%mask(ne), &
+             domain%frac(ne), &
+             domain%latc(ne), &
+             domain%lonc(ne), &
+             domain%lats(ne), &
+             domain%latn(ne), &
+             domain%lonw(ne), &
+             domain%lone(ne), &
+             domain%area(ne), stat=ier)
     if (ier /= 0) then
        write(6,*) 'domain_init ERROR: allocate mask, frac, lat, lon, area '
     endif
-    
-    domain%ns       = ns
+
+    ! Of course, reassign ns back ot ne
+    domain%ns       = ne
     domain%mask     = -9999
     domain%frac     = -1.0e36
     domain%latc     = nan
@@ -212,6 +222,38 @@ end subroutine domain_clean
 
 end subroutine domain_check
 
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_set
+!
+! !INTERFACE:
+  logical function domain_set(domain)
+!
+! !DESCRIPTION:
+! This function returns whether the domain has been set or not
+!
+! !ARGUMENTS:
+    implicit none
+    type(domain_type),intent(in)  :: domain        ! domain datatype
+!
+! !REVISION HISTORY:
+!   Created by T Craig
+!
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!------------------------------------------------------------------------------
+
+    if (domain%set == set) then
+       domain_set = .true.
+    else
+       domain_set = .false.
+    endif
+    return
+end function domain_set
+
 !----------------------------------------------------------------------------
 !BOP
 !
@@ -282,6 +324,7 @@ end subroutine domain_check
       end if
 
       call domain_init(domain, domain%ns)
+
       ns = domain%ns
 
       call check_ret(nf_inq_varid (ncid, 'xc_b', varid), subname)
@@ -326,6 +369,7 @@ end subroutine domain_check
 
       call check_ret(nf_inq_varid (ncid, 'area_b', varid), subname)
       call check_ret(nf_get_var_double (ncid, varid, domain%area), subname)
+
       domain%area = domain%area * re**2
     end if
     domain%maskset = .true.
