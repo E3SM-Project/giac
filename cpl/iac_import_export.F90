@@ -119,10 +119,10 @@ write(iulog,*) trim(sub),' export pft and harvest data'
           z2x(index_z2x_Sz_pct_pft_prev(p),g) = iac2lnd_vars%pct_pft_prev(i,j,p)
 
 ! avd
-if (iac2lnd_vars%pct_pft(i,j,p) /= 0.) then 
-          write(iulog,*) 'pft=', p, ' lon,lat,g=', i,',',j,',',g, ' value=', &
-                         z2x(index_z2x_Sz_pct_pft(p),g) 
-end if 
+!if (iac2lnd_vars%pct_pft(i,j,p) /= 0.) then 
+!          write(iulog,*) 'pft=', p, ' lon,lat,g=', i,',',j,',',g, ' value=', &
+!                         z2x(index_z2x_Sz_pct_pft(p),g) 
+!end if 
        end do ! pft index p
 
        ! Now the 5 harvest fields

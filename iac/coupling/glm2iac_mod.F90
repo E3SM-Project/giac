@@ -19,7 +19,6 @@ iac_ctl
   use netcdf
   use gcam2glm_mod, only : lon, lat, numLats, handle_err
   use mksurfdat, only : fdyndat
-!  use abortutils, only : endrun
   use shr_log_mod, only : errMsg => shr_log_errMsg
 
   implicit none
@@ -197,7 +196,6 @@ contains
     ierr = nf90_put_var(ncid,lat_id,lat_rev)
     ierr = nf90_put_var(ncid,lon_id,lon) 
 
-    ! avd - this isn't writing for some reason
     ierr = nf90_put_var(ncid,rid,glmo)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
 
