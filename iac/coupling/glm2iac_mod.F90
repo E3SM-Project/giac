@@ -19,7 +19,7 @@ iac_ctl
   use netcdf
   use gcam2glm_mod, only : lon, lat, numLats, handle_err
   use mksurfdat, only : fdyndat
-  use abortutils, only : endrun
+!  use abortutils, only : endrun
   use shr_log_mod, only : errMsg => shr_log_errMsg
 
   implicit none
@@ -172,11 +172,12 @@ contains
 
     ierr = nf90_def_var(ncid,'lat',NF90_DOUBLE,dimid(2),lat_id)
     ierr = nf90_def_var(ncid,'lon',NF90_DOUBLE,dimid(1),lon_id)
-    rawdims(1)=size(glmo,dim=1)
-    rawdims(2) = size(glmo,dim=2)
-    ierr = nf90_def_var(ncid,'raw_glmo',NF90_DOUBLE,rawdims,rid)
 
+    ierr = nf90_def_dim(ncid,'glmo_nf_raw', size(glmo,dim=1), rawdims(1))
+    ierr = nf90_def_dim(ncid,'glmo_nxy', size(glmo,dim=2), rawdims(2))
+    ierr = nf90_def_var(ncid,'raw_glmo',NF90_DOUBLE,rawdims,rid)
     ierr = nf90_enddef(ncid)
+
     allocate(array3d(iac_glm_nx,iac_glm_ny,size(glmo,dim=1)))
 
     ! flip the latitude into this diagnostic array and also in glmo
@@ -198,6 +199,7 @@ contains
 
     ! avd - this isn't writing for some reason
     ierr = nf90_put_var(ncid,rid,glmo)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
 
     ! now refill glmo
     do n = 1,size(glmo,dim=1)
@@ -298,8 +300,7 @@ contains
     ierr= nf90_inq_varid(ncid, "YEAR", varid)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
     allocate(lsf_years(ntime), stat=ierr)
-    if(ierr/=0) call endrun(msg='ERROR reading dyn land file years'// &
-                             errMsg(__FILE__, __LINE__))
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
     ierr= nf90_get_var(ncid, varid, lsf_years)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
 
