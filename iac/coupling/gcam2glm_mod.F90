@@ -504,6 +504,11 @@ restart_run = .false.
    real(r8), allocatable    ::  avail_farea(:),avail_nfarea(:),avail_ag_farea(:),reassign_ag(:), &
                               unmet_aez_farea(:),cumsum_sorted_reassign_ag(:),unmet_regional_farea(:)
    integer ntimes,nntimes,zz
+
+! avd
+integer :: nmode, ierr
+character(len=128) :: hfile
+
 ! !REVISION HISTORY:
 ! Author: T Craig
 
@@ -643,9 +648,30 @@ restart_run = .false.
     ! are MgC; the conversion factor is 0.288 tonnes C per m^3 (MgC per m^3)
     ! so multiply the volume by 288000000 
 
+    ! avd - note that this multiplication has been moved to the gcam output
+    ! coupling code
+    ! but the base data still needs to be multiplied because it has not been
+    ! updated
+
+    ! avd - write the harvest data to a diag file
+    !write(hfile,'(a)') 'gcam2glm_harvest.nc'
+    !ierr = nf90_create(trim(hfile),nf90_clobber,ncid)
+    !ierr = nf90_def_dim(ncid,'num_gcam_units',gcamsize,dimid)
+    !ierr = nf90_def_var(ncid,'gcam_harvest',NF90_DOUBLE,dimid,varid)
+    !ierr = nf90_enddef(ncid)
+    !ierr = nf90_put_var(ncid,varid,gcamo(iac_gcamo_woodharv,:))
+    !if(ierr /= nf90_NoErr) call handle_err(ierr)
+    !ierr = nf90_close(ncid)
+
+    ! avd - write harvest data to the log
+    !do g=1,gcamsize
+    !  write(iulog,*) subname,' gunit ', g, ' gcamo wood harvest =', &
+    !                 gcamo(iac_gcamo_woodharv,g)
+    !end do
+
     gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
     gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
-    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:) * 288000000.
+    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
     gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
 
     ! Set previous year GCAM land
@@ -654,7 +680,15 @@ restart_run = .false.
     gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:) * 288000000.
     gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
 
-! test this by setting no change
+!avd - write some data to the log
+!do g=1,gcamsize
+!   write(iulog,*) subname,' gunit ', g, ' gcam_wh np1 =', &
+!                  gcam_wh(g,np1)
+!   write(iulog,*) subname,' gunit ', g, ' gcam_wh n =', &
+!                  gcam_wh(g,n)
+!end do
+
+! avd - test this by setting no change
 !gcam_crop(:,np1) = gcamo_base(iac_gcamo_crop,:)
 !    gcam_past(:,np1) = gcamo_base(iac_gcamo_pasture,:)
 !    gcam_wh(:,np1) = gcamo_base(iac_gcamo_woodharv,:)

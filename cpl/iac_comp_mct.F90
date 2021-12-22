@@ -34,6 +34,8 @@ module iac_comp_mct
   use ESMF
   use mct_mod
 
+  use clm_varctl       , only : clm_varctl_set_iac_active_only
+
 ! Stub in other moduals for running iac
 ! use IacMod
 ! use IacVar
@@ -298,6 +300,10 @@ contains
     call seq_infodata_PutData( infodata, iac_present=gcam_active, &
          iac_prognostic=gcam_active, &
          iac_nx = gcam_nlon, iac_ny = gcam_nlat)
+
+    ! set the clm flag denoting an active iac
+    ! just use gcam_active for now because both infodata flags are set to it
+    call clm_varctl_set_iac_active_only(gcam_active)
 
     ! Reset shr logging to original values
     call shr_file_setLogUnit (shrlogunit)
