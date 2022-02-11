@@ -90,7 +90,7 @@ module gcam_var_mod
   !----------------------------------------------------------
   ! Active gcam
   !----------------------------------------------------------
-  logical, public :: gcam_active = .false.  ! true to turn on gcam coupling
+  logical, public :: gcam_active = .true.  ! true to turn on gcam coupling
 
   ! Some sizes
   integer, public :: gcam_nlon, gcam_nlat

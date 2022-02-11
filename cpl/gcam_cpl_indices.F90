@@ -125,6 +125,7 @@ contains
     use seq_flds_mod   , only: seq_flds_x2z_fields, seq_flds_z2x_fields
     use mct_mod        , only: mct_aVect, mct_aVect_init, mct_avect_indexra
     use mct_mod        , only: mct_aVect_clean, mct_avect_nRattr
+    use gcam_var_mod, only : iulog
     !
     ! !ARGUMENTS:
     implicit none
@@ -163,6 +164,7 @@ contains
        index_z2x_Sz_pct_pft(p) = mct_avect_indexra(z2x,trim('Sz_pct_pft' // pftstr))
        index_z2x_Sz_pct_pft_prev(p) = &
           mct_avect_indexra(z2x,trim('Sz_pct_pft_prev' // pftstr))
+
        if (p <= iac_ctl%nharvest) then
           index_z2x_Sz_harvest_frac(p) = &
              mct_avect_indexra(z2x,trim('Sz_harvest_frac' // pftstr))
