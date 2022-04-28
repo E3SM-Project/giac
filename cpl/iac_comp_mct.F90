@@ -34,8 +34,6 @@ module iac_comp_mct
   use ESMF
   use mct_mod
 
-  use clm_varctl       , only : clm_varctl_set_iac_active_only
-
 ! Stub in other moduals for running iac
 ! use IacMod
 ! use IacVar
@@ -291,19 +289,16 @@ contains
        ! Initialize output attribute vectors
        call mct_aVect_init(z2x_z, rList=seq_flds_z2x_fields, lsize=lsize)
        call mct_aVect_zero(z2x_z) 
-! avd - I don't think this belongs here       
-       ! Create mct iac expxort state - try to review what this is.
-       !call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
+
+       ! Create mct iac export state - try to review what this is.
+       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
     end if
 
     ! Fill in infodata - of course, have to review all this
+    ! this happens before lnd init, so the elm flag is set later 
     call seq_infodata_PutData( infodata, iac_present=gcam_active, &
          iac_prognostic=gcam_active, &
          iac_nx = gcam_nlon, iac_ny = gcam_nlat)
-
-    ! set the clm flag denoting an active iac
-    ! just use gcam_active for now because both infodata flags are set to it
-    call clm_varctl_set_iac_active_only(gcam_active)
 
     ! Reset shr logging to original values
     call shr_file_setLogUnit (shrlogunit)
@@ -427,11 +422,10 @@ contains
 
     ! Run gcam.  
 
-    ! This pushes the carbon densities to gcam.  The lnd2iac_vars
-    ! structure holds most of what we want
-    if ( elm_iac_carbon_scaling ) then
-       call gcam_setdensity_mod(lnd2iac_vars)
-    end if
+    ! This calcs and pushes the carbon density scalars to gcam
+    !   the push happens only if elm_iac_carbon_scaling is true
+    ! this is called regardless in order to calculate and write scalars
+    call gcam_setdensity_mod()
 
     ! Run GCAM, for this timestep.  
     ! Inputs taken care of by gcam_setdensity_mod(), so both of these
@@ -543,9 +537,8 @@ contains
     begg  = iac_ctl%begg
     endg  = iac_ctl%endg
 
-! KVC: need gcam_nlon and gcam_nlat set before this is called
-gcam_nlon = 288
-gcam_nlat = 192
+    gcam_nlon = iac_ctl%nlon
+    gcam_nlat = iac_ctl%nlat
 
     lsize = iac_ctl%endg - iac_ctl%begg + 1
     gsize = gcam_nlon*gcam_nlat
@@ -607,8 +600,9 @@ gcam_nlat = 192
     character(len=32), parameter :: sub = 'iac_domain_mct'
     !-----------------------------------------------------
 
-    ! lat/lon in degrees,  area in radians^2, mask is 1 (land), 0 (non-land)
-    ! Note that in addition land carries around landfrac for the purposes of domain checking
+    ! the domain info is for iac-atm only
+    ! lat/lon in degrees,  area in radians^2, mask is 1 (atm everywhere) 
+    ! the iac frac need to be 1 everywhere, as the data are for grid cell 
     ! TRS - this is something I need to review
     call mct_gGrid_init( GGrid=dom_z, CoordChars=trim(seq_flds_dom_coord), &
       OtherChars=trim(seq_flds_dom_other), lsize=lsize )
@@ -623,12 +617,12 @@ gcam_nlat = 192
 
     ! Determine domain (numbering scheme is: West to East and South to North to South pole)
     ! Initialize attribute vector with special value
-    data(:) = -9999.0_R8 
+    data(:) = -9999.0_r8 
     call mct_gGrid_importRAttr(dom_z,"lat"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"lon"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"area" ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"aream",data,lsize) 
-    data(:) = 0.0_R8
+    data(:) = 0.0_r8
     call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     ! Determine bounds numbering consistency
@@ -663,37 +657,23 @@ gcam_nlat = 192
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
-    ! Area - pulled from lnd2iac_var array
+    ! cell Area - pulled from iac_ctl array in km^2
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        i = iac_ctl%ilon(n)
        j = iac_ctl%jlat(n)
-       !If area is in radians, then we need to scale
-       !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
-       !But I believe it's in km^2 already (at least from clm.h1 file)
-       data(ni) = lnd2iac_vars%area(i,j) 
+       ! scale area to radians
+       data(ni) = iac_ctl%area(i,j)/(re*re)
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
-    ! frac - same as lndfrac, from lnd2iac_var
-    ni = 0
-    do n = iac_ctl%begg,iac_ctl%endg
-       ni = ni + 1
-       i = iac_ctl%ilon(n)
-       j = iac_ctl%jlat(n)
-       data(ni) = lnd2iac_vars%landfrac(i,j)
-    end do
+    ! frac - this is one because atm covers whole grid cell
+    data(:) = 1.0_r8
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
 
-    ! iacmask = lndmask - this is globally indexed
-    ni = 0
-    do n = iac_ctl%begg,iac_ctl%endg
-       ni = ni + 1
-       idata(ni) = iac_ctl%iacmask(n)
-    end do
-
-    data(:) = 0.0_R8
+    ! iacmask = this is one because global coverage
+    data(:) = 1.0_r8
     call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     deallocate(data)

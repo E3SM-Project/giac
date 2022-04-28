@@ -48,6 +48,9 @@ contains
     ! then extract the global-indexed data, then pack them into the
     ! lnd2iac_vars(:,:) structure.
 
+    ! pftwgt is in actual fraction of grid cell and is properly
+    !    addressed in the gcam setdensity function
+
     do p=1,iac_ctl%npft
 
        ! This for logging purposes...
@@ -112,16 +115,26 @@ write(iulog,*) trim(sub),' export pft and harvest data'
        ! assume for iac to atm as well
        z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
 
+       ! these iac values are percent/fraction of veg land unit, but for proper
+       !   coupling they need to be converted to fraction of actual grid cell
+
        ! Now the 17 iac->lnd pfts
        ! need the new pfts and the previous pfts
        do p=1,iac_ctl%npft
-          z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p)
-          z2x(index_z2x_Sz_pct_pft_prev(p),g) = iac2lnd_vars%pct_pft_prev(i,j,p)
+          z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p) / 100.0_R8 * &
+             iac_ctl%iacmask(i,j) * iac_ctl%vegfrac(i,j) * iac_ctl%landfrac(i,j)
+          z2x(index_z2x_Sz_pct_pft_prev(p),g) = &
+             iac2lnd_vars%pct_pft_prev(i,j,p) / 100.0_R8 * iac_ctl%iacmask(i,j) * &
+             iac_ctl%vegfrac(i,j) * iac_ctl%landfrac(i,j)
+
        end do ! pft index p
 
        ! Now the 5 harvest fields
        do p=1,iac_ctl%nharvest
-          z2x(index_z2x_Sz_harvest_frac(p),g) = iac2lnd_vars%harvest_frac(i,j,p)
+          z2x(index_z2x_Sz_harvest_frac(p),g) = &
+             iac2lnd_vars%harvest_frac(i,j,p) * iac_ctl%iacmask(i,j) * &
+             iac_ctl%vegfrac(i,j) * iac_ctl%landfrac(i,j) 
+
        end do ! harvest index p
 
     end do ! global index g

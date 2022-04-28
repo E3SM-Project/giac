@@ -19,8 +19,6 @@ module iac_data_mod
 
      ! Dimensioned by grid cell - ngrid
      integer, allocatable :: gindex(:)  ! mapping grid cells to global index
-     integer, allocatable :: iacmask(:) ! mask
-
      integer, allocatable :: ilon(:)   ! Index of lat,lon dimension,
      integer, allocatable :: jlat(:)   ! for grid cell
 
@@ -31,6 +29,12 @@ module iac_data_mod
      ! (g) <-> (i,j)
      real(r8), allocatable :: lon(:)    ! longitude
      real(r8), allocatable :: lat(:)    ! latitude 
+
+     ! dimensioned lon,lat for use by iac
+     integer, allocatable :: iacmask(:,:) ! pft land mask from gridfile
+     real(r8), allocatable :: landfrac(:,:) ! landfrac from gridfile
+     real(r8), allocatable :: area(:,:) ! cell area from gridfile
+     real(r8), allocatable :: vegfrac(:,:) ! veg land unit frac from gridfile
 
      ! Various sizes
      integer, public :: ngrid
@@ -57,10 +61,6 @@ module iac_data_mod
      real(r8), allocatable :: npp(:,:,:)
      real(r8), allocatable :: hr(:,:,:)
      real(r8), allocatable :: pftwgt(:,:,:)
-
-     ! These will be read once from configuration file, and are (lon,lat)
-     real(r8), allocatable :: landfrac(:,:)
-     real(r8), allocatable :: area(:,:)
   end type lnd2iac_type
 
   type, public :: iac2lnd_type
