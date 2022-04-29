@@ -28,7 +28,7 @@ module iac_comp_mct
   use gcam_var_mod        , only : gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
-                                gcam_active, gcam_var_set
+                                gcam_active, gcam_var_set, num_lon, num_lat
   use iac_spmd_mod
   !use iac_fields_mod
   use ESMF
@@ -107,6 +107,7 @@ module iac_comp_mct
 
   private :: iac_SetgsMap_mct         ! Set the iac model MCT GS map
   private :: iac_domain_mct           ! Set the iac model domain information
+  private :: gcam2iac_copy            ! Copy z->a gcam output to coupler variables
 
 
 ! REVISION HISTORY:
@@ -459,6 +460,9 @@ contains
     ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
     call glm2iac_run_mod(glm2lnd_data)
 
+    ! Copy gcamo atm variables to iac2atm_vars
+    call gcam2iac_copy()
+
     ! Now export the land and atmosphere data
     call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
 
@@ -703,6 +707,67 @@ gcam_nlat = 192
 
 !====================================================================================
 
+  subroutine gcam2iac_copy()
+    !-----------------------------------------------------
+    !
+    ! !DESCRIPTION:
+    ! Copy the gcamoco2* variables into iac2atm_vars, which is what the
+    ! coupler code needs.
+
+    ! !ARGUMENTS:
+    implicit none
+    ! LOCAL VARIABLES
+    !-----------------------------------------------------
+
+    ! This is tedious, but seems to be the only way to convert these
+    ! text based variables to index based, which is what we'll need
+    ! inside the export function.  The alternative is to simply declare
+    ! all 36 of these expclitly as iac2atm_var elements, but then we
+    ! couldn't loop in iac export and clm import, so we'd be paying the
+    ! tedium forward.  So we do it just once, in this subroutine.
+
+    ! Surface co2 flux
+    iac2atm_vars%co2sfc(1,:,:) = gcamoco2sfcjan(:,:)
+    iac2atm_vars%co2sfc(2,:,:) = gcamoco2sfcfeb(:,:)
+    iac2atm_vars%co2sfc(3,:,:) = gcamoco2sfcmar(:,:)
+    iac2atm_vars%co2sfc(4,:,:) = gcamoco2sfcapr(:,:)
+    iac2atm_vars%co2sfc(5,:,:) = gcamoco2sfcmay(:,:)
+    iac2atm_vars%co2sfc(6,:,:) = gcamoco2sfcjun(:,:)
+    iac2atm_vars%co2sfc(7,:,:) = gcamoco2sfcjul(:,:)
+    iac2atm_vars%co2sfc(8,:,:) = gcamoco2sfcaug(:,:)
+    iac2atm_vars%co2sfc(9,:,:) = gcamoco2sfcsep(:,:)
+    iac2atm_vars%co2sfc(10,:,:) = gcamoco2sfcoct(:,:)
+    iac2atm_vars%co2sfc(11,:,:) = gcamoco2sfcnov(:,:)
+    iac2atm_vars%co2sfc(12,:,:) = gcamoco2sfcdec(:,:)
+
+    ! Low alt air co2
+    iac2atm_vars%co2airlo(1,:,:) = gcamoco2airlojan(:,:)
+    iac2atm_vars%co2airlo(2,:,:) = gcamoco2airlofeb(:,:)
+    iac2atm_vars%co2airlo(3,:,:) = gcamoco2airlomar(:,:)
+    iac2atm_vars%co2airlo(4,:,:) = gcamoco2airloapr(:,:)
+    iac2atm_vars%co2airlo(5,:,:) = gcamoco2airlomay(:,:)
+    iac2atm_vars%co2airlo(6,:,:) = gcamoco2airlojun(:,:)
+    iac2atm_vars%co2airlo(7,:,:) = gcamoco2airlojul(:,:)
+    iac2atm_vars%co2airlo(8,:,:) = gcamoco2airloaug(:,:)
+    iac2atm_vars%co2airlo(9,:,:) = gcamoco2airlosep(:,:)
+    iac2atm_vars%co2airlo(10,:,:) = gcamoco2airlooct(:,:)
+    iac2atm_vars%co2airlo(11,:,:) = gcamoco2airlonov(:,:)
+    iac2atm_vars%co2airlo(12,:,:) = gcamoco2airlodec(:,:)
+
+    ! High alt air co2
+    iac2atm_vars%co2airhi(1,:,:) = gcamoco2airhijan(:,:)
+    iac2atm_vars%co2airhi(2,:,:) = gcamoco2airhifeb(:,:)
+    iac2atm_vars%co2airhi(3,:,:) = gcamoco2airhimar(:,:)
+    iac2atm_vars%co2airhi(4,:,:) = gcamoco2airhiapr(:,:)
+    iac2atm_vars%co2airhi(5,:,:) = gcamoco2airhimay(:,:)
+    iac2atm_vars%co2airhi(6,:,:) = gcamoco2airhijun(:,:)
+    iac2atm_vars%co2airhi(7,:,:) = gcamoco2airhijul(:,:)
+    iac2atm_vars%co2airhi(8,:,:) = gcamoco2airhiaug(:,:)
+    iac2atm_vars%co2airhi(9,:,:) = gcamoco2airhisep(:,:)
+    iac2atm_vars%co2airhi(10,:,:) = gcamoco2airhioct(:,:)
+    iac2atm_vars%co2airhi(11,:,:) = gcamoco2airhinov(:,:)
+    iac2atm_vars%co2airhi(12,:,:) = gcamoco2airhidec(:,:)
+end subroutine 
 
 !===============================================================================
 

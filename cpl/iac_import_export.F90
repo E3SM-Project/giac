@@ -90,7 +90,7 @@ contains
     real(r8),    intent(out)   :: z2x(:,:)! land to coupler export state on land grid
 
     ! LOCAL VARIABLES
-    integer :: n,n1,g,i,j,p
+    integer :: n,n1,g,i,j,p,m
     integer :: begg, endg
     character(len=32), parameter :: sub = 'iac_export'
 
@@ -110,7 +110,13 @@ write(iulog,*) trim(sub),' export pft and harvest data'
        ! Co2flux to atm
        ! Convention has fluxes negative from lnd to atm, so we
        ! assume for iac to atm as well
-       z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
+       !z2x(index_z2x_Fazz_fco2_iac,g) = -iac2atm_vars%co2emiss(i,j)
+       ! Monthly sfc, low alt air, and high alt air values
+       do m=1,12
+          z2x(index_z2x_Fazz_co2sfc_iac(m),g) = -iac2atm_vars%co2sfc(m,i,j)
+          z2x(index_z2x_Fazz_co2airlo_iac(m),g) = -iac2atm_vars%co2airlo(m,i,j)
+          z2x(index_z2x_Fazz_co2airhi_iac(m),g) = -iac2atm_vars%co2airhi(m,i,j)
+       end do
 
        ! Now the 17 iac->lnd pfts
        ! need the new pfts and the previous pfts

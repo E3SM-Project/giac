@@ -31,7 +31,11 @@ module gcam_cpl_indices
   ! harvest fractions
   integer, pointer, public ::index_z2x_Sz_harvest_frac(:)
 
-  integer, public ::index_z2x_Fazz_fco2_iac    ! co2 from iac to atm, flux
+  ! co2 - sfc, two air levels
+  integer, pointer, public ::index_z2x_Fazz_co2sfc_iac(:)
+  integer, pointer, public ::index_z2x_Fazz_co2airlo_iac(:)
+  integer, pointer, public ::index_z2x_Fazz_co2airhi_iac(:)
+
   integer, public ::nflds_z2x = 0
 
   ! drv -> iac
@@ -106,6 +110,15 @@ contains
     if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft_prev',ier)
     allocate(index_z2x_Sz_harvest_frac(iac_ctl%nharvest), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_harvest_frac',ier)
+
+    ! Assuming number of months is constant
+    allocate(index_z2x_Fazz_co2sfc_iac(12), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Fazz_co2sfc_iac',ier)
+    allocate(index_z2x_Fazz_co2airlo_iac(12), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Fazz_co2airlo_iac',ier)
+    allocate(index_z2x_Fazz_co2airhi_iac(12), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate index_z2x_Fazz_co2airhi_iac',ier)
+
     allocate(index_x2z_Sl_hr(iac_ctl%npft))
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_hr',ier)
     allocate(index_x2z_Sl_npp(iac_ctl%npft))
@@ -135,8 +148,9 @@ contains
     ! !LOCAL VARIABLES:
     type(mct_aVect)   :: z2x      ! temporary, iac to coupler
     type(mct_aVect)   :: x2z      ! temporary, coupler to iac
-    integer           :: num, p
+    integer           :: num, p, m
     character(len=4)  :: pftstr   ! Up to 1000 pfts...
+    character(len=2)  :: monstr   ! Up to 1000 pfts...
     character(len=32) :: subname = 'gcam_cpl_indices_set'  ! subroutine name
     !-----------------------------------------------------------------------
 
@@ -180,7 +194,18 @@ contains
     end do
 
     ! iac -> atm
-    index_z2x_Fazz_fco2_iac = mct_avect_indexra(z2x,'Fazz_fco2_iac')
+    ! Monthly sfc, low alt air, high alt air
+    do m=1,12
+       write(monstr,'(I0)') m
+       monstr=trim(monstr)
+       index_z2x_Fazz_co2sfc_iac(m) = &
+            mct_avect_indexra(z2x,trim('Fazz_co2sfc_mon' // monstr))
+       index_z2x_Fazz_co2airlo_iac(m) = &
+            mct_avect_indexra(z2x,trim('Fazz_co2airlo_mon' // monstr))
+       index_z2x_Fazz_co2airhi_iac(m) = &
+            mct_avect_indexra(z2x,trim('Fazz_co2airhi_mon' // monstr))
+    end do
+
 
     call mct_aVect_clean(x2z)
     call mct_aVect_clean(z2x)

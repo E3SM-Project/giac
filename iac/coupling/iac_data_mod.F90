@@ -73,7 +73,9 @@ module iac_data_mod
 
   type, public :: iac2atm_type
      ! output to atm, dimensioned (lon,lat)
-     real(r8), allocatable :: co2emiss(:,:)
+     real(r8), allocatable :: co2sfc(:,:,:)
+     real(r8), allocatable :: co2airlo(:,:,:)
+     real(r8), allocatable :: co2airhi(:,:,:)
   end type iac2atm_type
 
   type(lnd2iac_type) :: lnd2iac_vars

@@ -171,7 +171,10 @@ contains
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%harvest_frac(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%nharvest))
 
-    allocate(iac2atm_vars%co2emiss(iac_ctl%nlon,iac_ctl%nlat))
+    ! Dimension: month,lon,lat
+    allocate(iac2atm_vars%co2sfc(12,iac_ctl%nlon,iac_ctl%nlat))
+    allocate(iac2atm_vars%co2airlo(12,iac_ctl%nlon,iac_ctl%nlat))
+    allocate(iac2atm_vars%co2airhi(12,iac_ctl%nlon,iac_ctl%nlat))
 
     ! Assign our global index, ilon, and jlat, to go from (g)
     ! dimension to (lon,lat) dimensions.
