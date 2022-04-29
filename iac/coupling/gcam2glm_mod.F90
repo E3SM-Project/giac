@@ -105,6 +105,7 @@ Module gcam2glm_mod
 
 
 ! !PRIVATE DATA MEMBERS:
+    real(r8), allocatable :: gcamo_base(:,:)
 
 !EOP
 !===============================================================
@@ -132,7 +133,8 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
     logical :: initial_run
-    integer :: iun,tmpyears(2),ier
+    integer :: iun,tmpyears(2),ier,t,yy
+    real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
 
     !character(len=512) :: gcam2glm_baselu
@@ -268,10 +270,16 @@ contains
     allocate(rglus(numLons, numLats), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rglus',ier)
 
+!avd
+write(iulog,*) subname,'glu_weights dims: ',gcamsize,numLons,numLats
+
     allocate(rgmin(nregions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rgmin',ier)
     allocate(rgmax(nregions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rgmax',ier)
+
+    allocate(gcamo_base(num_iac2elm_landtypes,nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamo_base',ier)
 
     glm_crop=iac_spval
     glm_past=iac_spval
@@ -287,6 +295,7 @@ contains
     cellarea_nonforest=iac_spval
     pctland_in2015=iac_spval
     datearr=iac_spval
+    gcamo_base=0.
 
 
     status = nf90_inq_varid(ncid,'time',timeVarId)
@@ -333,6 +342,9 @@ contains
     glu_weights=0.
     rgmin = 1000
     rgmax = 0
+
+!avd
+write(iulog,*) subname,'nglu=',nglu
 
     open(5,file=gcam2glm_glumap)
     ! Read header
@@ -382,18 +394,46 @@ contains
     pot_veg=pot_veg*0.75
     pctland_in2015(:,:) = 0.
     pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
+
+    ! Read in gcam base file 
+    open(5,file='./gcamo_base.csv')
+    ! Read header
+    read(5,*) dum
+    do
+       read(5,*,iostat=io) g,t,yy,v
+       if (io < 0) then
+          exit
+       endif
+       gcamo_base(t,g) = v
+
+    end do
+
+    close(5)
+
+
 ! KVC: Temp -- set this to false. 
 restart_run = .false.
     if (.not.restart_run) then
        glm_crop(:,:,1)=hydeGCROP2015;
        glm_past(:,:,1)=hydeGPAST2015;
 
+       ! Set initial gcam land
+       ! current baseline is still in billion m^3 of biomass
+       !   need MgC here; conv fact is 0.288 tonnes C per m^3 (MgC per m^3)
+       gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
+       gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
+       gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:) * 288000000.
+       gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+
        ! Set years 
        cdata%i(iac_cdatai_gcam_yr1)=iac_start_year
        cdata%i(iac_cdatai_gcam_yr2)=iac_start_year+iac_gcam_timestep
     else
        ! read restart and set crop and past
-       
+      
+!!!! avd - need to add the gcam crop, past and forest area and wh to the restart file!
+!!!! and use them here!
+ 
        inquire(file=trim(gcam2glm_rpointer),exist=lexist)
        if (lexist) then
           
@@ -463,7 +503,6 @@ restart_run = .false.
 
 ! !ARGUMENTS:
     real(r8), pointer :: gcamo(:,:)
-    real(r8), pointer :: gcamo_base(:,:)
     real(r8), pointer :: glmi(:,:)
     real(r8), pointer :: glmi_wh(:)
 
@@ -486,7 +525,7 @@ restart_run = .false.
     logical :: restart_now,gcam_alarm
     real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
     real(r8)  :: gcam_crop_tmp(2,18,14),gcam_past_tmp(2,18,14),gcam_forest_area_tmp(2,18,14)
-    real(r8)  :: fact1,fact2,eclockyr,fact1yrm1, fact2yrm1,delyr,eclockyrm1
+    real(r8)  :: fact1,fact2,eclockyr,fact1yrp1, fact2yrp1,delyr,eclockyrp1
     real(r8)  :: tmp0
     integer,save :: ncid,varid,dimid,dimid3(3)
     integer :: totrglus
@@ -563,8 +602,6 @@ character(len=128) :: hfile
     if(ier/=0) call mct_die(subName,'allocate cumsum_sorted_reassign_ag',ier)
     allocate(unmet_regional_farea(nreg), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate unmet_regional_farea',ier)
-    allocate(gcamo_base(num_iac2elm_landtypes,nglu), stat=ier)
-    if(ier/=0) call mct_die(subName,'allocate gcamo_base',ier)
 
     avail_farea=0.
     avail_nfarea=0.
@@ -574,7 +611,6 @@ character(len=128) :: hfile
     cumsum_sorted_reassign_ag=0.
     unmet_regional_farea=0.
     unmet_farea=0.
-    gcamo_base=0.
 
     ! KVC: This does not appear to be set. Manually setting for now
     gcam_alarm = .true.
@@ -604,22 +640,6 @@ character(len=128) :: hfile
        end where
     enddo
 
-
-    ! Read in gcam outputs for previous year 
-    open(5,file='./gcamo_base.csv')
-    ! Read header
-    read(5,*) dum
-    do
-       read(5,*,iostat=io) g,t,y,v
-       if (io < 0) then
-          exit
-       endif
-       gcamo_base(t,g) = v
-
-    end do
-
-    close(5)
-
 #ifdef notdef
     ! Ugly triple loop
     do g=1,nglu
@@ -642,17 +662,7 @@ character(len=128) :: hfile
 #endif     
     ! Unpack gcamo field
     ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
-    ! move the next field to the previous field at end of this function
     
-    ! gcam output wood harvest in billion m^3 of biomass, but units needed here
-    ! are MgC; the conversion factor is 0.288 tonnes C per m^3 (MgC per m^3)
-    ! so multiply the volume by 288000000 
-
-    ! avd - note that this multiplication has been moved to the gcam output
-    ! coupling code
-    ! but the base data still needs to be multiplied because it has not been
-    ! updated
-
     ! avd - write the harvest data to a diag file
     !write(hfile,'(a)') 'gcam2glm_harvest.nc'
     !ierr = nf90_create(trim(hfile),nf90_clobber,ncid)
@@ -669,16 +679,11 @@ character(len=128) :: hfile
     !                 gcamo(iac_gcamo_woodharv,g)
     !end do
 
+    ! note that the GCAM coupling now converts wh to MgC
     gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
     gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
     gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
     gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
-
-    ! Set previous year GCAM land
-    gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
-    gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
-    gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:) * 288000000.
-    gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
 
 !avd - write some data to the log
 !do g=1,gcamsize
@@ -689,7 +694,7 @@ character(len=128) :: hfile
 !end do
 
 ! avd - test this by setting no change
-!gcam_crop(:,np1) = gcamo_base(iac_gcamo_crop,:)
+!    gcam_crop(:,np1) = gcamo_base(iac_gcamo_crop,:)
 !    gcam_past(:,np1) = gcamo_base(iac_gcamo_pasture,:)
 !    gcam_wh(:,np1) = gcamo_base(iac_gcamo_woodharv,:)
 !    gcam_forest_area(:,np1) = gcamo_base(iac_gcamo_forest,:)
@@ -1475,18 +1480,15 @@ character(len=128) :: hfile
 ! gcam constructed states at year+1
 ! and harvest transitions at year
 !
-! since eclock is already advanced 
-! by 1 year for gcam2glm and glm we have 
-!
-! glm calculates eclock year using 
-! gcam constructed states at eclock year
-! and harvest transitions at eclock year minus 1
+! note that eclock is the model year
+! if the years are correct the factors should be correct
+! if GCAM is at annual time step, these should be 0 and 1
 
     eclockyr=ymd/10000
-    eclockyrm1=eclockyr-1
+    eclockyrp1=eclockyr+1
     delyr= year2-year1
-    fact1yrm1=(year2-eclockyrm1)/delyr
-    fact2yrm1=(eclockyrm1-year1)/delyr
+    fact1yrp1=(year2-eclockyrp1)/delyr
+    fact2yrp1=(eclockyrp1-year1)/delyr
     fact1=(year2-eclockyr)/delyr
     fact2=(eclockyr-year1)/delyr
 
@@ -1495,12 +1497,12 @@ character(len=128) :: hfile
 #endif
 
 ! use eclock year year for interpolating crop past and othr
-    glm_crop_ann(:,:)=glm_crop(:,:,n)*fact1+glm_crop(:,:,np1)*fact2
-    glm_past_ann(:,:)=glm_past(:,:,n)*fact1+glm_past(:,:,np1)*fact2
+    glm_crop_ann(:,:)=glm_crop(:,:,n)*fact1yrp1+glm_crop(:,:,np1)*fact2yrp1
+    glm_past_ann(:,:)=glm_past(:,:,n)*fact1yrp1+glm_past(:,:,np1)*fact2yrp1
     glm_othr_ann(:,:)=pctland_in2015-glm_past_ann-glm_crop_ann
 
 ! use previous year for fractions fact1 and fact2 for woodharvest
-    glm_wh_ann(:)=gcam_wh(:,n)*fact1yrm1+gcam_wh(:,np1)*fact2yrm1
+    glm_wh_ann(:)=gcam_wh(:,n)*fact1+gcam_wh(:,np1)*fact2
 
 !    do j=1,360
 !       do i=1,720
@@ -1549,10 +1551,12 @@ character(len=128) :: hfile
 !
 ! If we are at the boundary year of the gcam data. Need to move np1 info
 ! into timelevel n to calculate the next set of years.
-! this should always be true now that gcam is at annual time step
-    if (eclockyr==year2) then 
+! this should always be true if gcam is at annual time step
+    if (eclockyr==(year2-1)) then 
        glm_crop(:,:,n)=glm_crop(:,:,np1)
        glm_past(:,:,n)=glm_past(:,:,np1)
+       gcam_crop(:,n)=gcam_crop(:,np1)
+       gcam_past(:,n)=gcam_past(:,np1)
        gcam_wh(:,n)=gcam_wh(:,np1)
        gcam_forest_area(:,n)=gcam_forest_area(:,np1)
     end if
@@ -1658,7 +1662,6 @@ character(len=128) :: hfile
     deallocate(unmet_aez_farea)
     deallocate(cumsum_sorted_reassign_ag)
     deallocate(unmet_regional_farea)
-    deallocate(gcamo_base)
 
   end subroutine gcam2glm_run_mod
   
@@ -1731,6 +1734,7 @@ character(len=128) :: hfile
     deallocate(rgmin)
     deallocate(rgmax)
 
+    deallocate(gcamo_base)
 
   end subroutine gcam2glm_final_mod
 !====================================================================================

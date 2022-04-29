@@ -157,15 +157,17 @@ contains
     allocate(iac_ctl%jlat(iac_ctl%ngrid))
 
     allocate(iac_ctl%gindex(iac_ctl%ngrid))
-    allocate(iac_ctl%iacmask(iac_ctl%ngrid))
+
+    ! dimensions: lon,lat
+    allocate(iac_ctl%iacmask(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(iac_ctl%landfrac(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(iac_ctl%area(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(iac_ctl%vegfrac(iac_ctl%nlon,iac_ctl%nlat))
 
     ! Dimension order: (lon,lat,pft)
     allocate(lnd2iac_vars%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-
-    allocate(lnd2iac_vars%landfrac(iac_ctl%nlon,iac_ctl%nlat))
-    allocate(lnd2iac_vars%area(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
@@ -207,7 +209,7 @@ contains
 
     ! lon
     call ncd_io(ncid=ncid, varname='LONGXY', flag='read', data=tempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read GCAM longitudes')
+    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC longitudes')
     if (masterproc) write(iulog,*) 'Read LONGXY ',minval(tempr),maxval(tempr)
     do i=1,iac_ctl%nlon
        ! lon is first index in column major indexing
@@ -216,47 +218,57 @@ contains
 
     ! lat
     call ncd_io(ncid=ncid, varname='LATIXY', flag='read', data=tempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read GCAM latitudes')
+    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC latitudes')
     if (masterproc) write(iulog,*) 'Read LATIXY ',minval(tempr),maxval(tempr)
     do j=1,iac_ctl%nlat
        ! lat is second index in column major indexing
        iac_ctl%lat(j) = tempr(1,j)
     enddo
 
-    ! area
+    ! grid cell area
     call ncd_io(ncid=ncid, varname='AREA', flag='read', data=tempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read GCAM area')
+    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC area')
     if (masterproc) write(iulog,*) 'Read AREA ',minval(tempr),maxval(tempr)
 
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
-          ! area needed by lnd2iac_var, input to gcam
-          lnd2iac_vars%area(i,j) = tempr(i,j)
+          iac_ctl%area(i,j) = tempr(i,j)
        enddo
     enddo
 
     ! landfrac
     call ncd_io(ncid=ncid, varname='LANDFRAC_PFT', flag='read', data=tempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read GCAM landfrac')
+    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC landfrac')
     if (masterproc) write(iulog,*) 'Read LANDFRAC_PFT ',minval(tempr),maxval(tempr)
 
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
-          lnd2iac_vars%landfrac(i,j) = tempr(i,j)
+          iac_ctl%landfrac(i,j) = tempr(i,j)
        enddo
     enddo
 
-    ! landmask - same as iacmask?  Needed for gsl map
+    ! veg land unit frac 
+    call ncd_io(ncid=ncid, varname='PCT_NATVEG', flag='read', data=tempr, &
+                readvar=found)
+    if ( .not. found ) call shr_sys_abort( trim(subname)// &
+          ' ERROR: read IAC vegfrac')
+    if (masterproc) write(iulog,*) &
+          'Read PCT_NATVEG ',minval(tempr),maxval(tempr)
+
+    do i=1,iac_ctl%nlon
+       do j=1,iac_ctl%nlat
+          iac_ctl%vegfrac(i,j) = tempr(i,j) / 100.0_R8
+       enddo
+    enddo
+
+    ! pft land mask
     call ncd_io(ncid=ncid, varname='PFTDATA_MASK', flag='read', data=itempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read GCAM landmask')
+    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC landmask')
     if (masterproc) write(iulog,*) 'Read PFTDATA_MASK ',minval(tempr),maxval(tempr)
 
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
-          ! For global seg mapping - Vary lon fastest, which matches
-          ! input grid file, at least.
-          n = (j-1)*iac_ctl%nlon + i
-          iac_ctl%iacmask(n) = itempr(i,j)
+          iac_ctl%iacmask(i,j) = itempr(i,j)
        enddo
     enddo
  

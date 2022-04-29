@@ -383,7 +383,7 @@ contains
 ! !IROUTINE: gcam_setdensity_mod
 
 ! !INTERFACE:
-  subroutine gcam_setdensity_mod(lnd2iac_vars)
+  subroutine gcam_setdensity_mod()
 
 ! !DESCRIPTION:
 ! Setdensity interface for gcam
@@ -391,17 +391,16 @@ contains
 ! !USES:
    use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
    use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
-   use iac_data_mod, only : iac_first_coupled_year
+   use iac_data_mod, only : iac_first_coupled_year, lnd2iac_vars
    use iso_c_binding
     implicit none
 
 ! !ARGUMENTS:
-    type(lnd2iac_type), intent(in) :: lnd2iac_vars
 
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt, yyyymmdd
-    integer :: i,j,r,w,len
+    integer :: i,j,r,w,s,len
     character(len=*),parameter :: subname='(gcam_setdensity_mod)'
 
 
@@ -433,15 +432,21 @@ contains
      w = 0
   end if
 
+  if ( elm_iac_carbon_scaling ) then
+     s = 1
+  else
+     s = 0
+  end if
+
   ! Null terminate                                           
   len = len_trim(elm2gcam_mapping_file)
   elm2gcam_mapping_file(len+1:len+1) = c_null_char
 
   !  Call setdensity method of GCAM-E3SM Interface 
-  call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
+  call setdensitycGCAM(ymd, iac_ctl%area, &
        lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
        iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
-       iac_first_coupled_year, r, w, base_npp_file, base_hr_file, base_pft_file) 
+       iac_first_coupled_year, r, w, s, base_npp_file, base_hr_file, base_pft_file) 
   
   end subroutine gcam_setdensity_mod
 
