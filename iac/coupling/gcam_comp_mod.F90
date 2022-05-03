@@ -439,8 +439,12 @@ contains
   end if
 
   ! Null terminate                                           
-  len = len_trim(elm2gcam_mapping_file)
-  elm2gcam_mapping_file(len+1:len+1) = c_null_char
+  !len = len_trim(elm2gcam_mapping_file)
+  !elm2gcam_mapping_file(len+1:len+1) = c_null_char
+  elm2gcam_mapping_file=trim(elm2gcam_mapping_file)//c_null_char
+  base_npp_file=trim(base_npp_file)//c_null_char
+  base_hr_file=trim(base_hr_file)//c_null_char
+  base_pft_file=trim(base_pft_file)//c_null_char
 
   !  Call setdensity method of GCAM-E3SM Interface 
   call setdensitycGCAM(ymd, iac_ctl%area, &
