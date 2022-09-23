@@ -570,6 +570,7 @@ character(len=128) :: hfile
 
     ! Maxiumum number of glus in a region
     max_nglu=iac_max_nglu
+
     allocate(indxup(numLons*numLats), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate indxup',ier)
     allocate(indxdn(numLons*numLats), stat=ier)
@@ -1236,11 +1237,14 @@ character(len=128) :: hfile
        ! Here we are looping over regions, using the rgmin(r) and
        ! rgmax(r) to find the g's inside this region
        do r = 1,nreg
+
           !regional_farea_needed = sum(unmet_farea(((r-1)*18+1):r*18))
           regional_farea_needed = sum(unmet_farea(rgmin(r):rgmax(r)))
           
           ! number of glus in this region
-          nglu = rgmax(r)-rgmin(r)-1
+          ! nglu = rgmax(r)-rgmin(r)-1
+          ! TRS - zounds! I'm pretty sure -1 is wrong, just from arithmetic
+          nglu = rgmax(r)-rgmin(r)+1
 
           ! Just in case
           avail_farea = 0.
@@ -1282,8 +1286,10 @@ character(len=128) :: hfile
           ! TRS - not sure this will work with variable nglu
           indxa=(/(i,i=1,nglu)/)
           indxadn=(/(i,i=1,nglu)/)
+
           call D_mrgrnk(reassign_ag,indxa,nglu)
           call D_mrgrnk(reassign_ag*-1.,indxadn,nglu)
+
           cumsum_sorted_reassign_ag(1)=reassign_ag(indxadn(1))
           do i=2,nglu
              cumsum_sorted_reassign_ag(i)=cumsum_sorted_reassign_ag(i-1)+reassign_ag(indxadn(i))

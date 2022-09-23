@@ -5,7 +5,7 @@ module iac_comp_mct
   !
   ! !uses:
   use seq_flds_mod
-  use shr_kind_mod     , only : r8 => shr_kind_r8
+  use shr_kind_mod     , only : r8 => shr_kind_r8, SHR_KIND_CL
   use shr_file_mod     , only : shr_file_setLogUnit, shr_file_setLogLevel, &
                                 shr_file_getLogUnit, shr_file_getLogLevel, &
                                 shr_file_getUnit, shr_file_setIO
