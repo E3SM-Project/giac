@@ -84,7 +84,7 @@ Module gcam2glm_mod
 
     real(r4)  :: miss_val = 1.0e36
 
-    integer :: n,np1,nflds,gcamsize,nglu,nregions,io,r,g,g1
+    integer :: n,np1,nflds,gcamsize,nglu,nregions,io,r,g1
     integer :: lonx,latx,max_nglu
     real(r8) :: x,y,weight
     character(256) :: region_name, glu_name ! dummy vars to read csv
@@ -133,7 +133,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
     logical :: initial_run
-    integer :: iun,tmpyears(2),ier,t,yy
+    integer :: iun,tmpyears(2),ier,t,yy,g
     real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
 
@@ -395,20 +395,21 @@ write(iulog,*) subname,'nglu=',nglu
     pctland_in2015(:,:) = 0.
     pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
 
-    ! Read in gcam base file 
-    open(5,file='./gcamo_base.csv')
-    ! Read header
-    read(5,*) dum
-    do
-       read(5,*,iostat=io) g,t,yy,v
-       if (io < 0) then
-          exit
-       endif
-       gcamo_base(t,g) = v
-
-    end do
-
-    close(5)
+    ! if gcam_spinup == .true. this file does not exist yet
+    if (.not. gcam_spinup) then
+       ! Read in gcam base file 
+       open(5,file=base_gcam_lu_wh_file)
+       ! Read header
+       read(5,*) dum
+       do
+          read(5,*,iostat=io) g,t,yy,v
+          if (io < 0) then
+             exit
+          endif
+          gcamo_base(t,g) = v
+       end do
+       close(5)
+    end if
 
 
 ! KVC: Temp -- set this to false. 
@@ -418,12 +419,16 @@ restart_run = .false.
        glm_past(:,:,1)=hydeGPAST2015;
 
        ! Set initial gcam land
-       ! current baseline is still in billion m^3 of biomass
-       !   need MgC here; conv fact is 0.288 tonnes C per m^3 (MgC per m^3)
-       gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
-       gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
-       gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:) * 288000000.
-       gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+       ! current baseline has been converted from billion m^3 of biomass
+       !   to the needed MgC here
+       !      conv fact is 0.250 tonnes C per m^3 (MgC per m^3); same as in gcam
+       ! but do it only if not gcam spinup
+       if (.not. gcam_spinup) then
+          gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
+          gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
+          gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:)
+          gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+       end if
 
        ! Set years 
        cdata%i(iac_cdatai_gcam_yr1)=iac_start_year
@@ -431,9 +436,6 @@ restart_run = .false.
     else
        ! read restart and set crop and past
       
-!!!! avd - need to add the gcam crop, past and forest area and wh to the restart file!
-!!!! and use them here!
- 
        inquire(file=trim(gcam2glm_rpointer),exist=lexist)
        if (lexist) then
           
@@ -460,7 +462,25 @@ restart_run = .false.
           status= nf90_open(filename,nf90_nowrite,ncid)
           if(status /= nf90_NoErr) call handle_err(status)
 
-	  ! Need to set cdata year1 and year 2 for restart
+          status = nf90_inq_varid(ncid,'gcam_crop',varid)
+          if(status /= nf90_NoErr) call handle_err(status)
+          status = nf90_get_var(ncid,varid,gcam_crop)
+          if(status /= nf90_NoErr) call handle_err(status)
+
+          status = nf90_inq_varid(ncid,'gcam_past',varid)
+          if(status /= nf90_NoErr) call handle_err(status)
+          status = nf90_get_var(ncid,varid,gcam_past)
+          if(status /= nf90_NoErr) call handle_err(status)
+
+          status = nf90_inq_varid(ncid,'gcam_wh',varid)
+          if(status /= nf90_NoErr) call handle_err(status)
+          status = nf90_get_var(ncid,varid,gcam_wh)
+          if(status /= nf90_NoErr) call handle_err(status)
+
+          status = nf90_inq_varid(ncid,'gcam_forest_area',varid)
+          if(status /= nf90_NoErr) call handle_err(status)
+          status = nf90_get_var(ncid,varid,gcam_forest_area)
+          if(status /= nf90_NoErr) call handle_err(status)
 
           status = nf90_inq_varid(ncid,'gcam_years',varid)
           if(status /= nf90_NoErr) call handle_err(status)
@@ -519,7 +539,7 @@ restart_run = .false.
     character*4 :: yearc
     character(256) :: filename
     integer :: i,j,ij,r,i1,j1,aez,ind,h,z
-    integer :: row,g,t,y
+    integer :: row,g,t,y,yy
     integer :: iun,iyr,ier
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
     logical :: restart_now,gcam_alarm
@@ -527,8 +547,8 @@ restart_run = .false.
     real(r8)  :: gcam_crop_tmp(2,18,14),gcam_past_tmp(2,18,14),gcam_forest_area_tmp(2,18,14)
     real(r8)  :: fact1,fact2,eclockyr,fact1yrp1, fact2yrp1,delyr,eclockyrp1
     real(r8)  :: tmp0
-    integer,save :: ncid,varid,dimid,dimid3(3)
-    integer :: totrglus
+    integer,save :: ncid,varid,dimid,dimid3(3), dimid_gcam(2)
+    integer :: totrglus, nrglu
     integer, allocatable  ::indxdn(:),indxup(:),sortlatsup(:),sortlonsup(:),sortlatsdn(:),sortlonsdn(:),indxa(:),indxadn(:),v1u(:),v2u(:),v1d(:),v2d(:)
     real(r8), allocatable   :: tmparr(:)
     integer :: sortind(1),max_aez_ind(1),regional_unmet_reassign
@@ -544,9 +564,9 @@ restart_run = .false.
                               unmet_aez_farea(:),cumsum_sorted_reassign_ag(:),unmet_regional_farea(:)
    integer ntimes,nntimes,zz
 
-! avd
-integer :: nmode, ierr
-character(len=128) :: hfile
+   ! avd
+   integer :: nmode, ierr
+   character(len=128) :: hfile
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -663,7 +683,28 @@ character(len=128) :: hfile
 #endif     
     ! Unpack gcamo field
     ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
-    
+   
+    ! if gcam_spinup == .true. the base data need to be read now to initialize
+    if (gcam_spinup) then
+       ! Read in gcam base file 
+       open(5,file=base_gcam_lu_wh_file)
+       ! Read header
+       read(5,*) dum
+       do
+          read(5,*,iostat=io) g,t,yy,v
+          if (io < 0) then
+             exit
+          endif
+          gcamo_base(t,g) = v
+       end do
+       close(5)
+
+       gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
+       gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
+       gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:)
+       gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+    end if
+ 
     ! avd - write the harvest data to a diag file
     !write(hfile,'(a)') 'gcam2glm_harvest.nc'
     !ierr = nf90_create(trim(hfile),nf90_clobber,ncid)
@@ -1242,9 +1283,9 @@ character(len=128) :: hfile
           regional_farea_needed = sum(unmet_farea(rgmin(r):rgmax(r)))
           
           ! number of glus in this region
-          ! nglu = rgmax(r)-rgmin(r)-1
+          ! nrglu = rgmax(r)-rgmin(r)-1
           ! TRS - zounds! I'm pretty sure -1 is wrong, just from arithmetic
-          nglu = rgmax(r)-rgmin(r)+1
+          nrglu = rgmax(r)-rgmin(r)+1
 
           ! Just in case
           avail_farea = 0.
@@ -1254,7 +1295,7 @@ character(len=128) :: hfile
           unmet_aez_farea = 0.
 
           do g = rgmin(r),rgmax(r)
-             ! g1 =  1:nglu
+             ! g1 =  1:nrglu
              g1 = g-rgmin(r)+1
 
              cellarea_forest(:,:)=0.
@@ -1274,7 +1315,7 @@ character(len=128) :: hfile
              fnfnonforest=fnfnonforest*glu_weights(g,:,:)
 
              ! May need to zero-init all these each loop, becasue we
-             ! now have variable nglu per region.
+             ! now have variable nrglu per region.
              avail_farea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
              avail_nfarea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest)
              avail_ag_farea(g1) = sum((glm_crop(:,:,np1)+glm_past(:,:,np1))*cellarea_forest)
@@ -1283,20 +1324,20 @@ character(len=128) :: hfile
           end do
           
           !jt [sorted_reassign_ag,sort_aez] = sort(reassign_ag,'descend')
-          ! TRS - not sure this will work with variable nglu
-          indxa=(/(i,i=1,nglu)/)
-          indxadn=(/(i,i=1,nglu)/)
+          ! TRS - not sure this will work with variable nrglu
+          indxa=(/(i,i=1,nrglu)/)
+          indxadn=(/(i,i=1,nrglu)/)
 
-          call D_mrgrnk(reassign_ag,indxa,nglu)
-          call D_mrgrnk(reassign_ag*-1.,indxadn,nglu)
+          call D_mrgrnk(reassign_ag,indxa,nrglu)
+          call D_mrgrnk(reassign_ag*-1.,indxadn,nrglu)
 
           cumsum_sorted_reassign_ag(1)=reassign_ag(indxadn(1))
-          do i=2,nglu
+          do i=2,nrglu
              cumsum_sorted_reassign_ag(i)=cumsum_sorted_reassign_ag(i-1)+reassign_ag(indxadn(i))
           end do
           sortind = MINLOC(cumsum_sorted_reassign_ag(:),mask=cumsum_sorted_reassign_ag(:) >= regional_farea_needed)
           if (sortind(1).eq.0) then
-             sortind(1) = nglu
+             sortind(1) = nrglu
              reassign_ag_at_max_aez_ind = reassign_ag(indxadn(sortind(1)))
              unmet_regional_farea(r) = regional_farea_needed - sum(reassign_ag(indxadn))
           elseif (sortind(1)>1) then 
@@ -1314,7 +1355,7 @@ character(len=128) :: hfile
           ! important glu, but whatever, let's go with it.
           do zz=1,sortind(1)
               z=indxadn(zz)
-              ! Remember, z = 1,nglu(r).  So convert to a global g.
+              ! Remember, z = 1,nrglu(r).  So convert to a global g.
               g=z+rgmin(r)-1
 
               if (reassign_ag(z)>0) then
@@ -1557,6 +1598,7 @@ character(len=128) :: hfile
 !
 ! If we are at the boundary year of the gcam data. Need to move np1 info
 ! into timelevel n to calculate the next set of years.
+! also advance the gcam years
 ! this should always be true if gcam is at annual time step
     if (eclockyr==(year2-1)) then 
        glm_crop(:,:,n)=glm_crop(:,:,np1)
@@ -1565,12 +1607,16 @@ character(len=128) :: hfile
        gcam_past(:,n)=gcam_past(:,np1)
        gcam_wh(:,n)=gcam_wh(:,np1)
        gcam_forest_area(:,n)=gcam_forest_area(:,np1)
+       cdata%i(iac_cdatai_gcam_yr1) = year2
+       cdata%i(iac_cdatai_gcam_yr2) = cdata%i(iac_cdatai_gcam_yr1) + &
+          iac_gcam_timestep
     end if
 
     ! lets write a restart every time this routine is called
+    ! this needs to be year+1 because it has run this model year
 
     call shr_cal_date2ymd(ymd,year,mon,day)
-    write(filename,'(a,i4.4,a,i2.2,a)') trim(gcam2glm_restfile)//'r.',year,'.nc'
+    write(filename,'(a,i4.4,a,i2.2,a)') trim(gcam2glm_restfile)//'r.',year+1,'.nc'
 
     iun = shr_file_getunit()
     open(iun,file=trim(gcam2glm_rpointer),form='formatted')
@@ -1590,6 +1636,10 @@ character(len=128) :: hfile
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_def_dim(ncid,'time',2,dimid3(3))
     if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_def_dim(ncid,'lu_gcam',num_gcam_land_regions,dimid_gcam(1))
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_inq_dimid(ncid,'time',dimid_gcam(2))
+    if(status /= nf90_NoErr) call handle_err(status)
 
     dimid = dimid3(1)
     status = nf90_def_var(ncid,'lon',NF90_DOUBLE,dimid,varid)
@@ -1601,6 +1651,26 @@ character(len=128) :: hfile
     status = nf90_def_var(ncid,'lat',NF90_DOUBLE,dimid,varid)
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_put_att(ncid,varid,"units","degrees_north")
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_def_var(ncid,'gcam_crop',NF90_DOUBLE,dimid_gcam,varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_att(ncid,varid,"units","thous_sqkm")
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_def_var(ncid,'gcam_past',NF90_DOUBLE,dimid_gcam,varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_att(ncid,varid,"units","thous_sqkm")
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_def_var(ncid,'gcam_wh',NF90_DOUBLE,dimid_gcam,varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_att(ncid,varid,"units","thous_sqkm")
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_def_var(ncid,'gcam_forest_area',NF90_DOUBLE,dimid_gcam,varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_att(ncid,varid,"units","thous_sqkm")
     if(status /= nf90_NoErr) call handle_err(status)
 
     dimid = dimid3(3)
@@ -1632,6 +1702,26 @@ character(len=128) :: hfile
     status = nf90_inq_varid(ncid,'lat',varid)
     if(status /= nf90_NoErr) call handle_err(status)
     status = nf90_put_var(ncid,varid,lat)
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_inq_varid(ncid,'gcam_crop',varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_var(ncid,varid,gcam_crop)
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_inq_varid(ncid,'gcam_past',varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_var(ncid,varid,gcam_past)
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_inq_varid(ncid,'gcam_wh',varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_var(ncid,varid,gcam_wh)
+    if(status /= nf90_NoErr) call handle_err(status)
+
+    status = nf90_inq_varid(ncid,'gcam_forest_area',varid)
+    if(status /= nf90_NoErr) call handle_err(status)
+    status = nf90_put_var(ncid,varid,gcam_forest_area)
     if(status /= nf90_NoErr) call handle_err(status)
 
     status = nf90_inq_varid(ncid,'gcam_years',varid)

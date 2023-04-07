@@ -324,7 +324,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: restart_now
     integer :: ymd, tod, dt
-    integer :: i,j,w
+    integer :: i,j,w,gs
     character(len=*),parameter :: subname='(gcam_run_mod)'
 
 
@@ -346,8 +346,15 @@ contains
 
   write(iulog,*) trim(subname),' date= ',ymd,tod
 
+  ! convert logical for gcam spinup
+  if ( gcam_spinup ) then
+        gs = 1
+     else
+        gs = 0
+     end if
+
   !  Call runcGCAM method of E3SM Interface 
-  call runcGCAM(ymd,gcamo,gcamoemis)
+  call runcGCAM(ymd,gcamo,gcamoemis,trim(base_gcam_lu_wh_file),trim(base_gcam_co2_file),gs)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
   if ( iac_elm_co2_emissions ) then
@@ -369,8 +376,9 @@ contains
           gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
-          gcamoco2airhidec, base_co2_surface_file, base_co2emis_surface,      &
-          base_co2_aircraft_file, base_co2emis_aircraft, num_lon, num_lat, w, ymd)
+          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,        &
+          base_co2_aircraft_file, num_emiss_regions, num_emiss_sectors,       &
+          num_lon, num_lat, w, ymd)
 
   end if
 

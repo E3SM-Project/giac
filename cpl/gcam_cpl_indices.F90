@@ -59,22 +59,32 @@ contains
     use mct_mod
     use shr_file_mod, only : shr_file_get, shr_file_getUnit, shr_file_freeUnit
     use iac_spmd_mod, only : masterproc
-    use gcam_var_mod, only : iulog
+    use gcam_var_mod
     !
     ! !LOCAL VARIABLES:
     integer           :: ier, unitn
     character(len=32), parameter :: subname = 'gcam_cpl_indices_init'
     logical :: lexist
     character(len=32) :: nlfilename_iac
-    integer :: num_pft, num_harvest
+    !integer :: num_pft, num_harvest
 
-! avd - how do we get these from the namelist? they are not found until
-! the comp iac_init(), which is called after this routine in iac_init_mct()
-
-! let's try a limited namelist read-in
-! this doesn't work for some reason
-    namelist /gcam_inparm/ num_pft, num_harvest
-    
+    ! all namelist items must be in this declaration or it won't work
+    namelist /gcam_inparm/ &
+         case_name, &
+         num_pft, num_harvest, num_lat, num_lon, &
+         num_gcam_energy_regions, num_gcam_land_regions, &
+         num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
+         gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
+         base_co2_surface_file, base_co2_aircraft_file, &
+         base_npp_file, base_hr_file, base_pft_file, &
+         gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
+         gcam2elm_woodharvest_mapping_file, &
+         gcam_gridfile, elm2gcam_mapping_file, &
+         gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         read_scalars, write_scalars, write_co2, &
+         elm_iac_carbon_scaling, iac_elm_co2_emissions, &
+         gcam_spinup, run_gcam   
+ 
     nlfilename_iac = "gcam_in"
 
     inquire (file = trim(nlfilename_iac), exist = lexist)
@@ -83,6 +93,8 @@ contains
             //trim(nlfilename_iac)
        call shr_sys_abort(trim(subname)//' ERROR nlfilename_iac does not exist')
     end if
+
+    write(iulog,*) "masterproc in gcam_cpl_indices_init is ", masterproc
 
     if (masterproc) then
        unitn = shr_file_getunit()
@@ -98,11 +110,11 @@ contains
        call shr_file_freeUnit( unitn )
     end if
 
-    !write(iulog,'(A20,a,I2,a,I1)') subname , 'num_pft=' , num_pft , &
-    !               'num_harvest=' , num_harvest
+    write(iulog,*) 'num_pft=',num_pft,' num_harvest=',num_harvest,&
+                   'gcam_cpl_indices_init'
 
-    iac_ctl%npft = 17
-    iac_ctl%nharvest = 5
+    iac_ctl%npft = num_pft  
+    iac_ctl%nharvest = num_harvest
 
     allocate(index_z2x_Sz_pct_pft(iac_ctl%npft), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate index_z2x_Sz_pct_pft',ier)

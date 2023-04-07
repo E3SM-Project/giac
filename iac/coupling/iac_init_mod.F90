@@ -36,18 +36,20 @@ contains
 
     ! GCAM namelist
     namelist /gcam_inparm/ &
-         gcam_gridfile, gcam_config,&
-         case_name, gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
-         gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
-         base_co2_surface_file, base_co2_aircraft_file,&
+         case_name, &
+         num_pft, num_harvest, num_lat, num_lon, &
+         num_gcam_energy_regions, num_gcam_land_regions, &
+         num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
+         gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
+         base_co2_surface_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
-         read_scalars,read_elm_from_file, write_co2, write_scalars, &
-         elm_iac_carbon_scaling, iac_elm_co2_emissions, num_lat,&
-         num_lon, num_pft, num_harvest, num_gcam_energy_regions,&
-         num_gcam_land_regions, num_iac2elm_landtypes,&
-         num_emiss_sectors, num_emiss_regions,&
-         gcam2glm_baselu, gcam2glm_basebiomass, gcam2glm_glumap,&
-         base_co2emis_surface, base_co2emis_aircraft
+         gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
+         gcam2elm_woodharvest_mapping_file, &
+         gcam_gridfile, elm2gcam_mapping_file, &
+         gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         read_scalars, write_scalars, write_co2, &
+         elm_iac_carbon_scaling, iac_elm_co2_emissions, &
+         gcam_spinup, run_gcam 
 
     nlfilename_iac = "gcam_in"
 
@@ -72,43 +74,58 @@ contains
        call shr_file_freeUnit( unitn )
     end if
 
-    ! Just make sure that worked
-
     ! Don't need to mpi_bcast the namelist, because we don't have other procs
     ! to communitate with.  But if we did, we'd mpi_bcast them around
     ! mpicom_iac here.  
 
+    ! write the namelist values to the log to make sure they are read in
     if (masterproc) then
-       write(iulog,*) 'define GCAM run:'
-       ! write out namelist stuff here
-       write(iulog, '(A,A)') "base_co2_surface_file = ", trim(base_co2_surface_file )
-       write(iulog, '(A,A)') "base_co2_aircraft_file = ", trim(base_co2_aircraft_file )
-       write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
-       write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
-       write(iulog, '(A,A)') "base_pft_file = ", trim(base_pft_file )
+       write(iulog,*) 'Namelist for IAC/GCAM run:'
+       write(iulog,*) 'GCAM case name:'
        write(iulog, '(A,A)') "case_name = ", trim(case_name)
-       write(iulog, '(A,A)') "elm2gcam_mapping_file = ", trim(elm2gcam_mapping_file)
-       write(iulog, '(A,L)') "elm_iac_carbon_scaling = ", elm_iac_carbon_scaling
+
+       write(iulog,*) 'grid and region size parameters:'
+       write(iulog, '(A,I)') "num_pft = ",num_pft
+       write(iulog, '(A,I)') "num_harvest = ",num_harvest
+       write(iulog, '(A,I)') "num_lat = ",num_lat
+       write(iulog, '(A,I)') "num_lon = ",num_lon
+       write(iulog, '(A,I)') "num_gcam_energy_regions = ", &
+                             num_gcam_energy_regions
+       write(iulog, '(A,I)') "num_gcam_land_regions = ",num_gcam_land_regions
+       write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
+       write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
+       write(iulog, '(A,I)') "num_emiss_regions = ",num_emiss_regions
+
+       write(iulog,*) 'GCAM config and init files:'
+       write(iulog, '(A,A)') "gcam_config = ", trim(gcam_config)
+       write(iulog, '(A,A)') "base_gcam_co2_file = ", trim(base_gcam_co2_file)
+       write(iulog, '(A,A)') "base_gcam_lu_wh_file = ", trim(base_gcam_lu_wh_file)
+       write(iulog, '(A,A)') "base_co2_surface_file = ", &
+                             trim(base_co2_surface_file )
+       write(iulog, '(A,A)') "base_co2_aircraft_file = ", trim(base_co2_aircraft_file )
+       write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
+       write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
+       write(iulog, '(A,A)') "base_pft_file = ", trim(base_pft_file )
        write(iulog, '(A,A)') "gcam2elm_co2_mapping_file = ", trim(gcam2elm_co2_mapping_file )
        write(iulog, '(A,A)') "gcam2elm_luc_mapping_file = ", trim(gcam2elm_luc_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_woodharvest_mapping_file = ", trim(gcam2elm_woodharvest_mapping_file)
-       write(iulog, '(A,A)') "gcam_config = ", trim(gcam_config)
+
+       write(iulog,*) 'grid mapping and initialization files:'
        write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
-       write(iulog, '(A,L)') "iac_elm_co2_emissions = ", iac_elm_co2_emissions
-       write(iulog, '(A,I)') "num_emiss_regions = ",num_emiss_regions
-       write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
-       write(iulog, '(A,I)') "num_gcam_energy_regions = ",num_gcam_energy_regions
-       write(iulog, '(A,I)') "num_gcam_land_regions = ",num_gcam_land_regions
-       write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
-       write(iulog, '(A,I)') "num_lat = ",num_lat
-       write(iulog, '(A,I)') "num_lon = ",num_lon
-       write(iulog, '(A,I)') "num_pft = ",num_pft
-       write(iulog, '(A,L)') "read_elm_from_file = ",read_elm_from_file
+       write(iulog, '(A,A)') "elm2gcam_mapping_file = ", &
+                             trim(elm2gcam_mapping_file)
+       write(iulog, '(A,A)') "gcam2glm_glumap = ", trim(gcam2glm_glumap)
+       write(iulog, '(A,A)') "gcam2glm_baselu = ", trim(gcam2glm_baselu)
+       write(iulog, '(A,A)') "gcam2glm_basebiomass = ", trim(gcam2glm_basebiomass)
+
+       write(iulog,*) 'rumtime options:'
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
-       write(iulog, '(A,L)') "write_co2 = ",write_co2
        write(iulog, '(A,L)') "write_scalars = ",write_scalars
-       write(iulog, '(A,F)') "base_co2emis_surface = ",base_co2emis_surface
-       write(iulog, '(A,F)') "base_co2emis_aircraft = ",base_co2emis_aircraft
+       write(iulog, '(A,L)') "write_co2 = ",write_co2
+       write(iulog, '(A,L)') "elm_iac_carbon_scaling = ", elm_iac_carbon_scaling
+       write(iulog, '(A,L)') "iac_elm_co2_emissions = ", iac_elm_co2_emissions
+       write(iulog, '(A,L)') "gcam_spinup = ",gcam_spinup
+       write(iulog, '(A,L)') "run_gcam = ",run_gcam
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)
@@ -191,8 +208,7 @@ contains
 
     ! Now we start reading our grid variables.  I'm assuming all the
     ! lat,lon,area, and landfrac variables are in this netcdf
-    ! configuration file - extracted (or used straight up?) from a
-    ! clm2.h1 file?
+    ! configuration file - this is a landuse.timeseries file
 
     ! Apparently this kind of netcdf interface is all the rage
     ! I'm going to copy existing interfaces (rtm, specifically) in
@@ -262,9 +278,12 @@ contains
     enddo
 
     ! pft land mask
-    call ncd_io(ncid=ncid, varname='PFTDATA_MASK', flag='read', data=itempr, readvar=found)
-    if ( .not. found ) call shr_sys_abort( trim(subname)//' ERROR: read IAC landmask')
-    if (masterproc) write(iulog,*) 'Read PFTDATA_MASK ',minval(tempr),maxval(tempr)
+    call ncd_io(ncid=ncid, varname='PFTDATA_MASK', flag='read', data=itempr,&
+                readvar=found)
+    if ( .not. found ) call shr_sys_abort( trim(subname)//&
+                             ' ERROR: read IAC landmask')
+    if (masterproc) write(iulog,*) 'Read PFTDATA_MASK',&
+                                minval(tempr),maxval(tempr)
 
     do i=1,iac_ctl%nlon
        do j=1,iac_ctl%nlat
@@ -280,6 +299,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Initialize Restart
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! ToDo: adivi: so far I think this is the same for a restart
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Initialize history handler

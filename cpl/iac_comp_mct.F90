@@ -25,7 +25,7 @@ module iac_comp_mct
   use glm_comp_mod
   use gcam2glm_mod
   use glm2iac_mod
-  use gcam_var_mod        , only : gcam_nlon, gcam_nlat,  iulog, &
+  use gcam_var_mod        , only : run_gcam, gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
                                 gcam_active, gcam_var_set, num_lon, num_lat
@@ -169,12 +169,16 @@ contains
     call seq_cdata_setptrs(cdata_z, ID=IACID, mpicom=mpicom_iac, &
          gsMap=gsMap_iac, dom=dom_z, infodata=infodata)
 
+    ! Initialize gcam MPI communicator 
+    call spmd_init(mpicom_iac, IACID)
+
+    if (masterproc) then
+       write(iulog,*) "masterproc before gcam_cpl_indices_init is ", masterproc
+    end if
+
     ! Determine attriute vector indices
     call gcam_cpl_indices_init()
     call gcam_cpl_indices_set()
-
-    ! Initialize gcam MPI communicator 
-    call spmd_init(mpicom_iac, IACID)
 
     ! I see this kind of thing everywhere, so why not
 #if (defined _MEMTRACE)
@@ -421,36 +425,43 @@ contains
     nlend = seq_timemgr_StopAlarmIsOn( EClock )
     rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
 
-    ! Run gcam.  
+    ! Run gcam and glm, unless it is the historical period
+    ! TODO: make the iac res match the land res
+    ! For now, running the historical period will get the appropriate
+    ! land surface files, until we make the iac res match the land
+    ! Without gcam/glm, glm2iac_run_mod reads in the reformatted luh2 data
+    if ( run_gcam ) then  
 
-    ! This calcs and pushes the carbon density scalars to gcam
-    !   the push happens only if elm_iac_carbon_scaling is true
-    ! this is called regardless in order to calculate and write scalars
-    call gcam_setdensity_mod()
+       ! This calcs and pushes the carbon density scalars to gcam
+       !   the push happens only if elm_iac_carbon_scaling is true
+       ! this is called regardless in order to calculate and write scalars
+       call gcam_setdensity_mod()
 
-    ! Run GCAM, for this timestep.  
-    ! Inputs taken care of by gcam_setdensity_mod(), so both of these
-    ! are outputs, for input to glm and for export to atm (emis)
-    call gcam_run_mod(gcam2glm_data, gcam_emis_data,                          &
-          gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
-          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
-          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
-          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
-          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
-          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
-          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
-          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
-          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
-          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
-          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
-          gcamoco2airhidec)
+       ! Run GCAM, for this timestep.  
+       ! Inputs taken care of by gcam_setdensity_mod(), so both of these
+       ! are outputs, for input to glm and for export to atm (emis)
+       call gcam_run_mod(gcam2glm_data, gcam_emis_data,                          &
+             gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
+             gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+             gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+             gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+             gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+             gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+             gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+             gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+             gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+             gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+             gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+             gcamoco2airhidec)
 
-    ! Set up to run glm
-    call gcam2glm_run_mod(gcam2glm_data, glmi_data, glm_wh_data)
+       ! Set up to run glm
+       call gcam2glm_run_mod(gcam2glm_data, glmi_data, glm_wh_data)
 
-    ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod(glmi_data, glm_wh_data, glm2lnd_data)
+       ! Run glm, which produces the coupled vars to lnd (z->l)
+       call glm_run_mod(glmi_data, glm_wh_data, glm2lnd_data)
     
+    end if
+
     ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
     call glm2iac_run_mod(glm2lnd_data)
 
