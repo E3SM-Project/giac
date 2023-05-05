@@ -77,10 +77,10 @@ contains
 !-----------------------------------------------------------------------
 
     nflds = iac_iac_npfts + 7
-    nsize = cdata%i(iac_cdatai_glm_size)
+    !nsize = cdata%i(iac_cdatai_glm_size)
     ! npfts + extra pft + vh1,vh2,sh1,sh2,sh3,grazing
-    allocate(plodata(nflds,nsize))
-    plodata = 0.0
+    allocate(plodata(nflds,iac_glm_nx*iac_glm_ny))
+    plodata(:,:) = 0.0
 
     allocate(harvest_names(iac_ctl%nharvest))
     harvest_names = ['HARVEST_VH1', 'HARVEST_VH2', 'HARVEST_SH1', &
@@ -304,6 +304,13 @@ contains
     end if
 
     deallocate(array3d)
+
+#ifdef DEBUG
+    do j = 1,iac_glmo_nflds
+       write(iulog,*) trim(subname),' glmo minmax after flip ',&
+                       j,minval(glmo(j,:)),maxval(glmo(j,:))
+    enddo
+#endif
 
 #ifdef DEBUG
     write(iulog,*) trim(subname),' date= ',ymd,tod

@@ -933,12 +933,12 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       output_lu(curryear); 
     }
     if (output_netcdf) {
-	  // write output states each year
+	  // write output states for in year
       output_updated_states_nc(curryear,FALSE);
       output_lu_nc(curryear);
     }
 	  
-	// these must get cleaned up if it isn't a restart year
+	// write restart for outyear
 	output_updated_states_nc(curryear,TRUE);
 	  
     //country_primeflow_print(curryear);
@@ -7327,35 +7327,35 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_def_var(ncid_state, "gfvh2", NC_DOUBLE, RANK_gfvh2, gfvh2_dims, &gfvh2_id);
     check_err(stat,__LINE__,__FILE__);
 
-/*     gsbh1_dims[0] = time_dim; */
-/*     gsbh1_dims[1] = lat_dim; */
-/*     gsbh1_dims[2] = lon_dim; */
-/*     stat = nc_def_var(ncid_state, "gsbh1", NC_DOUBLE, RANK_gsbh1, gsbh1_dims, &gsbh1_id); */
-/*     check_err(stat,__LINE__,__FILE__); */
+    gsbh1_dims[0] = time_dim;
+    gsbh1_dims[1] = lat_dim;
+    gsbh1_dims[2] = lon_dim;
+    stat = nc_def_var(ncid_state, "gsbh1", NC_DOUBLE, RANK_gsbh1, gsbh1_dims, &gsbh1_id);
+    check_err(stat,__LINE__,__FILE__);
 
-/*     gsbh2_dims[0] = time_dim; */
-/*     gsbh2_dims[1] = lat_dim; */
-/*     gsbh2_dims[2] = lon_dim; */
-/*     stat = nc_def_var(ncid_state, "gsbh2", NC_DOUBLE, RANK_gsbh2, gsbh2_dims, &gsbh2_id); */
-/*     check_err(stat,__LINE__,__FILE__); */
+    gsbh2_dims[0] = time_dim;
+    gsbh2_dims[1] = lat_dim;
+    gsbh2_dims[2] = lon_dim;
+    stat = nc_def_var(ncid_state, "gsbh2", NC_DOUBLE, RANK_gsbh2, gsbh2_dims, &gsbh2_id);
+    check_err(stat,__LINE__,__FILE__);
 
-/*     gsbh3_dims[0] = time_dim; */
-/*     gsbh3_dims[1] = lat_dim; */
-/*     gsbh3_dims[2] = lon_dim; */
-/*     stat = nc_def_var(ncid_state, "gsbh3", NC_DOUBLE, RANK_gsbh3, gsbh3_dims, &gsbh3_id); */
-/*     check_err(stat,__LINE__,__FILE__); */
+    gsbh3_dims[0] = time_dim;
+    gsbh3_dims[1] = lat_dim;
+    gsbh3_dims[2] = lon_dim;
+    stat = nc_def_var(ncid_state, "gsbh3", NC_DOUBLE, RANK_gsbh3, gsbh3_dims, &gsbh3_id);
+    check_err(stat,__LINE__,__FILE__);
 
-/*     gvbh1_dims[0] = time_dim; */
-/*     gvbh1_dims[1] = lat_dim; */
-/*     gvbh1_dims[2] = lon_dim; */
-/*     stat = nc_def_var(ncid_state, "gvbh1", NC_DOUBLE, RANK_gvbh1, gvbh1_dims, &gvbh1_id); */
-/*     check_err(stat,__LINE__,__FILE__); */
+    gvbh1_dims[0] = time_dim;
+    gvbh1_dims[1] = lat_dim;
+    gvbh1_dims[2] = lon_dim;
+    stat = nc_def_var(ncid_state, "gvbh1", NC_DOUBLE, RANK_gvbh1, gvbh1_dims, &gvbh1_id);
+    check_err(stat,__LINE__,__FILE__);
 
-/*     gvbh2_dims[0] = time_dim; */
-/*     gvbh2_dims[1] = lat_dim; */
-/*     gvbh2_dims[2] = lon_dim; */
-/*     stat = nc_def_var(ncid_state, "gvbh2", NC_DOUBLE, RANK_gvbh2, gvbh2_dims, &gvbh2_id); */
-/*     check_err(stat,__LINE__,__FILE__); */
+    gvbh2_dims[0] = time_dim;
+    gvbh2_dims[1] = lat_dim;
+    gvbh2_dims[2] = lon_dim;
+    stat = nc_def_var(ncid_state, "gvbh2", NC_DOUBLE, RANK_gvbh2, gvbh2_dims, &gvbh2_id);
+    check_err(stat,__LINE__,__FILE__);
 
 /*     gzdis_dims[0] = time_dim; */
 /*     gzdis_dims[1] = lat_dim; */
@@ -7578,46 +7578,47 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_put_att_text(ncid_state, gfvh2_id, "long_name", 72, "gridcell fraction that had wood harvested from primary nonforested land ");
     check_err(stat,__LINE__,__FILE__);
     }
-/*     { /\* units *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh1_id, "units", 3, "kgC"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* long_name *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh1_id, "long_name", 60, "mature secondary forest biomass harvested from each gridcell"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* units *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh2_id, "units", 3, "kgC"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* long_name *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh2_id, "long_name", 59, "young secondary forest biomass harvested from each gridcell"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* units *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh3_id, "units", 3, "kgC"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* long_name *\/ */
-/*     stat = nc_put_att_text(ncid_state, gsbh3_id, "long_name", 58, "secondary non-forest biomass harvested from each gridcell "); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* units *\/ */
-/*     stat = nc_put_att_text(ncid_state, gvbh1_id, "units", 3, "kgC"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* long_name *\/ */
-/*     stat = nc_put_att_text(ncid_state, gvbh1_id, "long_name", 52, "primary forest biomass harvested from each gridcell "); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* units *\/ */
-/*     stat = nc_put_att_text(ncid_state, gvbh2_id, "units", 3, "kgC"); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
-/*     { /\* long_name *\/ */
-/*     stat = nc_put_att_text(ncid_state, gvbh2_id, "long_name", 57, "primary non-forest biomass harvested from each gridcell  "); */
-/*     check_err(stat,__LINE__,__FILE__); */
-/*     } */
+
+    { /* units */
+    stat = nc_put_att_text(ncid_state, gsbh1_id, "units", 3, "kgC");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* long_name */
+    stat = nc_put_att_text(ncid_state, gsbh1_id, "long_name", 60, "mature secondary forest biomass harvested from each gridcell");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* units */
+    stat = nc_put_att_text(ncid_state, gsbh2_id, "units", 3, "kgC");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* long_name */
+    stat = nc_put_att_text(ncid_state, gsbh2_id, "long_name", 59, "young secondary forest biomass harvested from each gridcell");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* units */
+    stat = nc_put_att_text(ncid_state, gsbh3_id, "units", 3, "kgC");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* long_name */
+    stat = nc_put_att_text(ncid_state, gsbh3_id, "long_name", 58, "secondary non-forest biomass harvested from each gridcell ");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* units */
+    stat = nc_put_att_text(ncid_state, gvbh1_id, "units", 3, "kgC");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* long_name */
+    stat = nc_put_att_text(ncid_state, gvbh1_id, "long_name", 52, "primary forest biomass harvested from each gridcell ");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* units */
+    stat = nc_put_att_text(ncid_state, gvbh2_id, "units", 3, "kgC");
+    check_err(stat,__LINE__,__FILE__);
+    }
+    { /* long_name */
+    stat = nc_put_att_text(ncid_state, gvbh2_id, "long_name", 57, "primary non-forest biomass harvested from each gridcell  ");
+    check_err(stat,__LINE__,__FILE__);
+    }
 /*     { /\* units *\/ */
 /*     stat = nc_put_att_text(ncid_state, gzdis_id, "units", 8, "fraction"); */
 /*     check_err(stat,__LINE__,__FILE__); */
@@ -7716,6 +7717,19 @@ void output_updated_states_nc(int curryear,int restart){
     check_err(stat,__LINE__,__FILE__);
     stat = nc_put_vara_double(ncid_state, gfsh3_id, start, count, &newdata[timeidx].flowsbh3[0][0]);
     check_err(stat,__LINE__,__FILE__);
+
+    stat = nc_put_vara_double(ncid_state, gvbh1_id, start, count, &newdata[timeidx].vbh[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+    stat = nc_put_vara_double(ncid_state, gvbh2_id, start, count, &newdata[timeidx].vbh2[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+
+    stat = nc_put_vara_double(ncid_state, gsbh1_id, start, count, &newdata[timeidx].sbh[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+    stat = nc_put_vara_double(ncid_state, gsbh2_id, start, count, &newdata[timeidx].sbh2[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+    stat = nc_put_vara_double(ncid_state, gsbh3_id, start, count, &newdata[timeidx].sbh3[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+
     stat =  nc_put_var_double(ncid_state, lat_id, &lat[0]);
     check_err(stat,__LINE__,__FILE__);
     stat =  nc_put_var_double(ncid_state, lon_id, &lon[0]);
@@ -7732,18 +7746,17 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_close(ncid_state);
     check_err(stat,__LINE__,__FILE__);
 
-	// copy restart file to regular state file for completeness
-
-	if (restart) {
-		sprintf(curryearc, "%d", curryear);
-		strcpy(command,"cp ");
-		strcat(command,state_file);
-		strcat(command," ");
-		strcat(command,casename);
-		strcat(command,".glm.state.");
-		strcat(command,strcat(curryearc,".nc"));
-		system(command);
-	}
+// don't do this, the in year state is also written
+//	if (restart) {
+//		sprintf(curryearc, "%d", curryear);
+//		strcpy(command,"cp ");
+//		strcat(command,state_file);
+//		strcat(command," ");
+//		strcat(command,casename);
+//		strcat(command,".glm.state.");
+//		strcat(command,strcat(curryearc,".nc"));
+//		system(command);
+//	}
 	
     return;
 }

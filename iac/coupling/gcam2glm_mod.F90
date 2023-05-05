@@ -1665,7 +1665,7 @@ restart_run = .false.
 
     status = nf90_def_var(ncid,'gcam_wh',NF90_DOUBLE,dimid_gcam,varid)
     if(status /= nf90_NoErr) call handle_err(status)
-    status = nf90_put_att(ncid,varid,"units","thous_sqkm")
+    status = nf90_put_att(ncid,varid,"units","MgC")
     if(status /= nf90_NoErr) call handle_err(status)
 
     status = nf90_def_var(ncid,'gcam_forest_area',NF90_DOUBLE,dimid_gcam,varid)

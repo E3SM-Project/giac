@@ -2317,14 +2317,23 @@ readhurttdynprimary(long modyear) {
 	int year_varid;
 	size_t numrecs, *start, *count;
 	double *years;
+
+    int loc_nvars;
 	
     selectedvarcnt = 0;
     
-    nc_inq(innetcdfid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp);
+    nc_inq(innetcdfid, &ndimsp, &loc_nvars, &nattsp, &unlimdimidp);
+
+//printf("readhurttdynprimary first loc_nvars=%i\n", loc_nvars );
+//nc_inq_nvars(innetcdfid, &nvarsp);
+//printf("readhurttdynprimary second nvarsp=%i\n", nvarsp );
     
-    for (nvarspcnt = 0; nvarspcnt < nvarsp; nvarspcnt ++) {
+    for (nvarspcnt = 0; nvarspcnt < loc_nvars; nvarspcnt ++) {
         nc_inq_varname(innetcdfid, nvarspcnt, varname);
         nc_inq_var(innetcdfid, nvarspcnt, varname, &vartype, &vardimsp, &vardimidsp, &varattsp);
+
+//printf("readhurttdynprimary nvarspcnt=%i varname=%s loc_nvars=%i\n", nvarspcnt, varname, loc_nvars);
+
         if (strcmp(varname,"GOTHR") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
@@ -2358,6 +2367,8 @@ readhurttdynprimary(long modyear) {
 	count[1] = latlen;
 	count[2] = lonlen;
     
+printf("readhurttdynprimary year_ind=%li sv0=%i\n", year_ind, selectedvarids[0]);
+
     varlayers = 1;
     varlayers2 = 1;
     primvalues = malloc(sizeof(double) * lonlen * latlen * varlayers * varlayers2);
@@ -2366,11 +2377,14 @@ readhurttdynprimary(long modyear) {
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         inprimvalue = primvalues[outgrid];
         if (inprimvalue >= 0.0 && inprimvalue <= 1.1) {
-            //prevprimary[outgrid] = round(inprimvalue * 100.0);
+            //prevprimary[outgrid] = round(inprimvalue * 100.0 * ROUND_PREC) / ROUND_PREC;
             prevprimary[outgrid] = inprimvalue * 100.0;
             if (prevprimary[outgrid] > 100.0) {
                 prevprimary[outgrid] = 100.0;
             }
+
+//printf("read outgrid=%li prevprimary=%f\n", outgrid, prevprimary[outgrid]);
+
         }
         else {
             prevprimary[outgrid] = 0.0;
@@ -2398,12 +2412,13 @@ readhurttdynsecondary(long modyear) {
 	int year_varid;
 	size_t numrecs, *start, *count;
 	double *years;
+    int loc_nvars;
 	
     selectedvarcnt = 0;
     
-    nc_inq(innetcdfid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp);
+    nc_inq(innetcdfid, &ndimsp, &loc_nvars, &nattsp, &unlimdimidp);
     
-    for (nvarspcnt = 0; nvarspcnt < nvarsp; nvarspcnt ++) {
+    for (nvarspcnt = 0; nvarspcnt < loc_nvars; nvarspcnt ++) {
         nc_inq_varname(innetcdfid, nvarspcnt, varname);
         nc_inq_var(innetcdfid, nvarspcnt, varname, &vartype, &vardimsp, &vardimidsp, &varattsp);
         if (strcmp(varname,"GSECD") == 0) {
@@ -2446,7 +2461,7 @@ readhurttdynsecondary(long modyear) {
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         insecvalue = secvalues[outgrid];
         if (insecvalue >= 0.0 && insecvalue <= 1.1) {
-            //prevsecondary[outgrid] = round(insecvalue * 100.0);
+            //prevsecondary[outgrid] = round(insecvalue * 100.0 * ROUND_PREC) / ROUND_PREC;
             prevsecondary[outgrid] = insecvalue * 100.0;
             if (prevsecondary[outgrid] > 100.0) {
                 prevsecondary[outgrid] = 100.0;
@@ -5673,7 +5688,20 @@ void sethurttlanduse(int outgrid) {
 	
    // round these to the same precision as the pft outputs
    // this means 100*ROUND_PREC because these are fractions, while pfts are percents
-   
+  
+
+#ifdef DEBUG
+if(0){
+//if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
+   printf("sethurttlanduse before calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+}
+#endif
+ 
     if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
         outhurttvh1[outgrid] = round( 100.0 * ROUND_PREC * (inhurttvh1[outgrid] / (prevprimary[outgrid] + prevsecondary[outgrid])) )
             / (100.0 * ROUND_PREC);
@@ -5700,7 +5728,19 @@ void sethurttlanduse(int outgrid) {
       printf("prevprimary=%f, prevsec=%f, inhurttvh2=%f\n", prevprimary[outgrid], prevsecondary[outgrid], inhurttvh2[outgrid]);
    }
 #endif
-   
+  
+#ifdef DEBUG
+if(0){
+//if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
+   printf("sethurttlanduse after calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+}
+#endif
+ 
     /* checks for overflow and underflow - lpc */
     if (outhurttvh1[outgrid] < 0.0) {
         outhurttvh1[outgrid] = 0.0;
@@ -5746,6 +5786,18 @@ void sethurttlanduse(int outgrid) {
         outhurttsh3[outgrid] = outhurttsh3[outgrid] - (harvestsum - 1.0);
         harvestsum = 1.0;
     }
+
+#ifdef DEBUG
+if(0){
+if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
+   printf("sethurttlanduse post-correction outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+}
+#endif
 	
     /* compute the total herbaceous area over all herbaceous PFTs - lpc */
     herbaceouspftsum = 0.0;
@@ -5786,7 +5838,15 @@ calchurtt(int modyear, int calcyear) {
 		/* initalize two pft mask arrays for each grid -adv */
 		cropavailpotvegtreepftval[outgrid] = 0;
 		pastureavailpotvegtreepftval[outgrid] = 0;
-		
+	
+                // initialize the harvest output value
+                outhurttvh1[outgrid] = 0.0;
+                outhurttvh2[outgrid] = 0.0;
+                outhurttsh1[outgrid] = 0.0;
+		outhurttsh2[outgrid] = 0.0;
+                outhurttsh3[outgrid] = 0.0;
+                outhurttgrazing[outgrid] = 0.0;
+	
 #ifdef DEBUG
        printf("\noutgrid: %i\n", outgrid);
 #endif
@@ -6252,6 +6312,9 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		readhurttdynprimary(initial_hist_year);
 		readhurttdynsecondary(initial_hist_year);
 	} else {
+
+printf("ualu dyn file is %s\n", dyn_luh_file);
+
 		readhurttdynprimary(modyear);
 		readhurttdynsecondary(modyear);
 	}
