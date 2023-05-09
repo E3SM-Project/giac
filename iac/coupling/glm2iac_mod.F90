@@ -117,6 +117,7 @@ contains
     integer :: i,j,n,ij,ierr,nmode
     integer :: dimid(3),varid,ncid, lat_id, lon_id, rawdims(2), rid
     real*8, pointer :: array3d(:,:,:)
+    integer, dimension(166) :: array1d
     character(len=128) :: fname,casename,hfile
     integer :: myear, mon, day, e3smyear
     character(len=*),parameter :: subname='(glm2iac_run_mod)'
@@ -227,28 +228,46 @@ contains
        ierr = nf90_open('LUH2_HIST_LUH1f_c07182019.nc',&
           nf90_nowrite,ncid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       
+
+       ! first find the correct time index
+       ! these data can be used for harvest below
+       !    because the harvest time array matches but
+       !    is one element shorter at the end
+       ! the desired year for land cover is myear
+       ! the desired year for harvest is e3smyear, which is myear-1
+       ierr= nf90_inq_varid(ncid, "TIME", varid)
+       if(ierr /= nf90_NoErr) call handle_err(ierr)
+       ierr= nf90_get_var(ncid, varid, array1d(:))
+       if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+       start3(1) = 1
+       start3(2) = 1
+       start3(3) = findloc(array1d, myear, dim=1)
+       count3(1) = iac_glm_nx
+       count3(2) = iac_glm_ny
+       count3(3) = 1      
+ 
        ! need to read into a multi dim array then transfer
        
        ! order is crop, pasture, primary, secondary
        ierr= nf90_inq_varid(ncid, "GCROP", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,1))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,1), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GPAST", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,2))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,2), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GOTHR", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,3))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,3), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GSECD", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,4))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,4), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_close(ncid)
@@ -261,30 +280,32 @@ contains
           nf90_nowrite,ncid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
+       ! need the previous year data for harvest
+       start3(3) = findloc(array1d, e3smyear, dim=1)
 
        ierr= nf90_inq_varid(ncid, "GFVH1", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,5))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,5), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GFVH2", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,6))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,6), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GFSH1", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,7))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,7), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GFSH2", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,8))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,8), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_inq_varid(ncid, "GFSH3", varid)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, array3d(:,:,9))
+       ierr= nf90_get_var(ncid, varid, array3d(:,:,9), start3, count3)
        if(ierr /= nf90_NoErr) call handle_err(ierr)
 
        ierr= nf90_close(ncid)
