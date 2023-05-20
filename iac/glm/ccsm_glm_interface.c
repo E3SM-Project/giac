@@ -1,5 +1,5 @@
-void initglm_() {
-    initialize();
+void initglm_(int *restart) {
+    initialize(restart);
 }
 void runglm_() {
     run_model();

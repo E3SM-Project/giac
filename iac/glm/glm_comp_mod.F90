@@ -29,6 +29,8 @@ Module glm_comp_mod
 ! !PUBLIC DATA MEMBERS: None
 
   integer, parameter :: glm_data_size   = iac_glm_nx*iac_glm_ny ! should be set by glm
+  character(len=*),parameter :: glm_restfile = 'output.glm.restart.state.'
+  character(len=*),parameter :: glm_rpointer = 'rpointer.glm'
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -63,7 +65,7 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    integer :: numreg,numglu,ier
+    integer :: numreg,numglu,ier,restart
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -93,7 +95,15 @@ contains
     glmi = iac_spval
     glmo = iac_spval
 
-    call initGLM()
+    write(6,*)'gcam_var_mod nsrest is', nsrest
+
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       restart = 1
+    else
+       restart = 0
+    end if
+
+    call initGLM(restart)
   end subroutine glm_init_mod
 
 !---------------------------------------------------------------------------
@@ -116,7 +126,6 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    logical :: restart_now
     integer :: ymd, tod, dt
     integer :: i,j,ij,n,ni
     integer :: glmyear,e3smyear
@@ -128,8 +137,6 @@ contains
 
 !EOP
 !-----------------------------------------------------------------------
-
-    restart_now = cdata%l(iac_cdatal_rest)
 
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)

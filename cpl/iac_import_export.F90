@@ -32,7 +32,7 @@ contains
     ! LOCAL VARIABLES
     integer :: n,n1,p,g,i,j
     integer :: begg, endg
-    character(len=32), parameter :: sub = 'iac_import'
+    character(len=32), parameter :: sub = '(iac_import)'
 
     ! Gcam expects things in npp_m[lon][lat][pft] format, so we need
     ! to extract from the flattened column representation.
@@ -95,7 +95,7 @@ contains
     ! LOCAL VARIABLES
     integer :: n,n1,g,i,j,p,m
     integer :: begg, endg
-    character(len=32), parameter :: sub = 'iac_export'
+    character(len=32), parameter :: sub = '(iac_export)'
 
     ! Once again, domain decomp isn't meaningful with one proc, but keep it for
     ! consistency with everybody else

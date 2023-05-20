@@ -351,10 +351,8 @@ contains
     integer      :: tod                  ! gcam current time of day (sec)
     integer      :: dtime                ! time step increment (sec)
     integer,save :: nstep                ! time step index
-    logical      :: rstwr_sync           ! .true. ==> write restart file before returning
-    logical      :: rstwr                ! .true. ==> write restart file before returning
-    logical      :: nlend_sync           ! Flag signaling last time-step
-    logical      :: nlend                ! .true. ==> last time-step
+!    logical      :: nlend_sync           ! Flag signaling last time-step
+!    logical      :: nlend                ! .true. ==> last time-step
     logical      :: dosend               ! true => send data back to driver
     real(r8)     :: nextsw_cday          ! calday from clock of next radiation computation
     real(r8)     :: caldayp1             ! gcam calday plus dtime offset
@@ -369,7 +367,7 @@ contains
     type(mct_gGrid),        pointer :: dom_z                ! iac model domain data
     !type(bounds_type)               :: bounds               ! bounds
     character(len=32)               :: rdate                ! date char string for restart file names
-    character(len=32), parameter    :: sub = "iac_run_mct"
+    character(len=32), parameter    :: sub = "(iac_run_mct)"
 
 
     ! I feel this is probably important
@@ -403,13 +401,13 @@ contains
     !tod = tod
     if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
        call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
-       write(iulog,*)' gcam ymd=',ymd     ,'  gcam tod= ',tod
-       write(iulog,*)'sync ymd=',ymd_sync,' sync tod= ',tod_sync
+       write(iulog,*) trim(sub), ' gcam ymd=',ymd     ,'  gcam tod= ',tod
+       write(iulog,*)trim(sub), 'sync ymd=',ymd_sync,' sync tod= ',tod_sync
        call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
     end if
 
-    write(iulog,*) "Nstep: ", nstep
-    write(iulog,*) "EClock: ", yr,mon,day,tod, ymd, dtime
+    write(iulog,*) trim(sub), "Nstep: ", nstep
+    write(iulog,*) trim(sub), "EClock: ", yr,mon,day,tod, ymd, dtime
 
     ! Assign the date to GClock
     GClock(iac_eclock_ymd) = ymd
@@ -422,14 +420,21 @@ contains
     !call iac_import(x2z_z, lnd2iac_vars)
     !call t_stopf('iac_import')
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
-    nlend = seq_timemgr_StopAlarmIsOn( EClock )
-    rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
+!    nlend = seq_timemgr_StopAlarmIsOn( EClock )
 
     ! Run gcam and glm, unless it is the historical period
     ! TODO: make the iac res match the land res
     ! For now, running the historical period will get the appropriate
     ! land surface files, until we make the iac res match the land
     ! Without gcam/glm, glm2iac_run_mod reads in the reformatted luh2 data
+
+    ! note that gcam handles its own restarts
+    ! note that the iac does not run in a timestep that handles model restart
+    !    writing
+    ! so gcam2glm and glm will always write restart files each year,
+    ! then the land model code (elm_driver) will write the two appropriate
+    !    restart pointer files when it is time to write the land restart file
+
     if ( run_gcam ) then  
 
        ! This calcs and pushes the carbon density scalars to gcam
@@ -459,14 +464,14 @@ contains
 
        ! Run glm, which produces the coupled vars to lnd (z->l)
        call glm_run_mod(glmi_data, glm_wh_data, glm2lnd_data)
+
+       ! Copy gcamo atm variables to iac2atm_vars
+       call gcam2iac_copy()
     
     end if
 
     ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
     call glm2iac_run_mod(glm2lnd_data)
-
-    ! Copy gcamo atm variables to iac2atm_vars
-    call gcam2iac_copy()
 
     ! Now export the land and atmosphere data
     call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
@@ -483,7 +488,7 @@ contains
          curr_yr=yr, curr_mon=mon, curr_day=day,&
          dtime=dtime)
 
-    write(iulog,*) "EClock post-iac run: ", yr,mon,day,tod, ymd, dtime
+    write(iulog,*) trim(sub), "EClock post-iac run: ", yr,mon,day,tod, ymd, dtime
 
     first_call = .false.
 
@@ -546,7 +551,7 @@ contains
     integer :: lsize,gsize                   ! size of iac data and number of grid cells
     integer :: begg, endg                   ! beg, end iac indices
     integer :: ier                           ! error code
-    character(len=32), parameter :: sub = 'iac_SetgsMap_mct'
+    character(len=32), parameter :: sub = '(iac_SetgsMap_mct)'
     !-----------------------------------------------------
 
     begg  = iac_ctl%begg
@@ -612,7 +617,7 @@ contains
     integer , pointer :: idata(:) ! temporary
     real(r8), pointer :: data(:)  ! temporary
     real(r8) :: re = SHR_CONST_REARTH*0.001_r8 ! radius of earth (km)
-    character(len=32), parameter :: sub = 'iac_domain_mct'
+    character(len=32), parameter :: sub = '(iac_domain_mct)'
     !-----------------------------------------------------
 
     ! the domain info is for iac-atm only

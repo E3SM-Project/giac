@@ -223,11 +223,6 @@ contains
     call inite3sminterface()
     
     ! Call initcGCAM method of e3sm/GCAM Interface 
-    write (iulog, *) trim(case_name), &
-         trim(gcam_config),&
-         trim(gcam2elm_co2_mapping_file),&
-         trim(gcam2elm_luc_mapping_file), & 
-         trim(gcam2elm_woodharvest_mapping_file)
 
     ! Null terminate
     len = len_trim(case_name)
@@ -440,11 +435,15 @@ contains
      w = 0
   end if
 
+
   if ( elm_iac_carbon_scaling ) then
      s = 1
   else
      s = 0
   end if
+
+  write(iulog,*) trim(subname),' elm_iac_carbon_scaling is ', &
+     elm_iac_carbon_scaling,'s is ', s
 
   ! Null terminate                                           
   !len = len_trim(elm2gcam_mapping_file)

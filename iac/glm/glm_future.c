@@ -78,7 +78,7 @@ char* regcodes_map;
 char* regnames_file;
 char* aez_region_grid_file;
 char* aez_region_zone_file;
-char* restart_filename;
+char restart_filename[256];
 char* runtype;
 char* s;
 char* shiftcult_map;
@@ -270,7 +270,7 @@ void force_harvest3(int it, int i, int curryear);
 void global_timeseries_checker(int regional_code, char regional_name[50],int curryear);
 void global_timeseries_checker_aez(int regional_code, char regional_name[50],int curryear);
 void harvest_gridded_data(int it);
-void initialize();
+void initialize(int *restart);
 void initialize_checker(int regional_code);
 void initialize_woodharvest_country_ratios(int baseyear);
 void loop_call_for_country_final_stats(int curryear);
@@ -286,7 +286,7 @@ void output_lu_nc(int curryear);
 void output_updated_states(int curryear);
 void output_updated_states2(int curryear);
 void output_updated_states3(int curryear);
-void output_updated_states_nc(int curryear,int restart);
+void output_updated_states_nc(int curryear,int rstwr);
 void predict_available_biomass(int it, int i);
 void predict_available_biomass_aez(int it, int ir, int ia);
 float prob_harv(float biomass);
@@ -334,6 +334,8 @@ int main(int argc, char *argv[]){
 
 #include "iniparser.h"
 
+  int restart = 0;
+
   setbuf(stdout, NULL);
 
   printf("\n");
@@ -344,7 +346,7 @@ int main(int argc, char *argv[]){
       return;
     }
 
-  initialize();
+  initialize(&restart);
 
   run_model();
 
@@ -388,7 +390,7 @@ void option_settings(int smart_flow_option,
 
 }
 /***********************************************************************/
-void initialize(){
+void initialize(int *restart){
 
   dictionary* ini ;
   int status;
@@ -528,6 +530,7 @@ void initialize(){
   strcpy(runtypebuf,runtype);
   //jtfix  if(strcmp("initial",lowercase_string(runtypebuf)) == 0) {initialrun=1;}
   if(strcmp("initial",runtype) == 0) {initialrun=1;}
+  if(*restart == 1) {initialrun = 0;}
 
   option_settings(smart_flow_option,
 		  converted_forest_land_option,
@@ -839,6 +842,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       }
     }
     if (0) {
+
     for (it1=0;it1<2;it1++){
       printf("newdata values in before transitions ..\n");
       for (j=0;j<NY;j++){
@@ -857,13 +861,15 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
 	}
       }
     }
-    }
+    
     for (i=0;i<NREG;i++){
       for (j=0;j<rdata[i].num_glu;j++){
 	printf("aez_tdata %lf i %d j %d\n",aez_tdata[i][j].wh,i,j);
       }
     }
-    //    read_woodharvest_data_nc(curryear);
+    
+    } // end if(0)
+//    read_woodharvest_data_nc(curryear);
 
     transitions(curryear); 
     
@@ -938,7 +944,9 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       output_lu_nc(curryear);
     }
 	  
-	// write restart for outyear
+	// write restart for outyear each year 
+	// but let the land model write the rpointer file
+        // this is distinct from reading a restart, which is done in initialize
 	output_updated_states_nc(curryear,TRUE);
 	  
     //country_primeflow_print(curryear);
@@ -7025,7 +7033,7 @@ void output_lu(int curryear){
   return;
 }
 /********************************************************************/
-void output_updated_states_nc(int curryear,int restart){
+void output_updated_states_nc(int curryear,int rstwr){
   int stat,k,m,timeidx;
 /*   char ayear[7], state_file[256]; */
   char state_file[256];
@@ -7034,6 +7042,9 @@ void output_updated_states_nc(int curryear,int restart){
 	char command[512];
   size_t start[] = {0, 0, 0};   /* start at first value */
   size_t count[] = {1, NY, NX};
+
+  size_t start2[] = {0, 0};   /* start at first value */
+  size_t count2[] = {NY, NX};
 
 	/* for iesm this is writing the output states at labelled year curryear */
 
@@ -7150,11 +7161,13 @@ void output_updated_states_nc(int curryear,int restart){
     int time_dims[RANK_time];
     char curryearc[8];
 
-    if (restart) {
-      create_restart_inifile(curryear);
-      printf("creating restart files \n");
+    // do not write the rpointer file here
+    // let the land model do it at the correct time
+    if (rstwr) {
+      //create_restart_inifile(curryear);
+      printf("creating restart files for year %i \n", curryear);
     }else{
-      printf("output updated state to netcdf file \n");
+      printf("output previous state for year %i to netcdf file \n", curryear-1);
     }
 
 
@@ -7173,13 +7186,14 @@ void output_updated_states_nc(int curryear,int restart){
       }
     }
 
-    sprintf(curryearc, "%d", curryear);
     strcpy(state_file,casename);
 
-    if (restart) {
+    if (rstwr) {
       strcat(state_file,".glm.restart.state.");
+      sprintf(curryearc, "%d", curryear);
     }else{
       strcat(state_file,".glm.state.");
+      sprintf(curryearc, "%d", curryear-1);
     }
     strcat(state_file,strcat(curryearc,".nc"));
     /* enter define mode */
@@ -7243,11 +7257,16 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_def_var(ncid_state, "gssmb", NC_DOUBLE, RANK_gssmb, gssmb_dims, &gssmb_id);
     check_err(stat,__LINE__,__FILE__);
 
-    gsumm_dims[0] = time_dim;
-    gsumm_dims[1] = lat_dim;
-    gsumm_dims[2] = lon_dim;
-    stat = nc_def_var(ncid_state, "gsumm", NC_DOUBLE, RANK_gsumm, gsumm_dims, &gsumm_id);
-    check_err(stat,__LINE__,__FILE__);
+    //gsumm_dims[0] = time_dim;
+    //gsumm_dims[1] = lat_dim;
+    //gsumm_dims[2] = lon_dim;
+    //stat = nc_def_var(ncid_state, "gsumm", NC_DOUBLE, RANK_gsumm, gsumm_dims, &gsumm_id);
+    //check_err(stat,__LINE__,__FILE__);
+
+    // include the following variables only for non-restart state output
+    // otherwise the restart file is confusing
+
+       if(!rstwr) {
 
 /*     gflcp_dims[0] = time_dim; */
 /*     gflcp_dims[1] = lat_dim; */
@@ -7363,6 +7382,8 @@ void output_updated_states_nc(int curryear,int restart){
 /*     stat = nc_def_var(ncid_state, "gzdis", NC_DOUBLE, RANK_gzdis, gzdis_dims, &gzdis_id); */
 /*     check_err(stat,__LINE__,__FILE__); */
 
+    } // end not restart file, define vars
+
     lat_dims[0] = lat_dim;
     stat = nc_def_var(ncid_state, "lat", NC_DOUBLE, RANK_lat, lat_dims, &lat_id);
     check_err(stat,__LINE__,__FILE__);
@@ -7466,14 +7487,20 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_put_att_text(ncid_state, gssmb_id, "long_name", 50, "mean biomass density of secondary land in gridcell");
     check_err(stat,__LINE__,__FILE__);
     }
-    { /* units */
-    stat = nc_put_att_text(ncid_state, gsumm_id, "units", 8, "fraction");
-    check_err(stat,__LINE__,__FILE__);
-    }
-    { /* long_name */
-    stat = nc_put_att_text(ncid_state, gsumm_id, "long_name", 63, "sum of crop,pasture,primary,secondary,urban,ice,water fractions");
-    check_err(stat,__LINE__,__FILE__);
-    }
+    //{ /* units */
+    //stat = nc_put_att_text(ncid_state, gsumm_id, "units", 8, "fraction");
+    //check_err(stat,__LINE__,__FILE__);
+    //}
+    //{ /* long_name */
+    //stat = nc_put_att_text(ncid_state, gsumm_id, "long_name", 63, "sum of crop,pasture,primary,secondary,urban,ice,water fractions");
+    //check_err(stat,__LINE__,__FILE__);
+    //}
+
+    // include the following variables only for non-restart state output
+    // otherwise the restart file is confusing
+    
+    if(!rstwr) {
+
 /*     { /\* units *\/ */
 /*     stat = nc_put_att_text(ncid_state, gflcp_id, "units", 8, "fraction"); */
 /*     check_err(stat,__LINE__,__FILE__); */
@@ -7627,6 +7654,10 @@ void output_updated_states_nc(int curryear,int restart){
 /*     stat = nc_put_att_text(ncid_state, gzdis_id, "long_name", 1, " "); */
 /*     check_err(stat,__LINE__,__FILE__); */
 /*     } */
+
+    } // end if not restart file, define var attributes
+
+
     { /* long_name */
     stat = nc_put_att_text(ncid_state, lat_id, "long_name", 8, "latitude");
     check_err(stat,__LINE__,__FILE__);
@@ -7666,8 +7697,13 @@ void output_updated_states_nc(int curryear,int restart){
     check_err(stat,__LINE__,__FILE__);
 
     /* for a restart state put out time index 1 of arrays */
+    //    only the land types are output, and are for the start of the labelled year (curryear)
+    // for non-restart file output time index 0
+    //    this means that the land type values are for the start of the labelled year (curryear-1)
+    //       and the harvest values are for the labelled year
 
-    if (restart) {
+
+    if (rstwr) {
       timeidx=1;
     }else{
       timeidx=0;
@@ -7687,10 +7723,19 @@ void output_updated_states_nc(int curryear,int restart){
 	newdata[timeidx].flowsbh[k][m]=fround(newdata[timeidx].flowsbh[k][m],6);
 	newdata[timeidx].flowsbh2[k][m]=fround(newdata[timeidx].flowsbh2[k][m],6);
 	newdata[timeidx].flowsbh3[k][m]=fround(newdata[timeidx].flowsbh3[k][m],6);
+
+        //printf("k is %ld m is %ld tind is %i\n",k,m,timeidx);
+        //printf("fvh1 fvh2 fsh1 fsh2 fsh3 %f %f %f %f %f\n", newdata[timeidx].flowvbh[k][m],newdata[timeidx].flowvbh2[k][m],
+        //       newdata[timeidx].flowsbh[k][m], newdata[timeidx].flowsbh2[k][m], newdata[timeidx].flowsbh3[k][m]);
+
       }
     }
     
     /* assign variable data */
+
+    stat = nc_put_vara_double(ncid_state, cell_area_id, start2, count2, &garea[0][0]);
+    check_err(stat,__LINE__,__FILE__);
+
     stat = nc_put_vara_double(ncid_state, gothr_id, start, count, &newdata[timeidx].v[0][0]);
     check_err(stat,__LINE__,__FILE__);
     stat = nc_put_vara_double(ncid_state, gurbn_id, start, count, &newdata[timeidx].u[0][0]);
@@ -7705,6 +7750,10 @@ void output_updated_states_nc(int curryear,int restart){
     check_err(stat,__LINE__,__FILE__);
     stat = nc_put_vara_double(ncid_state, gssma_id, start, count, &newdata[timeidx].sma[0][0]);
     check_err(stat,__LINE__,__FILE__);
+
+    // include the following variables only for non-restart state output
+    // otherwise the restart file is confusing
+    if(!rstwr) {
 
     stat = nc_put_vara_double(ncid_state, gfvh1_id, start, count, &newdata[timeidx].flowvbh[0][0]);
     check_err(stat,__LINE__,__FILE__);
@@ -7730,6 +7779,8 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_put_vara_double(ncid_state, gsbh3_id, start, count, &newdata[timeidx].sbh3[0][0]);
     check_err(stat,__LINE__,__FILE__);
 
+    } // end if not restart file, put variables
+
     stat =  nc_put_var_double(ncid_state, lat_id, &lat[0]);
     check_err(stat,__LINE__,__FILE__);
     stat =  nc_put_var_double(ncid_state, lon_id, &lon[0]);
@@ -7746,18 +7797,6 @@ void output_updated_states_nc(int curryear,int restart){
     stat = nc_close(ncid_state);
     check_err(stat,__LINE__,__FILE__);
 
-// don't do this, the in year state is also written
-//	if (restart) {
-//		sprintf(curryearc, "%d", curryear);
-//		strcpy(command,"cp ");
-//		strcat(command,state_file);
-//		strcat(command," ");
-//		strcat(command,casename);
-//		strcat(command,".glm.state.");
-//		strcat(command,strcat(curryearc,".nc"));
-//		system(command);
-//	}
-	
     return;
 }
 
@@ -12725,13 +12764,29 @@ void read_restart_pointer(void)
 {
 	dictionary*	ini_rest;
 	int status;
+        FILE *in;
+        char line[5];
 
-        ini_rest         = iniparser_load("restart_glm.ini");
+        if ((in=fopen("rpointer.glm", "r"))==NULL) {
+           fprintf(stderr, "iniparser: cannot open rpointer.glm\n");
+           exit(1);
+        }
+
+        // the restart file name is in the first line of rpointer.glm
+        //    and is this: output_glm_restart.state.yyyy.nc,
+        //    where yyyy is the four digit restart year
+        fscanf(in,"%s",restart_filename);
+        strncpy(line,&restart_filename[25],4);
+        start_year = (int)strtol(line, NULL, 0);
+
+/*
+        ini_rest = iniparser_load("rpointer.glm");
         restart_filename = iniparser_getstring(ini_rest, "restart:restart_file", NULL);
         start_year       = iniparser_getint(ini_rest, "restart:restart_year", 1500);
+*/
 
         if (start_year >= stop_year) {
-	  fprintf(stderr, "glm:read_restart: start_year of restart run < stop_year\n");
+	  fprintf(stderr, "glm:read_restart: start_year of restart run >= stop_year\n");
 	  exit(1);
 	}
 }

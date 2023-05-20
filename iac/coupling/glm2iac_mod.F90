@@ -77,7 +77,7 @@ contains
 !-----------------------------------------------------------------------
 
     nflds = iac_iac_npfts + 7
-    !nsize = cdata%i(iac_cdatai_glm_size)
+    nsize = iac_glm_nx*iac_glm_ny 
     ! npfts + extra pft + vh1,vh2,sh1,sh2,sh3,grazing
     allocate(plodata(nflds,iac_glm_nx*iac_glm_ny))
     plodata(:,:) = 0.0

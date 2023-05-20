@@ -62,7 +62,7 @@ contains
 
     if (masterproc) then
        unitn = shr_file_getunit()
-       write(iulog,*) 'Read in gcam_inparm namelist from: ', trim(nlfilename_iac)
+       write(iulog,*) '('//trim(subname)//')', 'Read in gcam_inparm namelist from: ', trim(nlfilename_iac)
        open( unitn, file=trim(nlfilename_iac), status='old' )
        ier = 1
        !do while ( ier /= 0 )
@@ -80,10 +80,8 @@ contains
 
     ! write the namelist values to the log to make sure they are read in
     if (masterproc) then
-       write(iulog,*) 'Namelist for IAC/GCAM run:'
-       write(iulog,*) 'GCAM case name:'
-       write(iulog, '(A,A)') "case_name = ", trim(case_name)
-
+       write(iulog,*) '('//trim(subname)//')', 'Namelist for IAC/GCAM run:'
+       write(iulog,*) 'GCAM case name:', trim(case_name)
        write(iulog,*) 'grid and region size parameters:'
        write(iulog, '(A,I)') "num_pft = ",num_pft
        write(iulog, '(A,I)') "num_harvest = ",num_harvest
@@ -144,7 +142,7 @@ contains
 
     inquire(file=gcam_gridfile,exist=lexist)
     if (.NOT. lexist) then 
-       call shr_sys_abort ('IAC INIT: FAILED to find '//trim(gcam_gridfile))
+       call shr_sys_abort ('IAC_INIT: FAILED to find '//trim(gcam_gridfile))
     endif
 
     ! Read in dimension lengths, so we know how to allocate stuff
@@ -305,6 +303,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Initialize history handler
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    if (masterproc) write(iulog,*) '('//trim(subname)//') finished'
 
   end subroutine iac_init
 end module iac_init_mod

@@ -131,8 +131,7 @@ contains
 ! !ARGUMENTS:
 
 ! !LOCAL VARIABLES:
-    logical :: restart_run,lexist
-    logical :: initial_run
+    logical :: lexist, restart_run
     integer :: iun,tmpyears(2),ier,t,yy,g
     real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
@@ -152,14 +151,18 @@ contains
 
 #ifdef DEBUG
      write(iulog,*) subname,' starting subroutine '
+     write(iulog,*) subname,'gcam_var_mod nsrest is', nsrest
 #endif
-    restart_run  = cdata%l(iac_cdatal_rest)
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       restart_run = .true.
+    else
+       restart_run = .false.
+    end if
 
     nregions=num_gcam_energy_regions
     nglu=num_gcam_land_regions
 
     gcamsize=nglu
-    initial_run = cdata%l(iac_cdatal_initrun)
 
 ! initialize two level time indexes 
 
@@ -270,9 +273,6 @@ contains
     allocate(rglus(numLons, numLats), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rglus',ier)
 
-!avd
-write(iulog,*) subname,'glu_weights dims: ',gcamsize,numLons,numLats
-
     allocate(rgmin(nregions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rgmin',ier)
     allocate(rgmax(nregions), stat=ier)
@@ -343,9 +343,6 @@ write(iulog,*) subname,'glu_weights dims: ',gcamsize,numLons,numLats
     rgmin = 1000
     rgmax = 0
 
-!avd
-write(iulog,*) subname,'nglu=',nglu
-
     open(5,file=gcam2glm_glumap)
     ! Read header
     read(5,*) dum
@@ -413,8 +410,25 @@ write(iulog,*) subname,'nglu=',nglu
 
 
 ! KVC: Temp -- set this to false. 
-restart_run = .false.
-    if (.not.restart_run) then
+!restart_run = .false.
+    if (.not. restart_run) then
+
+        ! if gcam_spinup == .true. this file does not exist yet
+        if (.not. gcam_spinup) then
+           ! Read in gcam base file 
+           open(5,file=base_gcam_lu_wh_file)
+           ! Read header
+           read(5,*) dum
+           do
+             read(5,*,iostat=io) g,t,yy,v
+             if (io < 0) then
+               exit
+             endif
+             gcamo_base(t,g) = v
+          end do
+          close(5)
+       end if
+
        glm_crop(:,:,1)=hydeGCROP2015;
        glm_past(:,:,1)=hydeGPAST2015;
 
@@ -542,7 +556,7 @@ restart_run = .false.
     integer :: row,g,t,y,yy
     integer :: iun,iyr,ier
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
-    logical :: restart_now,gcam_alarm
+    logical :: restart_run
     real(r8)  :: crop_d,past_d,crop_neg,crop_pos,past_neg,past_pos,farea_d,v
     real(r8)  :: gcam_crop_tmp(2,18,14),gcam_past_tmp(2,18,14),gcam_forest_area_tmp(2,18,14)
     real(r8)  :: fact1,fact2,eclockyr,fact1yrp1, fact2yrp1,delyr,eclockyrp1
@@ -564,7 +578,6 @@ restart_run = .false.
                               unmet_aez_farea(:),cumsum_sorted_reassign_ag(:),unmet_regional_farea(:)
    integer ntimes,nntimes,zz
 
-   ! avd
    integer :: nmode, ierr
    character(len=128) :: hfile
 
@@ -577,11 +590,16 @@ restart_run = .false.
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
-    gcam_alarm=(EClock(iac_EClock_Agcam)==1)
 #ifdef DEBUG
     write(iulog,*) trim(subname),' date= ',ymd,tod
+    write(iulog,*) trim(subname), 'gcam_var_mod nsrest is', nsrest
 #endif
 
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       restart_run  = .true.
+    else
+       restart_run = .false.
+    end if
     year1=cdata%i(iac_cdatai_gcam_yr1)
     year2=cdata%i(iac_cdatai_gcam_yr2)
     
@@ -633,10 +651,6 @@ restart_run = .false.
     unmet_regional_farea=0.
     unmet_farea=0.
 
-    ! KVC: This does not appear to be set. Manually setting for now
-    gcam_alarm = .true.
-    if (gcam_alarm) then
-
     ! TRS refactor
     ! This stuff attempts to set to default anywhere not covered by an
     ! aez.  I'm not sure if that's still a concern here, but for now
@@ -676,7 +690,7 @@ restart_run = .false.
 #endif 
 
 #ifdef DEBUG
-    write(6,*) 'sum 0 glm_crop='
+    write(6,*) subname, 'sum 0 glm_crop='
     write(6,fmt="(1ES25.15)") sum(glm_crop(:,:,np1))
     write(6,*) 'sum 0 glm_past='
     write(6,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
@@ -685,7 +699,9 @@ restart_run = .false.
     ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
    
     ! if gcam_spinup == .true. the base data need to be read now to initialize
-    if (gcam_spinup) then
+    !    but only if this is not a restart run, in which the data are filled
+    !    from restart file on initialization
+    if (gcam_spinup .and. (.not. restart_run)) then
        ! Read in gcam base file 
        open(5,file=base_gcam_lu_wh_file)
        ! Read header
@@ -1029,7 +1045,7 @@ restart_run = .false.
              crop_pos_nf=0.
           end if
 #ifdef DEBUG
-          write(6,*)'cropland increase on non-forested land - land available'
+          write(6,*) subname, 'cropland increase on non-forested land - land available'
 #endif
           where(glu_weights(g,:,:) > 0) 
              glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*crop_pos_nf*fnfnonforest)/cellarea
@@ -1042,7 +1058,7 @@ restart_run = .false.
           sumavail_landA=sum(avail_landA)
           if (crop_pos_nf - sumavail_landA < 1e-6) then
 #ifdef DEBUG
-             write(6,*)'cropland increase - land available'
+             write(6,*) subname, 'cropland increase - land available'
 #endif 
              where(glu_weights(g,:,:) > 0) 
                 glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfnonforest/cellarea
@@ -1050,7 +1066,7 @@ restart_run = .false.
                      ((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(crop_pos_nf-sumavail_land0)*fnfnonforest)/cellarea
              end where
           else
-             write(6,*)'crop increase on non-forest - land not available'
+             write(6,*) subname, 'crop increase on non-forest - land not available'
              call abort
           end if
        end if
@@ -1066,7 +1082,7 @@ restart_run = .false.
              past_pos_nf=0
           end if
 #ifdef DEBUG
-          write(6,*)'pasture increase on non-forested land - land available'
+          write(6,*) subname, 'pasture increase on non-forested land - land available'
 #endif
           where(glu_weights(g,:,:) > 0) 
              glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*past_pos_nf*fnfnonforest)/cellarea
@@ -1079,7 +1095,7 @@ restart_run = .false.
           sumavail_landA=sum(avail_landA)
           if ( sumavail_landA >= past_pos_nf) then
 #ifdef DEBUG
-             write(6,*)'pasture increase on non-forested land - land available'
+             write(6,*) subname, 'pasture increase on non-forested land - land available'
 #endif
              where(glu_weights(g,:,:) > 0) 
                 glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0*fnfnonforest/cellarea
@@ -1089,7 +1105,7 @@ restart_run = .false.
              end where
           else
 #ifdef DEBUG
-             write(6,*)'pasture increase on non-forest - land NOT available, reducing pasture increase to accomodate'
+             write(6,*) subname, 'pasture increase on non-forest - land NOT available, reducing pasture increase to accomodate'
 #endif
              past_pos_nf = sumavail_landA
              where(glu_weights(g,:,:) > 0) 
@@ -1109,7 +1125,7 @@ restart_run = .false.
        if (abs(crop_pos_f)>1e-6) then
           if (sumavail_land0>=crop_pos_f) then
 #ifdef DEBUG
-             write(6,*)'cropland increase on forested land - land available'
+             write(6,*) subname, 'cropland increase on forested land - land available'
 #endif
              !jt              [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
@@ -1149,7 +1165,7 @@ restart_run = .false.
                    glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfforest/cellarea
                 end where
 #ifdef DEBUG
-                write(6,*)'cropland increase on forested land - land available'
+                write(6,*) subname, 'cropland increase on forested land - land available'
 #endif                   
                 !jt  [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
@@ -1176,7 +1192,7 @@ restart_run = .false.
                      fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
                      cellarea(v1u(sortind(1)),v2u(sortind(1))))
              else
-                write(6,*)'crop increase on forest - land not available'
+                write(6,*) subname, 'crop increase on forest - land not available'
                 call abort
              end if
           end if
@@ -1192,7 +1208,7 @@ restart_run = .false.
        if (abs(past_pos_f)>1e-6) then 
           if (sumavail_land0>=past_pos_f) then
 #ifdef DEBUG
-             write(6,*)'pasture increase on forest - land available'
+             write(6,*) subname, 'pasture increase on forest - land available'
 #endif                
              !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
@@ -1227,7 +1243,7 @@ restart_run = .false.
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >= past_pos_f) then 
 #ifdef DEBUG
-                write(6,*)'pasture increase on forest - land available'
+                write(6,*) subname, 'pasture increase on forest - land available'
 #endif
                 !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 cumsum_sorted_farea=0.
@@ -1263,7 +1279,7 @@ restart_run = .false.
                      fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
                      cellarea(v1u(sortind(1)),v2u(sortind(1))))
              else
-                write(6,*)'pasture increase on forest - land not available'
+                write(6,*) subname, 'pasture increase on forest - land not available'
                 call abort
              end if
           end if
@@ -1468,7 +1484,7 @@ restart_run = .false.
                 sumavail_land0=sum(avail_land0)
                 if (sumavail_land0 >=reassign_ag(z)) then 
 #ifdef DEBUG
-                   write(6,*)'crop and pasture increase on nonforest - land available'
+                   write(6,*) subname, 'crop and pasture increase on nonforest - land available'
 #endif
                    where(glu_weights(g,:,:) > 0)
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*avail_land0 / &
@@ -1487,7 +1503,7 @@ restart_run = .false.
                       call abort
                    end if
 #ifdef DEBUG
-                   write(6,*)'cropland and pasture increase on non-forest - land available'
+                   write(6,*) subname, 'cropland and pasture increase on non-forest - land available'
 #endif
                    where(glu_weights(g,:,:) > 0)
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*(avail_land0*fnfnonforest)/cellarea
@@ -1505,7 +1521,6 @@ restart_run = .false.
           end do ! end z loop
        end do !  end r loop
     end if   ! ! if regional_unmet_reassign
- end if
 
  if (allocated(v1u)) deallocate(v1u)
  if (allocated(v2u)) deallocate(v2u)
@@ -1513,7 +1528,7 @@ restart_run = .false.
  if (allocated(v2d)) deallocate(v2d)
 
 #ifdef DEBUG
-    write(6,*) 'sum final gcrop/gpast n'
+    write(6,*) subname, 'sum final gcrop/gpast n'
     write(6,fmt="(1ES25.15)") sum(glm_crop(:,:,n))
     write(6,fmt="(1ES25.15)") sum(glm_past(:,:,n))
     write(6,*) 'sum final gcrop/gpast np1'
@@ -1540,7 +1555,7 @@ restart_run = .false.
     fact2=(eclockyr-year1)/delyr
 
 #ifdef DEBUG
-     write(iulog,*)'crop interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
+     write(iulog,*) subname, 'crop interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
 #endif
 
 ! use eclock year year for interpolating crop past and othr
@@ -1612,17 +1627,17 @@ restart_run = .false.
           iac_gcam_timestep
     end if
 
-    ! lets write a restart every time this routine is called
-    ! this needs to be year+1 because it has run this model year
+    ! write a restart file each year,
+    !    but let the land model determine which rpointer is needed
 
     call shr_cal_date2ymd(ymd,year,mon,day)
     write(filename,'(a,i4.4,a,i2.2,a)') trim(gcam2glm_restfile)//'r.',year+1,'.nc'
 
-    iun = shr_file_getunit()
-    open(iun,file=trim(gcam2glm_rpointer),form='formatted')
-    write(iun,'(a)') trim(filename)
-    close(iun)
-    call shr_file_freeunit(iun)
+!    iun = shr_file_getunit()
+!    open(iun,file=trim(gcam2glm_rpointer),form='formatted')
+!    write(iun,'(a)') trim(filename)
+!    close(iun)
+!    call shr_file_freeunit(iun)
 
     write(iulog,*) subname,' write_restart rpointer ',trim(gcam2glm_rpointer)
     write(iulog,*) subname,' write_restart file     ',trim(filename)
