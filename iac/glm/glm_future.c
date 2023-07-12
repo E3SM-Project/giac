@@ -789,7 +789,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
   char country_name[50], continent_name[50], regional_name[50];
 
   curryear=*year;
-  printf("curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
+  printf("\nglm, stepglm_ccsm: curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
   if (curryear >=start_year && curryear<=stop_year){
 
     if (initialrun && curryear==start_year) {
@@ -844,7 +844,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
     if (0) {
 
     for (it1=0;it1<2;it1++){
-      printf("newdata values in before transitions ..\n");
+      printf("stepglm_ccsm: newdata values in before transitions ..\n");
       for (j=0;j<NY;j++){
 	for (i=0;i<NX;i++){   
 	  if (newdata[it1].c[j][i] != 0. || newdata[it1].p[j][i]!=0.  || newdata[it1].v[j][i]!=0. ) {
@@ -861,14 +861,18 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
 	}
       }
     }
-    
+   
     for (i=0;i<NREG;i++){
       for (j=0;j<rdata[i].num_glu;j++){
-	printf("aez_tdata %lf i %d j %d\n",aez_tdata[i][j].wh,i,j);
+        if(i==3 && j==4){
+           // africa congo
+	   printf("stepglm_ccsm: before transitions() aez_tdata[%d][%d].wh is %lf\n", i, j, aez_tdata[i][j].wh);
+        }
       }
     }
-    
+
     } // end if(0)
+    
 //    read_woodharvest_data_nc(curryear);
 
     transitions(curryear); 
@@ -1685,7 +1689,7 @@ void read_data_water_ice_nc(int curryear){
   size_t count[] = {1, NY, NX};
   size_t start[] = {0, 0, 0}; /* start at first value */
 
-  printf("\nreading data for water and ice...\n");
+  printf("\nglm, read_data_water_ice_nc: reading data for water and ice...\n");
 
   strcpy(new_path,PATH1); 
   strcat(new_path,future_icew_constructed_states); 
@@ -2927,7 +2931,7 @@ void transitions(int curryear){
   double tester1, tester2, tester3, tester4;
   
 
-  printf("\ncomputing transitions...\n");
+  printf("\nglm, transitions: computing transitions...\n");
 
 
 
@@ -2960,16 +2964,32 @@ void transitions(int curryear){
 	  else{
 		
 	    /* minimum flows everywhere with abandonment in the tropics, primary priority */
-		
+	
+            //if(k==150 && (m==387 || m==391 || m==394)){
+            //   printf("before alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //}
+	
 	    alternative_smart_flow1(k,m,it);
-		  
+		 
+            //if(k==150 && (m==387 || m==391 || m==394)){
+            //   printf("after alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //}
+ 
 	    if (BEST_CASE_MIN_FLOWS_T4){    /* abandonment in tropical non Eurasia, primary priority */
 	      if((lat[k] <= 23.5) && (lat[k] >= -23.5)) adjust_smart_flow1(k,m,it,i);
 	    }
 	    if (BEST_CASE_MIN_FLOWS_T5){   /*abandonment in shiftcult map */
 		  /* shiftcult is now the fraction of shifting cultivation */
 	      if(dstatic[k][m].shiftcult>0.0) adjust_smart_flow1(k,m,it,i);
-	    }		  
+	    }		 
+
+            //if(k==150 && (m==387 || m==391 || m==394)){
+            //   printf("after adjust_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //}
+ 
 	  }
 
 	      
@@ -3111,7 +3131,7 @@ void transitions(int curryear){
   if(gridded_wh==0){
     //fix this:	if (TOTAL_HARVEST_SWITCH){
 
-    printf("beginning harvest, time= %d\n",curryear); 
+    printf("glm, transitions: gridded_wh==0, beginning harvest, time= %d\n",curryear); 
 
     if(suit_option == 1) zdis_calc(it);
 
@@ -3234,7 +3254,7 @@ void transitions(int curryear){
   } /* end gridded_wh if */
   else if(gridded_wh==2){
 
-    printf("beginning harvest, time= %d\n",curryear); 
+    printf("glm, transitions: gridded_wh==2, beginning harvest, time= %d\n",curryear); 
 
     if(suit_option == 1) zdis_calc_aez(it);
 
@@ -3248,7 +3268,13 @@ void transitions(int curryear){
 
     for (ir=0;ir<NREG;ir++){
       for (ia=0;ia<NAEZ;ia++){
-        
+       
+        //if(ir==3 && ia==4){ // africa and congo
+        //   printf("glm, transitions: gridded_wh==2, first harvest loop\n");
+        //   printf("WH for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].wh);
+        //   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //}
+ 
 	aez_tdata[ir][ia].stbh=ZEROVALUE;
 	aez_tdata[ir][ia].whr=aez_tdata[ir][ia].wh;     /* units = MgC */ 
 
@@ -3297,6 +3323,12 @@ void transitions(int curryear){
     for (ir=0;ir<NREG;ir++){
       for (ia=0;ia<NAEZ;ia++){
 
+        //if(ir==3 && ia==4){ // africa and congo
+        //   printf("glm, transitions: gridded_wh==2, summing unmet or avail harvest land; before calcs\n");
+        //   printf("WHR before calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   printf("predict_b and reg_avail and reg_unmet before calcs are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //}
+
 	if(aez_tdata[ir][ia].whr <= aez_tdata[ir][ia].predict_b){
           aez_tdata[ir][ia].predict_b -= aez_tdata[ir][ia].whr;
           rtdata[ir].reg_avail+=aez_tdata[ir][ia].predict_b;
@@ -3307,20 +3339,46 @@ void transitions(int curryear){
 	  aez_tdata[ir][ia].predict_b = 0;
 	}
 
+        //if(ir==3){ // africa, and congo is index 4
+        //   printf("WHR after calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   printf("predict_b and reg_avail and reg_unmet after calcs are: %lf and %lf and %lf \n\n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //}
+
       } /* end ia loop */
     } /* end ir loop */
 
       /* reassign regional unmet to AEZs with available land */
     for (ir=0;ir<NREG;ir++){
       for (ia=0;ia<NAEZ;ia++){
+
+        //if(ir==3){ // africa, and congo is index 4
+        //     printf("\nglm, transitions: gridded_wh==2, reassigning unmet harvest loop; before calcs\n");
+        //     printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //     printf("predict_b and reg_avail and reg_unmet are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //}
+
 	if(rtdata[ir].reg_unmet<rtdata[ir].reg_avail){
 	  aez_tdata[ir][ia].whr+=aez_tdata[ir][ia].predict_b/rtdata[ir].reg_avail*rtdata[ir].reg_unmet;
+          //if(ir==3){ // africa, and congo is index 4
+          //   printf("reassigning unmet harvest loop; enough land\n");
+          //   printf("WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+          //}
 	}
         else{
 	  if(rtdata[ir].reg_avail>0){
 	    aez_tdata[ir][ia].whr+=aez_tdata[ir][ia].predict_b/rtdata[ir].reg_avail*rtdata[ir].reg_avail;
+            //if(ir==3){ // africa, and congo is index 4
+            // printf("reassigning unmet harvest loop; not enough land; avail>0\n");
+            // printf("WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+            //}
 	  }
         }
+
+        //if(ir==3){ // africa, and congo is index 4
+        //   printf("reassigning unmet harvest loop; after calcs\n");
+        //   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //}
+
       } /* end ia loop */
     } /* end ir loop */
 
@@ -3336,7 +3394,10 @@ void transitions(int curryear){
     for (ir=0;ir<NREG;ir++){
       for (ia=0;ia<NAEZ;ia++){
 
-	/*  printf("WHR for region %d and zone %d at time %t: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr); */
+        //if(ir==3 && ia==4){ // africa and congo
+	//   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //}
+
 	// #if BEST_CASE
 	if (BEST_CASE) {
 	  /* if best case, Eurasia does secondary priority for wood, non-Eurasia does primay */
@@ -3355,23 +3416,23 @@ void transitions(int curryear){
 
 	  else{	 
 	    aez_tdata[ir][ia].vwh = aez_tdata[ir][ia].whr;
-	    /*  if((ir==9)&(ia==5)){ */
-	    /* 	  printf("Region %d zone %d time %d: WHR (before virgin harvest): %lf, VWH (before virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr,aez_tdata[ir][ia].vwh); */
-	    /* 	} */
+	    //if((ir==3)&&(ia==4)){ // africa and congo
+	    //  printf("glm, transitions: gridded_wh==2, Region %d zone %d time %d: WHR (before virgin harvest): %lf, VWH (before virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr,aez_tdata[ir][ia].vwh); 
+	    //}
 	    //#if VIRGIN_HARVEST_SWITCH         
 	    if (VIRGIN_HARVEST_SWITCH)
 	      virgin_harvest_aez(it,ir,ia,curryear);
-	    /*  if((ir==9)&(ia==5)){ */
-	    /* 	  printf("Region %d zone %d time %d: WHR (after virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr); */
-	    /* 	} */
+	    //if((ir==3)&&(ia==4)){
+	    //  printf("Region %d zone %d time %d: WHR (after virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //}
 	    //#endif
 	 
 	    //#if SECONDARY_HARVEST_SWITCH 
 	    if (SECONDARY_HARVEST_SWITCH)
 	      secondary_harvest_aez(it,ir,ia);
-	    /* if((ir==9)&(ia==5)){ */
-	    /* 	  printf("Region %d zone %d time %d: WHR (after secondary harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr); */
-	    /* 	} */
+	    //if((ir==3)&&(ia==4)){
+	    //  printf("Region %d zone %d time %d: WHR (after secondary harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //}
 	  }
 	  //#else  BEST_CASE
 	}else{
@@ -3411,9 +3472,9 @@ void transitions(int curryear){
 	  if(aez_tdata[ir][ia].whr > 0.01){
 	  
 	    force_harvest_aez(it,ir,ia,curryear);
-	    /*  if((ir==9)&(ia==5)){ */
-	    /* 	  printf("Region %d zone %d time %d: WHR (after force harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr); */
-	    /* 	} */
+	    //if((ir==3)&&(ia==4)){
+	    //  printf("Region %d zone %d time %d: WHR (after force harvest): %lf \n\n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //}
 	  }	
 	  //#endif
 	}
@@ -3638,8 +3699,6 @@ void secondary_harvest(int it, int i){
   /* calculate secondary biomass harvest for each grid cell (sbh), and
      track the accumulating amount of sbh at the country level (stbh)  */
 
-
-  /*  printf("WHR before secondary harvest for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia][it].whr); */
   for (k=0;k<NY;k++){
     for (m=0;m<NX;m++){
 
@@ -3681,10 +3740,6 @@ void secondary_harvest(int it, int i){
 	
       } /* end of m */
     } /* end of k */
-
-  /*  printf("WHR and STBH after secondary harvest for region %d and zone %d at time %d: %lf, %lf \n",ir,ia,it,aez_tdata[ir][ia].whr,aez_tdata[ir][ia].stbh); */
-  /*  printf("Fraction of WHR harvested for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].stbh/(aez_tdata[ir][ia].whr+aez_tdata[ir][ia].stbh)); */
-    
 
     return;
 
@@ -4244,13 +4299,11 @@ void virgin_harvest(int it, int i,int curryear){
 
   if(zmax == 0){
     aez_tdata[ir][ia].wh_at_zmax=aez_tdata[ir][ia].whr;
-    /* printf("Region %d zone %d: zmax=%d, WHR: %lf, VB: %lf \n",ir,ia,zmax,aez_tdata[ir][ia].whr,aez_ztdata[ir][ia][0].vb); */
   }
   else{
     for(j=0;j<zmax;j++) aez_tdata[ir][ia].wh_lessthan_zmax+=aez_ztdata[ir][ia][j].vb;
     aez_tdata[ir][ia].wh_at_zmax=aez_tdata[ir][ia].whr-aez_tdata[ir][ia].wh_lessthan_zmax;
     if ((zmax==21)&(aezdata[ir][ia].fnf==1)){
-      /*   printf("Region %d zone %d: zmax=%d, WH: %lf WH_ZMAX: %lf \n",ir,ia,zmax,aez_tdata[ir][ia].whr, aez_tdata[ir][ia].wh_at_zmax); */
     }
   }
   
@@ -4323,7 +4376,7 @@ void virgin_harvest(int it, int i,int curryear){
 		    newdata[it].vbh[k][m]=newdata[it].flowvs[k][m]*garea[k][m]*
 		      dstatic[k][m].vba;
 		    
-		    /*  fprintf(testfile,"potential zmax trouble spot, %d %s zmax %d iz %d flowvs %lf wh_at_zmax %lf total %lf\n",year[it],cname[i],zmax,iz,newdata[it].flowvs[k][m],aez_tdata[ir][ia].wh_at_zmax,total_avail);  */
+		      fprintf(testfile,"potential zmax trouble spot,reg %d basin %d zmax %d iz %d flowvs %lf wh_at_zmax %lf total %lf\n",ir,ia,zmax,iz,newdata[it].flowvs[k][m],aez_tdata[ir][ia].wh_at_zmax,total_avail); 
 		  }
 		  else {
 		    printf("iz %d zmax %d\n",iz,zmax);
@@ -7165,9 +7218,9 @@ void output_updated_states_nc(int curryear,int rstwr){
     // let the land model do it at the correct time
     if (rstwr) {
       //create_restart_inifile(curryear);
-      printf("creating restart files for year %i \n", curryear);
+      printf("glm, output_updated_states_nc: creating restart file for year %i \n", curryear);
     }else{
-      printf("output previous state for year %i to netcdf file \n", curryear-1);
+      printf("glm, output_updated_states_nc: output previous state for year %i to netcdf file \n", curryear-1);
     }
 
 
@@ -7183,6 +7236,10 @@ void output_updated_states_nc(int curryear,int rstwr){
 	newdata[0].flowsbh2[k][m]=(newdata[0].smb[k][m] > ZEROVALUE) ? newdata[0].sbh2[k][m]/newdata[0].smb[k][m]/garea[k][m] : ZEROVALUE;
 	newdata[0].flowvbh2[k][m]=(dstatic[k][m].vba > ZEROVALUE) ? newdata[0].vbh2[k][m]/dstatic[k][m].vba/garea[k][m] : ZEROVALUE;
 	newdata[0].flowsbh3[k][m]=(newdata[0].smb[k][m] > ZEROVALUE) ? newdata[0].flowsbh3[k][m]=newdata[0].sbh3[k][m]/newdata[0].smb[k][m]/garea[k][m] : ZEROVALUE;
+        //if(newdata[0].flowvbh[k][m] > 0.05) {
+        //   printf("glm: high harvest value at lat from top k=%ld and lon from -180 m=%ld\n",k,m);
+        //   printf("vbh sva garea flowvbh %f %f %f %f \n", newdata[0].vbh[k][m],dstatic[k][m].vba,garea[k][m],newdata[0].flowvbh[k][m]);
+        //} 
       }
     }
 
@@ -7901,7 +7958,7 @@ void output_lu_nc(int curryear){
     int lon_dims[RANK_lon];
     int time_dims[RANK_time];
 
-    printf("output land change netcdf file \n");
+    printf("glm, output_lu_nc: output land change netcdf file \n");
  
     sprintf(curryearc, "%d", curryear-1);
     //jt fix the casename
@@ -9234,93 +9291,121 @@ void adjust_smart_flow1(int k, int m, int it, int i){
 
   past=newdata[it].p[k][m]-newdata[it].flowps[k][m]-newdata[it].flowpc[k][m]-newdata[it].flowpu[k][m];
 
+  if(k==150 && (m==387 || m==391 || m==394)){
+     printf("adjust_smart_flow1: k=%d, m=%d, it=%d, i=%d\n", k, m, it, i); 
+     printf("vtotal=%lf, stotal=%lf, vstotal=%lf, crop=%lf, past=%lf\n",vtotal, stotal, vstotal, crop, past);
+  }
+
  
-  //if((crop+past) > ZEROVALUE){
+        //if((crop+past) > ZEROVALUE){
 	if((crop) > ZEROVALUE){
 
 
-    /* abandonment of crop only */
+           /* abandonment of crop only */
 
-    /* best case method, default abandonment = 1/15 per year */
-    /* when using shifting cultivation use the input fractions */
-	if(BEST_CASE_MIN_FLOWS_T5 || (rdata[i].smart_flow_option == 1 && rdata[i].adjust_smart_flow_option == 5)) {
+           /* best case method, default abandonment = 1/15 per year */
+           /* when using shifting cultivation use the input fractions */
+	   if(BEST_CASE_MIN_FLOWS_T5 || (rdata[i].smart_flow_option == 1 && rdata[i].adjust_smart_flow_option == 5)) {
 		time_k=dstatic[k][m].shiftcult;
-	}
-	else {
-    	time_k=1.0/15.0;
-	}
-	/* use minimum of reference crop area and current crop area to determine flow */
-		if(dstatic[k][m].ref_crop < crop) {
-			flowcs_prime=dstatic[k][m].ref_crop*time_k;
-		}
-		else {
-			flowcs_prime=crop*time_k;
-		}
+	   }
+	   else {
+    	      time_k=1.0/15.0;
+	   }
+	   /* use minimum of reference crop area and current crop area to determine flow */
+	   if(dstatic[k][m].ref_crop < crop) {
+	      flowcs_prime=dstatic[k][m].ref_crop*time_k;
+	   }
+	   else {
+	      flowcs_prime=crop*time_k;
+	   }
 		
-    //flowps_prime=past*time_k;
-	// set this to zero so some lines below don't have to change
-	flowps_prime=0;
-    //jt    printf("asf1 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
-    //jt    printf("asf1 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
+           //flowps_prime=past*time_k;
+	   // set this to zero so some lines below don't have to change
+	   flowps_prime=0;
+           //jt    printf("asf1 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
+           //jt    printf("asf1 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
 
   
-    // recall that thus function assumes primary land priority
-    if((flowcs_prime+flowps_prime) <= vstotal){
+           // recall that thus function assumes primary land priority
+           if((flowcs_prime+flowps_prime) <= vstotal){
 
-	  if(stotal < 10*crop*time_k) {
+	      if(stotal < 10*crop*time_k) {
 			
-         if((flowcs_prime+flowps_prime) <= vtotal) {
-	        flowvc_prime=flowcs_prime;
+                 if((flowcs_prime+flowps_prime) <= vtotal) {
+	            flowvc_prime=flowcs_prime;
 		    //flowvp_prime=flowps_prime;
-         }
-         else { /* not enough v, but enough v+s */
+                 }
+                 else { /* not enough v, but enough v+s */
+                    
+                    if(k==150 && (m==387 || m==391 || m==394)){
+                       printf("adjust_smart_flow1, enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
+                    }
 
-	        flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
-	        //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
-	        flowsc_prime=flowcs_prime-flowvc_prime;
-	        //flowsp_prime=flowps_prime-flowvp_prime;
+                    if(vtotal > ZEROVALUE){
+                       flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
+                       //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+                    } else {
+                       flowvc_prime = 0.0;
+                    }
+
+	            flowsc_prime=flowcs_prime-flowvc_prime;
+	            //flowsp_prime=flowps_prime-flowvp_prime;
 	
-         }
-      } // end if small s
-	  else { // large s - there will always be enough s here
-		  flowsc_prime=flowcs_prime;
-	  }
-	} // end it flow within v+s
-    else{ /* not enough v+s, take all v+s (everything) that is possible */
+                    if(k==150 && (m==387 || m==391 || m==394)){
+                       printf("adjust_smart_flow1, enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf\n", flowvc_prime, flowsc_prime);
+                    }
 
-      flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
-      //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
-      
-      flowsc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*stotal;
-      //flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
-		
-      /* re-define desired abandonment (flowcs_prime and flowps_prime) to be what is available */
+                 }
+              } // end if small s
+	      else { // large s - there will always be enough s here
+	         flowsc_prime=flowcs_prime;
+	      }
+	   } // end if flow within v+s
+           else{ /* not enough v+s, take all v+s (everything) that is possible */
 
-      flowcs_prime=flowvc_prime+flowsc_prime; 
-      //flowps_prime=flowvp_prime+flowsp_prime;
+              if(k==150 && (m==387 || m==391 || m==394)){
+                       printf("adjust_smart_flow1, not enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
+                    }
 
-    }
+              if(vtotal > ZEROVALUE){
+                 flowvc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*vtotal;
+                 //flowvp_prime=flowps_prime/(flowcs_prime+flowps_prime)*vtotal;
+              } else{
+                 flowvc_prime = 0.0;
+              }      
 
-    rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
-    //jt    printf("asf1 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
-    //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
-    //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
-    //rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
-    rtdata[i].flowcs_prime+=flowcs_prime*garea[k][m]/1000./1000.;  
+              if(stotal > ZEROVALUE){
+                 flowsc_prime=flowcs_prime/(flowcs_prime+flowps_prime)*stotal;
+                 //flowsp_prime=flowps_prime/(flowcs_prime+flowps_prime)*stotal;
+              } else {
+                 flowsc_prime = 0.0;
+              }		
 
-    //newdata[it].flowvp[k][m]+=flowvp_prime;
-    newdata[it].flowvc[k][m]+=flowvc_prime;
-    //newdata[it].flowsp[k][m]+=flowsp_prime;
-    newdata[it].flowsc[k][m]+=flowsc_prime;
-    //newdata[it].flowps[k][m]+=flowps_prime;
-    newdata[it].flowcs[k][m]+=flowcs_prime;
+              /* re-define desired abandonment (flowcs_prime and flowps_prime) to be what is available */
 
+              flowcs_prime=flowvc_prime+flowsc_prime; 
+              //flowps_prime=flowvp_prime+flowsp_prime;
+              
+              if(k==150 && (m==387 || m==391 || m==394)){
+                       printf("adjust_smart_flow1, not enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime);
+                    }
+           }
 
+           rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
+           //jt    printf("asf1 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
+           //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
+           //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
+           rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
+           //rtdata[i].flowps_prime+=flowps_prime*garea[k][m]/1000./1000.;
+           rtdata[i].flowcs_prime+=flowcs_prime*garea[k][m]/1000./1000.;  
 
-
-  }    
-
+           //newdata[it].flowvp[k][m]+=flowvp_prime;
+           newdata[it].flowvc[k][m]+=flowvc_prime;
+           //newdata[it].flowsp[k][m]+=flowsp_prime;
+           newdata[it].flowsc[k][m]+=flowsc_prime;
+           //newdata[it].flowps[k][m]+=flowps_prime;
+           newdata[it].flowcs[k][m]+=flowcs_prime;
+        }    
 
   return;
   
@@ -9680,7 +9765,7 @@ void initialize_checker(int regional_code){
 
 
  
-  printf("printing global tester...\n"); 
+  printf("glm, global_timeseries_checker: printing global tester...\n"); 
 
   initialize_checker(regional_code);
  
@@ -10070,7 +10155,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   //  char outstat[2], ffname[90];
 
  
-  printf("printing global tester...\n"); 
+  printf("glm, global_timeseries_checker_aez: printing global tester...\n"); 
 
   initialize_checker(regional_code);
  
@@ -10087,13 +10172,13 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", ffname);
   }
 
-  printf("opening outfile outstat= %s\n",outstat);
+  //printf("opening outfile outstat= %s\n",outstat);
 
   if ((outfile2=fopen("global.primeflow.txt",outstat))==NULL) {
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", "global.primeflow.txt");
   }
 
-  printf("opening outfile2 outstat= %s\n",outstat);
+  //printf("opening outfile2 outstat= %s\n",outstat);
 
   it=0;
 
@@ -11422,7 +11507,12 @@ void loop_call_for_country_final_stats(int curryear){
   void predict_available_biomass_aez(int it,int ir,int ia){
    int k, m, iz;
    double vf=ZEROVALUE, vnf=ZEROVALUE, sf=ZEROVALUE, snf=ZEROVALUE;
-  
+ 
+  if(ir==3 && (isnan(vf) || isnan(sf) || isnan(vnf) ||isnan(snf))  ) {
+     printf("predict_available_biomass_aez before calcs: Region %d, Zone %d, it=%d: \n",ir,ia,it);
+     printf("vf=%lf, sf=%lf, vnf=%lf, snf=%lf\n",vf,sf,vnf,snf);
+  }
+ 
   for (iz=0;iz<NZ;iz++){
     vf+=aez_ztdata[ir][ia][iz].vb;
   }
@@ -11442,7 +11532,17 @@ void loop_call_for_country_final_stats(int curryear){
 	    else{
 
 	      snf+=newdata[it].smb[k][m]*(newdata[it].s[k][m]-newdata[it].flowsc[k][m]-newdata[it].flowsp[k][m])*garea[k][m]/1000.;
-		vnf+=dstatic[k][m].vba*(newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m])*garea[k][m]/1000.;
+              vnf+=dstatic[k][m].vba*(newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m])*garea[k][m]/1000.;
+
+              if(isnan(vnf) && ir==3){
+                 printf("predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
+                 printf("vba=%lf, v=%lf, flowvc=%lf, flowvp=%lf, garea=%lf \n", dstatic[k][m].vba, newdata[it].v[k][m], newdata[it].flowvc[k][m], newdata[it].flowvp[k][m], garea[k][m]);
+              }
+
+              if(isnan(snf) && ir==3){
+                 printf("predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
+                 printf("smb=%lf, s=%lf, flowsc=%lf, flowsp=%lf, garea=%lf \n", newdata[it].smb[k][m], newdata[it].s[k][m], newdata[it].flowsc[k][m], newdata[it].flowsp[k][m], garea[k][m]);
+              }
 
 	    } /* end of fnf */
 	  
@@ -11455,7 +11555,7 @@ void loop_call_for_country_final_stats(int curryear){
     aez_tdata[ir][ia].predict_b = vf+vnf+sf+snf;
    
     if(aez_tdata[ir][ia].predict_b<ZEROVALUE_CHECK){
-      printf("Region %d, Zone %d: predict_b = %lf, reset to ZERO \n",ir,ia,aez_tdata[ir][ia].predict_b);
+      //printf("glm, predict_available_biomass_aez: Region %d, Zone %d: predict_b = %lf, reset to ZERO \n",ir,ia,aez_tdata[ir][ia].predict_b);
       aez_tdata[ir][ia].predict_b=ZEROVALUE;
     }
 

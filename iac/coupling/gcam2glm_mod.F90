@@ -775,8 +775,10 @@ contains
     !do r = 1,nreg
     !   do aez = 1,naez
     do g=1,nglu
-
-       write(6,*) subname, 'land unit index for transitions = ', g
+       
+       #ifdef DEBUG
+          !write(6,*) subname, 'land unit index for transitions = ', g
+       #endif
 
        ! Round GCAM results to two decimal places before using as LUC
        crop_d = (real(nint(gcam_crop(g,np1)*100)/100)-real(nint(gcam_crop(g,n)*100)/100))*1000
@@ -1141,7 +1143,7 @@ contains
              crop_pos_nf=0.
           end if
 #ifdef DEBUG
-          write(6,*) subname, 'cropland increase on non-forested land - land available'
+          !write(6,*) subname, 'cropland increase on non-forested land - land available'
 #endif
           where(glu_weights(g,:,:) > 0) 
              glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*crop_pos_nf*fnfnonforest)/cellarea
@@ -1154,7 +1156,7 @@ contains
           sumavail_landA=sum(avail_landA)
           if (crop_pos_nf - sumavail_landA < 1e-6) then
 #ifdef DEBUG
-             write(6,*) subname, 'cropland increase - land available'
+             !write(6,*) subname, 'cropland increase - land available'
 #endif 
              where(glu_weights(g,:,:) > 0) 
                 glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfnonforest/cellarea
@@ -1191,7 +1193,7 @@ contains
              past_pos_nf=0
           end if
 #ifdef DEBUG
-          write(6,*) subname, 'pasture increase on non-forested land - land available'
+          !write(6,*) subname, 'pasture increase on non-forested land - land available'
 #endif
           where(glu_weights(g,:,:) > 0) 
              glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*past_pos_nf*fnfnonforest)/cellarea
@@ -1204,7 +1206,7 @@ contains
           sumavail_landA=sum(avail_landA)
           if ( sumavail_landA >= past_pos_nf) then
 #ifdef DEBUG
-             write(6,*) subname, 'pasture increase on non-forested land - land available'
+             !write(6,*) subname, 'pasture increase on non-forested land - land available'
 #endif
              where(glu_weights(g,:,:) > 0) 
                 glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0*fnfnonforest/cellarea
@@ -1238,7 +1240,7 @@ contains
        if (abs(crop_pos_f)>1e-6) then
           if (sumavail_land0>=crop_pos_f) then
 #ifdef DEBUG
-             write(6,*) subname, 'cropland increase on forested land - land available'
+             !write(6,*) subname, 'cropland increase on forested land - land available'
 #endif
              !jt              [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
@@ -1278,7 +1280,7 @@ contains
                    glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfforest/cellarea
                 end where
 #ifdef DEBUG
-                write(6,*) subname, 'cropland increase on forested land - land available'
+                !write(6,*) subname, 'cropland increase on forested land - land available'
 #endif                   
                 !jt  [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
@@ -1366,7 +1368,7 @@ contains
        if (abs(past_pos_f)>1e-6) then 
           if (sumavail_land0>=past_pos_f) then
 #ifdef DEBUG
-             write(6,*) subname, 'pasture increase on forest - land available'
+             !write(6,*) subname, 'pasture increase on forest - land available'
 #endif                
              !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
@@ -1401,7 +1403,7 @@ contains
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >= past_pos_f) then 
 #ifdef DEBUG
-                write(6,*) subname, 'pasture increase on forest - land available'
+                !write(6,*) subname, 'pasture increase on forest - land available'
 #endif
                 !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 cumsum_sorted_farea=0.
@@ -1681,7 +1683,7 @@ contains
                 sumavail_land0=sum(avail_land0)
                 if (sumavail_land0 >=reassign_ag(z)) then 
 #ifdef DEBUG
-                   write(6,*) subname, 'crop and pasture increase on nonforest - land available'
+                   !write(6,*) subname, 'crop and pasture increase on nonforest - land available'
 #endif
                    where(glu_weights(g,:,:) > 0)
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*avail_land0 / &
@@ -1707,7 +1709,7 @@ contains
                       !call abort
                    end if
 #ifdef DEBUG
-                   write(6,*) subname, 'cropland and pasture increase on non-forest - land available'
+                   !write(6,*) subname, 'cropland and pasture increase on non-forest - land available'
 #endif
                    where(glu_weights(g,:,:) > 0)
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*(avail_land0*fnfnonforest)/cellarea
@@ -1759,7 +1761,8 @@ contains
     fact2=(eclockyr-year1)/delyr
 
 #ifdef DEBUG
-     write(iulog,*) subname, 'crop interpolation factors fact1,fact2,year1,year2=',fact1yrp1,fact2yrp1,year1,year2
+     write(iulog,*) subname, 'crop/pasture interpolation factors fact1yrp1,fact2yrp1,year1,year2=',fact1yrp1,fact2yrp1,year1,year2
+     write(iulog,*) subname, 'wood harvest interpolation factors fact1,fact2,year1,year2=',fact1,fact2,year1,year2
 #endif
 
 ! use eclock year year for interpolating crop past and othr

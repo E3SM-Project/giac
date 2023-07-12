@@ -95,7 +95,7 @@ contains
     glmi = iac_spval
     glmo = iac_spval
 
-    write(6,*)'gcam_var_mod nsrest is', nsrest
+    write(6,*) subname, ' gcam_var_mod nsrest is', nsrest
 
     if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
        restart = 1
@@ -146,13 +146,13 @@ contains
 
     e3smyear=ymd/10000
     glmyear=e3smyear+1
-    write(6,*)'stepping glm. GLM is one year ahead of E3SM. E3SM year',e3smyear,'GLM year',glmyear,ymd
+    write(6,*) subname, ' stepping glm. GLM is one year ahead of E3SM. E3SM year',e3smyear,'GLM year',glmyear,ymd
 
     call stepGLM(glmyear,            &
                  glmi,size(glmi,dim=1),size(glmi,dim=2),  &
                  glmi_wh,size(glmi_wh,dim=1),  &
                  glmo,size(glmo,dim=1),size(glmo,dim=2));
-    write(6,*)'done stepping glm'
+    write(6,*) subname, 'done stepping glm'
 
   end subroutine glm_run_mod
 
