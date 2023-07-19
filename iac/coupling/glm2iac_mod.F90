@@ -112,7 +112,6 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    logical :: restart_now
     integer :: ymd, tod, dt, indnew, indprev
     integer :: i,j,n,ij,ierr,nmode
     integer :: dimid(3),varid,ncid, lat_id, lon_id, rawdims(2), rid

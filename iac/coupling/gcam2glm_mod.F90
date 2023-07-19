@@ -776,9 +776,7 @@ contains
     !   do aez = 1,naez
     do g=1,nglu
        
-       #ifdef DEBUG
-          !write(6,*) subname, 'land unit index for transitions = ', g
-       #endif
+       !write(6,*) subname, 'land unit index for transitions = ', g
 
        ! Round GCAM results to two decimal places before using as LUC
        crop_d = (real(nint(gcam_crop(g,np1)*100)/100)-real(nint(gcam_crop(g,n)*100)/100))*1000

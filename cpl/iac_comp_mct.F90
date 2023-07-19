@@ -437,10 +437,12 @@ contains
 
     if ( run_gcam ) then  
 
+!!!todo: delete and update note for gcam_run_mod!
+
        ! This calcs and pushes the carbon density scalars to gcam
        !   the push happens only if elm_iac_carbon_scaling is true
        ! this is called regardless in order to calculate and write scalars
-       call gcam_setdensity_mod()
+       !call gcam_setdensity_mod()
 
        ! Run GCAM, for this timestep.  
        ! Inputs taken care of by gcam_setdensity_mod(), so both of these

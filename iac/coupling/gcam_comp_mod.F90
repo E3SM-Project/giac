@@ -270,10 +270,13 @@ contains
 
 ! !DESCRIPTION:
 ! Run interface for gcam
+! This includes setting the yield and carbon density scalars
 
 ! !USES:
-   use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
-   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
+   use iac_data_mod, only : iac_spval, iac_cdatai_logunit
+   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt
+   use iac_data_mod, only : iac_first_coupled_year, lnd2iac_vars
+   use iso_c_binding
     implicit none
 
 ! !ARGUMENTS:
@@ -317,9 +320,12 @@ contains
     real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
     
 ! !LOCAL VARIABLES:
-    logical :: restart_now
     integer :: ymd, tod, dt
-    integer :: i,j,w,gs
+    integer :: i,j,wc,gs,cs,rs,ws,rr
+    character(len=256) :: elm2gcam_mapping_file_loc 
+    character(len=256) :: base_npp_file_loc
+    character(len=256) :: base_hr_file_loc
+    character(len=256) :: base_pft_file_loc
     character(len=*),parameter :: subname='(gcam_run_mod)'
 
 
@@ -330,10 +336,8 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    gcamo = iac_spval
-    gcamoemis = iac_spval
-    
-  restart_now = cdata%l(iac_cdatal_rest)
+  gcamo = iac_spval
+  gcamoemis = iac_spval
 
   ymd = EClock(iac_eclock_ymd)
   tod = EClock(iac_eclock_tod)
@@ -341,23 +345,61 @@ contains
 
   write(iulog,*) trim(subname),' date= ',ymd,tod
 
+  ! get restart state
+  if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+     rr = 1
+  else
+     rr = 0
+  end if
+
   ! convert logical for gcam spinup
   if ( gcam_spinup ) then
-        gs = 1
-     else
-        gs = 0
-     end if
+     gs = 1
+  else
+     gs = 0
+  end if
+
+  ! get scalar control variables as ints
+  if ( read_scalars ) then
+     rs = 1
+  else
+     rs = 0
+  end if
+
+  if ( write_scalars ) then
+     ws = 1
+  else
+     ws = 0
+  end if
+
+  if ( elm_iac_carbon_scaling ) then
+     cs = 1
+  else
+     cs = 0
+  end if
+
+  ! get some file names for scalars
+  ! use local variables to avoid adding multiple null characters to the orig
+  elm2gcam_mapping_file_loc=trim(elm2gcam_mapping_file)//c_null_char
+  base_npp_file_loc=trim(base_npp_file)//c_null_char
+  base_hr_file_loc=trim(base_hr_file)//c_null_char
+  base_pft_file_loc=trim(base_pft_file)//c_null_char
 
   !  Call runcGCAM method of E3SM Interface 
-  call runcGCAM(ymd,gcamo,gcamoemis,trim(base_gcam_lu_wh_file),trim(base_gcam_co2_file),gs)
+  !  The yields and carbon density scalars are set within this function also
+  call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
+                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file_loc, &
+                iac_first_coupled_year, rs, ws, cs, &
+                base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
   if ( iac_elm_co2_emissions ) then
      ! Convert logical to int for interface with C/C++
      if ( write_co2 ) then
-        w = 1
+        wc = 1
      else
-        w = 0
+        wc = 0
      end if
 
      call downscaleemissionscgcam(gcamoemis, gcamoco2sfcjan, gcamoco2sfcfeb, &
@@ -373,7 +415,7 @@ contains
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
           gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,        &
           base_co2_aircraft_file, num_emiss_regions, num_emiss_sectors,       &
-          num_lon, num_lat, w, ymd)
+          num_lon, num_lat, wc, ymd)
 
   end if
 
@@ -382,6 +424,8 @@ contains
 
 !---------------------------------------------------------------------------
 !BOP
+
+!!!!!!!!!!!!todo: delete gcam_setdensity_mod
 
 ! !IROUTINE: gcam_setdensity_mod
 
