@@ -28,7 +28,8 @@ module iac_comp_mct
   use gcam_var_mod        , only : run_gcam, gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
-                                gcam_active, gcam_var_set, num_lon, num_lat
+                                gcam_active, gcam_var_set, num_lon, num_lat, &
+                                gcam_alarm
   use iac_spmd_mod
   !use iac_fields_mod
   use ESMF
@@ -243,7 +244,7 @@ contains
 
     ! Do whatever init gcam needs
     ! I.e. read namelist and grid, etc.
-    call iac_init()
+    call iac_init(EClock)
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 
@@ -414,6 +415,13 @@ contains
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
  
+    ! store whether GCAM runs this model year or not
+    ! use the hardcoded gcam time step to determine this
+    gcam_alarm = .false.
+    if (modulo(yr, iac_gcam_timestep)==0) then
+       gcam_alarm = .true.
+    endif 
+
     ! Import from land model
     !call t_startf('iac_import')
     call iac_import(x2z_z%rattr, lnd2iac_vars)

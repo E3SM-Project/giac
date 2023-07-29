@@ -81,6 +81,7 @@ contains
          gcam2elm_woodharvest_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, &
          gcam_spinup, run_gcam   

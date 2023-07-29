@@ -45,6 +45,8 @@ module mksurfdat
     use mkCH4inversionMod  , only : mkCH4inversion
     use mksoilphosphorusMod, only : mksoilphosphorus
     use mkSedMod           , only : mkgrvl, mkslp10, mkEROparams
+    use iac_data_mod
+
 !
 ! !ARGUMENTS:
     implicit none
@@ -1260,14 +1262,14 @@ subroutine mksurfdat_run(year,plodata)
              fname = ' '
              call mkpft_parse_oride(mksrf_fdynuse)
              call mkharvest_parse_oride(mksrf_fdynuse)
-	         write(6,*)'PFT and harvesting values are ',trim(mksrf_fdynuse),' year is ',year
+             write(6,*)'PFT and harvesting values are ',trim(mksrf_fdynuse),' year is ',year
              !
              ! Otherwise intrepret string as a filename with PFT and harvesting values in it
              !
           else
              !fname = string
              fname = mksrf_fdynuse
-	         write(6,*)'input dynamic pft grid definition is ',trim(fname),' year is ',year
+             write(6,*)'input dynamic pft grid definition is ',trim(fname),' year is ',year
           end if
           !ntim = ntim + 1
 
@@ -1320,9 +1322,9 @@ subroutine mksurfdat_run(year,plodata)
           end do
           ntim = len(ndims) + 1
           
-write(6,*) subname,'ntim is ', ntim
+          write(6,*) subname,'ntim is ', ntim
 
-len(ndims) = 1
+          len(ndims) = 1
           beg(ndims) = ntim
           call check_ret(nf_put_vara_double(ncid, varid, beg, len, pctnatpft), subname)
 
@@ -1353,9 +1355,24 @@ len(ndims) = 1
           call check_ret(nf_inq_varid(ncid, 'input_pftdata_filename', varid), subname)
           call check_ret(nf_put_vara_text(ncid, varid, (/ 1, ntim /), (/ len_trim(string), 1 /), trim(string) ), subname)
 
-	      ! Synchronize the disk copy of a netCDF dataset with in-memory buffers
+          ! Synchronize the disk copy of a netCDF dataset with in-memory buffers
 
-	      call check_ret(nf_sync(ncid), subname)
+          call check_ret(nf_sync(ncid), subname)
+
+          ! loop over the pft and harvest data and copy them to iac2lnd_vars
+          ! note that pctnatpft and harvest are 2d arrays (assume lon varying
+          !    faster), and iac2lnd_vars variables are 3d arrays (lon,lat,type)
+          ! note that pctnatpft is indexed from 0 to 16
+          do k=1,iac_ctl%npft
+             do n=1,ns_o
+                nj=(n-1)/iac_ctl%nlon+1
+                ni=modulo((n-1), iac_ctl%nlon)+1
+                iac2lnd_vars%pct_pft(ni,nj,k) = pctnatpft(n,k-1)
+                if(k <= mkharvest_numtypes()) then
+                   iac2lnd_vars%harvest_frac(ni,nj,k) = harvest(n,k)
+                endif
+             enddo
+          enddo
 
        ! do not loop because this is called each year and data come from plodata
        !end do   ! end of read loop

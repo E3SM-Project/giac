@@ -13,19 +13,29 @@ module iac_init_mod
   use iac_io_mod, only : ncd_pio_openfile, ncd_pio_closefile, ncd_io
   use iac_io_mod, only : file_desc_t
   use iac_io_mod
+  use seq_timemgr_mod
+  use netcdf
+  use gcam2glm_mod, only : handle_err
+  use ESMF
 
   implicit none
   save
 
 
 contains
-  subroutine iac_init()
+  subroutine iac_init(EClock)
     !---------------------------------------------------------------------------
     ! !DESCRIPTION:
     ! Read in namelist, define grid, allocate variables
     !---------------------------------------------------------------------------
+
+    ! !Uses:
     use shr_kind_mod, only: CL => SHR_KIND_CL, CXX => SHR_KIND_CXX
 
+    ! !ARGUMENTS:
+    type(ESMF_Clock),           intent(inout) :: EClock     ! Input synchronization clock
+
+    ! !LOCAL VARIABLES:
     character(len=CL) :: nlfilename_iac
     integer :: unitn, ier, dimid, i, j, n
     type(file_desc_t) :: ncid
@@ -33,6 +43,11 @@ contains
     real(r8), pointer :: tempr(:,:)
     integer, pointer :: itempr(:,:)
     character(len=32) :: subname = 'iac_init'
+    ! these are for reading the dynamic land file
+    integer :: curr_yr, ncid_int                               ! current model year
+    integer :: nlon, nlat, ntime, npft, indprev, varid, ierr
+    integer, dimension(4) :: start4, count4
+    integer, allocatable :: lsf_years(:)
 
     ! GCAM namelist
     namelist /gcam_inparm/ &
@@ -47,6 +62,7 @@ contains
          gcam2elm_woodharvest_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, &
          gcam_spinup, run_gcam 
@@ -73,6 +89,10 @@ contains
        !end do
        call shr_file_freeUnit( unitn )
     end if
+
+    ! get the current model year for readin in the start-of-year pft and harvest data
+    call seq_timemgr_EClockGetData(EClock, curr_yr=curr_yr)
+    write(iulog,*) "(", subname, ") Current model year is ", curr_yr
 
     ! Don't need to mpi_bcast the namelist, because we don't have other procs
     ! to communitate with.  But if we did, we'd mpi_bcast them around
@@ -115,6 +135,9 @@ contains
        write(iulog, '(A,A)') "gcam2glm_glumap = ", trim(gcam2glm_glumap)
        write(iulog, '(A,A)') "gcam2glm_baselu = ", trim(gcam2glm_baselu)
        write(iulog, '(A,A)') "gcam2glm_basebiomass = ", trim(gcam2glm_basebiomass)
+
+       write(iulog,*) 'name of dynamic landuse timeseries file:'
+       write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
 
        write(iulog,*) 'rumtime options:'
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
@@ -293,6 +316,66 @@ contains
     deallocate(itempr)             
 
     call ncd_pio_closefile(ncid)
+
+    ! read in the dynamic land surface file fdyndat_ehc
+    !   and fill the iac2lnd_vars%pct_pft with the start-of-current-year data
+    ! this will be copied into iac2lnd_vars%pct_pft_prev as needed
+    !    so this will work as-is for restarts also
+    ! the iac2lnd_vars%pct_pft and iac2lnd_vars%harvest_frac are filled as needed (after the copy)
+    ! this is so that these data no longer have to be read from the land surface
+    !    file at runtime; they are now set in memory by mksurfdata,
+    !    (and the current moved to previous before the new current are set)
+
+    ierr = nf90_open(fdyndat_ehc,nf90_nowrite,ncid_int)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+    ! first get the dimensions
+    ierr= nf90_inq_dimid(ncid_int, "lsmlon", dimid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inquire_dimension(ncid_int, dimid, len=nlon)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inq_dimid(ncid_int, "lsmlat", dimid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inquire_dimension(ncid_int, dimid, len=nlat)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inq_dimid(ncid_int, "time", dimid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inquire_dimension(ncid_int, dimid, len=ntime)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inq_dimid(ncid_int, "natpft", dimid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_inquire_dimension(ncid_int, dimid, len=npft)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+   
+    ! get the years in the dynamic land surface file
+    ierr= nf90_inq_varid(ncid_int, "YEAR", varid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    allocate(lsf_years(ntime), stat=ierr)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_get_var(ncid_int, varid, lsf_years)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+    ! find the last matching year
+    indprev = findloc(lsf_years, curr_yr, dim=1, back=.true.)
+
+    ! prev pct pft, but put it in pct_pft for now
+    start4(1) = 1
+    start4(2) = 1
+    start4(3) = 1
+    start4(4) = indprev
+    count4(1) = nlon
+    count4(2) = nlat
+    count4(3) = npft
+    count4(4) = 1
+    ierr= nf90_inq_varid(ncid_int, "PCT_NAT_PFT", varid)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+    ierr= nf90_get_var(ncid_int, varid, iac2lnd_vars%pct_pft, start=start4, count=count4)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+    ierr= nf90_close(ncid_int)
+    if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+    deallocate(lsf_years)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Initialize Restart

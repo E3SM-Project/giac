@@ -39,7 +39,7 @@ Module gcam2glm_mod
          hydeGPAST2015,   &
          hydeGWH2015,     &
          hydeGOTHR2015,   &
-		 hydeGSECD2015,	  &
+         hydeGSECD2015,   &
          cellarea,        &
          cellarea_forest, &
          cellarea_nonforest,&
@@ -393,20 +393,20 @@ contains
     pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
 
     ! if gcam_spinup == .true. this file does not exist yet
-    if (.not. gcam_spinup) then
+!    if (.not. gcam_spinup) then
        ! Read in gcam base file 
-       open(5,file=base_gcam_lu_wh_file)
+!       open(5,file=base_gcam_lu_wh_file)
        ! Read header
-       read(5,*) dum
-       do
-          read(5,*,iostat=io) g,t,yy,v
-          if (io < 0) then
-             exit
-          endif
-          gcamo_base(t,g) = v
-       end do
-       close(5)
-    end if
+!       read(5,*) dum
+!       do
+!          read(5,*,iostat=io) g,t,yy,v
+!          if (io < 0) then
+!             exit
+!          endif
+!          gcamo_base(t,g) = v
+!       end do
+!       close(5)
+!    end if
 
 
 ! KVC: Temp -- set this to false. 
@@ -593,6 +593,9 @@ contains
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
+    eclockyr=ymd/10000
+    ! this is .true. if gcam is running this model year
+    write(iulog,*) trim(subname),'model year is ', eclockyr, 'gcam alarm is ', gcam_alarm
 #ifdef DEBUG
     write(iulog,*) trim(subname),' date= ',ymd,tod
     write(iulog,*) trim(subname), 'gcam_var_mod nsrest is', nsrest
@@ -654,6 +657,11 @@ contains
     unmet_regional_farea=0.
     unmet_farea=0.
 
+    ! this should only do the processing when gcam runs
+    ! this is because nothing changes until gcam runs
+    ! the annual interpolation is after this conditional if
+    if (gcam_alarm) then
+
     ! TRS refactor
     ! This stuff attempts to set to default anywhere not covered by an
     ! aez.  I'm not sure if that's still a concern here, but for now
@@ -699,12 +707,13 @@ contains
     write(6,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
 #endif     
     ! Unpack gcamo field
-    ! the previous field (n) is initialized by file or by previous year, so read into next (np1) field
+    ! the previous field (n) is initialized by file or by previous year, so read gcamo into next (np1) field
    
     ! if gcam_spinup == .true. the base data need to be read now to initialize
-    !    but only if this is not a restart run, in which the data are filled
+    !    but only if it is the first model year 
+    !    and only if this is not a restart run, in which the data are filled
     !    from restart file on initialization
-    if (gcam_spinup .and. (.not. restart_run)) then
+    if (gcam_spinup .and. (.not. restart_run) .and. eclockyr == iac_start_year) then
        ! Read in gcam base file 
        open(5,file=base_gcam_lu_wh_file)
        ! Read header
@@ -742,15 +751,16 @@ contains
 
     ! note that the GCAM coupling now converts wh to MgC
 
+    ! todo: delete the commented if - using the gcam_alarm control
     ! try setting these only if gcam has run
     !    which is when the node year is the first year of gcam period
-    eclockyr=ymd/10000
-    if (eclockyr == year1) then
+    !eclockyr=ymd/10000
+    !if (eclockyr == year1) then
        gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
        gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
        gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
        gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
-    end if
+    !end if
 
 !avd - write some data to the log
 !do g=1,gcamsize
@@ -1725,6 +1735,8 @@ contains
           end do ! end z loop
        end do !  end r loop
     end if   ! ! if regional_unmet_reassign
+
+ end if ! end if gcam runs this model year
 
  if (allocated(v1u)) deallocate(v1u)
  if (allocated(v2u)) deallocate(v2u)

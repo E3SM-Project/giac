@@ -120,14 +120,10 @@ contains
     character(len=128) :: fname,casename,hfile
     integer :: myear, mon, day, e3smyear
     character(len=*),parameter :: subname='(glm2iac_run_mod)'
-    ! these are extracted from the dynamic land file
-    integer :: nlon, nlat, ntime, npft
-    ! these are for reading the dynamic land file
     integer, dimension(3) :: start3, count3
-    integer, dimension(4) :: start4, count4
-    integer, allocatable :: lsf_years(:)
 
     real*8, allocatable :: lat_rev(:)
+
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -381,98 +377,24 @@ contains
     ierr = nf90_put_var(ncid,lon_id,lon)
 
     ierr = nf90_close(ncid)
+    deallocate(lat_rev)
+
+    ! move the stored pft percents to previous before filling with
+    !    newly calculated values for myear
+    ! recall that myear is model year + 1
+    !    and that pfts are for start of myear and harvest is for model year
+    ! mksurfdat fills iac2lnd_vars%pct_pft and iac2lnd_vars%harvest_frac
+
+    do n=1,iac_ctl%npft
+       do j=1,iac_ctl%nlat
+          do i=1,iac_ctl%nlon
+             iac2lnd_vars%pct_pft_prev(i,j,n) = iac2lnd_vars%pct_pft(i,j,n)
+          enddo
+       enddo
+    enddo
 
     call mksurfdat_run(myear,plodata)
 
-    deallocate(lat_rev)
-
-    ! read in the dynamic land surface file fdyndat
-    ! this was just updated by the mksurfdat_run call
-    ! and fill the iac2lnd_vars
-    ! myear is already advanced to model year +1
-    ! myear in the file contains myear start pfts and myear-1 harvest
-
-    ierr = nf90_open(fdyndat,nf90_nowrite,ncid)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-
-    ! first get the dimensions
-    ierr= nf90_inq_dimid(ncid, "lsmlon", dimid(1))
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inquire_dimension(ncid, dimid(1), len=nlon)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inq_dimid(ncid, "lsmlat", dimid(1))
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inquire_dimension(ncid, dimid(1), len=nlat)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inq_dimid(ncid, "time", dimid(1))
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inquire_dimension(ncid, dimid(1), len=ntime)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inq_dimid(ncid, "natpft", dimid(1))
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_inquire_dimension(ncid, dimid(1), len=npft)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-   
-    ! get the years in the dynamic land surface file
-    ierr= nf90_inq_varid(ncid, "YEAR", varid)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    allocate(lsf_years(ntime), stat=ierr)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_get_var(ncid, varid, lsf_years)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-
-    ! get the indices for the new year and the previous year
-    ! these should be ntime and ntime-1, respectively
-    ! but find them in case a year is duplicated
-    ! find the last matching element
-
-    indnew = findloc(lsf_years, myear, dim=1, back=.true.)
-    indprev = findloc(lsf_years, myear - 1, dim=1, back=.true.)
-
-    ! pct pft
-    start4(1) = 1
-    start4(2) = 1
-    start4(3) = 1
-    start4(4) =  indnew
-    count4(1) = nlon
-    count4(2) = nlat
-    count4(3) = npft
-    count4(4) = 1
-    ierr= nf90_inq_varid(ncid, "PCT_NAT_PFT", varid)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_get_var(ncid, varid, iac2lnd_vars%pct_pft, start=start4, count=count4)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-
-    ! prev pct pft
-    start4(1) = 1
-    start4(2) = 1
-    start4(3) = 1
-    start4(4) = indprev
-    count4(1) = nlon
-    count4(2) = nlat
-    count4(3) = npft
-    count4(4) = 1
-    ierr= nf90_inq_varid(ncid, "PCT_NAT_PFT", varid)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-    ierr= nf90_get_var(ncid, varid, iac2lnd_vars%pct_pft_prev, start=start4, count=count4)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
-
-    ! harvest frac
-    start3(1) = 1
-    start3(2) = 1
-    start3(3) = indnew
-    count3(1) = nlon
-    count3(2) = nlat
-    count3(3) = 1
-    do n = 1,iac_ctl%nharvest
-       ierr= nf90_inq_varid(ncid, harvest_names(n), varid)
-       if(ierr /= nf90_NoErr) call handle_err(ierr)
-       ierr= nf90_get_var(ncid, varid, iac2lnd_vars%harvest_frac(:,:,n), start=start3, count=count3)
-       if(ierr /= nf90_NoErr) call handle_err(ierr)
-    enddo  
-
-    ierr= nf90_close(ncid)
-    if(ierr /= nf90_NoErr) call handle_err(ierr)
 
   end subroutine glm2iac_run_mod
 

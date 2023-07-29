@@ -92,6 +92,8 @@ module gcam_var_mod
   !----------------------------------------------------------
   logical, public :: gcam_active = .false.  ! true to turn on gcam coupling
 
+  logical, public :: gcam_alarm =.false.    ! true in model years when gcam runs, based on the EClock iac run alarm
+
   ! Some sizes
   integer, public :: gcam_nlon, gcam_nlat
 
@@ -133,6 +135,9 @@ module gcam_var_mod
   character(len=256), public :: gcam2glm_glumap
   character(len=256), public :: gcam2glm_baselu
   character(len=256), public :: gcam2glm_basebiomass
+
+  ! Name only of the dynamic landuse timeseries file
+  character(len=256), public ::  fdyndat_ehc
 
   ! runtime options
   logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr

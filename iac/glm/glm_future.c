@@ -9291,10 +9291,10 @@ void adjust_smart_flow1(int k, int m, int it, int i){
 
   past=newdata[it].p[k][m]-newdata[it].flowps[k][m]-newdata[it].flowpc[k][m]-newdata[it].flowpu[k][m];
 
-  if(k==150 && (m==387 || m==391 || m==394)){
-     printf("adjust_smart_flow1: k=%d, m=%d, it=%d, i=%d\n", k, m, it, i); 
-     printf("vtotal=%lf, stotal=%lf, vstotal=%lf, crop=%lf, past=%lf\n",vtotal, stotal, vstotal, crop, past);
-  }
+  //if(k==150 && (m==387 || m==391 || m==394)){
+  //   printf("adjust_smart_flow1: k=%d, m=%d, it=%d, i=%d\n", k, m, it, i); 
+  //   printf("vtotal=%lf, stotal=%lf, vstotal=%lf, crop=%lf, past=%lf\n",vtotal, stotal, vstotal, crop, past);
+  //}
 
  
         //if((crop+past) > ZEROVALUE){
