@@ -1,4 +1,4 @@
 [submodule "gcam"]
 	path = iac/gcam
-	url = git@github.com:JGCRI/gcam-core
+	url = git@github.com:daleihao/gcam-core.git
 	branch = e3sm-integration
