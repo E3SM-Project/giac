@@ -413,7 +413,8 @@ contains
           gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
-          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,        &
+          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,  &
+          elm2gcam_mapping_file,                                              &
           base_co2_aircraft_file, num_emiss_regions, num_emiss_sectors,       &
           num_lon, num_lat, wc, ymd)
 
