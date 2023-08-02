@@ -239,6 +239,8 @@ contains
     base_co2_surface_file(len+1:len+1) = c_null_char
     len = len_trim(base_co2_aircraft_file)
     base_co2_aircraft_file(len+1:len+1) = c_null_char
+    len = len_trim(base_gcam_co2_file)
+    base_gcam_co2_file(len+1:len+1) = c_null_char
 
     call initcGCAM(trim(case_name), &
          trim(gcam_config),&
@@ -414,8 +416,9 @@ contains
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
           gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,  &
-          elm2gcam_mapping_file,                                              &
-          base_co2_aircraft_file, num_emiss_regions, num_emiss_sectors,       &
+          base_co2_aircraft_file,					      &
+ 	  elm2gcam_mapping_file_loc,                                              &
+	  num_emiss_regions, num_emiss_sectors,  			      &
           num_lon, num_lat, wc, ymd)
 
   end if
