@@ -55,6 +55,7 @@ contains
          num_pft, num_harvest, num_lat, num_lon, &
          num_gcam_energy_regions, num_gcam_land_regions, &
          num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
+         num_emiss_ctys, num_periods, &
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
@@ -62,6 +63,9 @@ contains
          gcam2elm_woodharvest_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         country2grid_map, pop_iiasa_file, gdp_iiasa_file, &
+         pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
+         surface_co2_downscaling_method, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, &
@@ -113,6 +117,8 @@ contains
        write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
        write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
        write(iulog, '(A,I)') "num_emiss_regions = ",num_emiss_regions
+       write(iulog, '(A,I)') "num_emiss_ctys = ", num_emiss_ctys
+       write(iulog, '(A,I)') "num_periods = ", num_periods
 
        write(iulog,*) 'GCAM config and init files:'
        write(iulog, '(A,A)') "gcam_config = ", trim(gcam_config)
@@ -135,6 +141,15 @@ contains
        write(iulog, '(A,A)') "gcam2glm_glumap = ", trim(gcam2glm_glumap)
        write(iulog, '(A,A)') "gcam2glm_baselu = ", trim(gcam2glm_baselu)
        write(iulog, '(A,A)') "gcam2glm_basebiomass = ", trim(gcam2glm_basebiomass)
+
+       write(iulog,*) 'config and input files for emiss downscaling:'
+       write(iulog, '(A,A)') "country2grid_map = ", trim(country2grid_map)
+       write(iulog, '(A,A)') "pop_iiasa_file = ", trim(pop_iiasa_file)
+       write(iulog, '(A,A)') "gdp_iiasa_file = ", trim(gdp_iiasa_file)
+       write(iulog, '(A,A)') "pop_gcam_file = ", trim(pop_gcam_file)
+       write(iulog, '(A,A)') "gdp_gcam_file = ", trim(gdp_gcam_file) 
+       write(iulog, '(A,A)') "co2_gcam_file = ", trim(co2_gcam_file)
+       write(iulog, '(A,A)') "surface_co2_downscaling_method = ", trim(surface_co2_downscaling_method)
 
        write(iulog,*) 'name of dynamic landuse timeseries file:'
        write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
