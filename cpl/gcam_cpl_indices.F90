@@ -74,6 +74,7 @@ contains
          num_pft, num_harvest, num_lat, num_lon, &
          num_gcam_energy_regions, num_gcam_land_regions, &
          num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
+         num_emiss_ctys, num_periods, &
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
@@ -81,6 +82,9 @@ contains
          gcam2elm_woodharvest_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
+         country2grid_map, pop_iiasa_file, gdp_iiasa_file, &
+         pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
+         surface_co2_downscaling_method, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_iac_carbon_scaling, iac_elm_co2_emissions, &
