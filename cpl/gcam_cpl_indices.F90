@@ -76,13 +76,13 @@ contains
          num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
          num_emiss_ctys, num_periods, &
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
-         base_co2_surface_file, base_co2_aircraft_file, &
+         base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
-         country2grid_map, pop_iiasa_file, gdp_iiasa_file, &
+         country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
          pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
          surface_co2_downscaling_method, &
          fdyndat_ehc, &

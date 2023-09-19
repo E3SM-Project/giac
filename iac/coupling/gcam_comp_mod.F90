@@ -237,10 +237,30 @@ contains
     gcam2elm_woodharvest_mapping_file(len+1:len+1) = c_null_char
     len = len_trim(base_co2_surface_file)
     base_co2_surface_file(len+1:len+1) = c_null_char
+    len = len_trim(base_co2_shipment_file)
+    base_co2_shipment_file(len+1:len+1) = c_null_char
     len = len_trim(base_co2_aircraft_file)
     base_co2_aircraft_file(len+1:len+1) = c_null_char
     len = len_trim(base_gcam_co2_file)
     base_gcam_co2_file(len+1:len+1) = c_null_char
+    len = len_trim(country2grid_map)
+    country2grid_map(len+1:len+1) = c_null_char
+    len = len_trim(country2region_map)
+    country2region_map(len+1:len+1) = c_null_char
+    len = len_trim(pop_iiasa_file)
+    pop_iiasa_file(len+1:len+1) = c_null_char
+    len = len_trim(gdp_iiasa_file)
+    gdp_iiasa_file(len+1:len+1) = c_null_char
+    len = len_trim(pop_gcam_file)
+    pop_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(gdp_gcam_file)
+    gdp_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(co2_gcam_file)
+    co2_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(surface_co2_downscaling_method)
+    surface_co2_downscaling_method(len+1:len+1) = c_null_char
+
+
 
     call initcGCAM(trim(case_name), &
          trim(gcam_config),&
@@ -392,7 +412,7 @@ contains
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
                 iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_emiss_regions, num_emiss_sectors, elm2gcam_mapping_file_loc, &
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods, elm2gcam_mapping_file_loc, &
                 iac_first_coupled_year, rs, ws, cs, &
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 
@@ -417,10 +437,13 @@ contains
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
           gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,  &
-          base_co2_aircraft_file,					      &
- 	  elm2gcam_mapping_file_loc,                                              &
-	  num_emiss_regions, num_emiss_sectors,  			      &
-          num_lon, num_lat, wc, ymd)
+          base_co2_shipment_file, base_co2_aircraft_file,		      &
+ 	  elm2gcam_mapping_file_loc, country2grid_map, country2region_map,    &
+          pop_iiasa_file, gdp_iiasa_file,                                     &
+          pop_gcam_file, gdp_gcam_file, co2_gcam_file,                        &
+	  num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
+          num_lon, num_lat, wc, ymd,                                          &
+          surface_co2_downscaling_method)
 
   end if
 

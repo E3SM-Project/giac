@@ -123,7 +123,8 @@ module gcam_var_mod
   character(len=256), public ::  base_gcam_co2_file  ! baseline gcam out
   character(len=256), public ::  base_gcam_lu_wh_file  ! baseline gcam out
   character(len=256), public ::  base_co2_surface_file ! gridded basline
-  character(len=256), public ::  base_co2_aircraft_file ! ridded baseline
+  character(len=256), public ::  base_co2_shipment_file ! gridded basline
+  character(len=256), public ::  base_co2_aircraft_file ! gridded baseline
   character(len=256), public ::  base_npp_file   ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_hr_file    ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_pft_file   ! by pft, lat, lon, for land scalars
@@ -140,6 +141,7 @@ module gcam_var_mod
 
   ! Config and input files for emiss downscaling
   character(len=256), public :: country2grid_map
+  character(len=256), public :: country2region_map
   character(len=256), public :: pop_iiasa_file
   character(len=256), public :: gdp_iiasa_file
   character(len=256), public :: pop_gcam_file
