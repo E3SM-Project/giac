@@ -59,12 +59,12 @@ contains
          base_co2_surface_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
-         gcam2elm_woodharvest_mapping_file, &
+         gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
-         elm_iac_carbon_scaling, iac_elm_co2_emissions, &
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_elm_co2_emissions, &
          gcam_spinup, run_gcam 
 
     nlfilename_iac = "gcam_in"
@@ -127,6 +127,7 @@ contains
        write(iulog, '(A,A)') "gcam2elm_co2_mapping_file = ", trim(gcam2elm_co2_mapping_file )
        write(iulog, '(A,A)') "gcam2elm_luc_mapping_file = ", trim(gcam2elm_luc_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_woodharvest_mapping_file = ", trim(gcam2elm_woodharvest_mapping_file)
+       write(iulog, '(A,A)') "gcam2elm_cdensity_mapping_file = ", trim(gcam2elm_cdensity_mapping_file)
 
        write(iulog,*) 'grid mapping and initialization files:'
        write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
@@ -143,8 +144,9 @@ contains
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,L)') "write_scalars = ",write_scalars
        write(iulog, '(A,L)') "write_co2 = ",write_co2
-       write(iulog, '(A,L)') "elm_iac_carbon_scaling = ", elm_iac_carbon_scaling
-       write(iulog, '(A,L)') "iac_elm_co2_emissions = ", iac_elm_co2_emissions
+       write(iulog, '(A,L)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
+       write(iulog, '(A,L)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
+       write(iulog, '(A,L)') "ehc_elm_co2_emissions = ", ehc_elm_co2_emissions
        write(iulog, '(A,L)') "gcam_spinup = ",gcam_spinup
        write(iulog, '(A,L)') "run_gcam = ",run_gcam
 

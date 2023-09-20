@@ -127,7 +127,8 @@ module gcam_var_mod
   character(len=256), public ::  base_pft_file   ! by pft, lat, lon, for land scalars
   character(len=256), public ::  gcam2elm_co2_mapping_file ! define gcam co2 out
   character(len=256), public ::  gcam2elm_luc_mapping_file ! def gcam lu out
-  character(len=256), public ::  gcam2elm_woodharvest_mapping_file ! def gcam wh
+  character(len=256), public ::  gcam2elm_woodharvest_mapping_file ! def gcam wh out
+  character(len=256), public ::  gcam2elm_cdensity_mapping_file ! def gcam cdensity in
 
   ! Grid and mapping and initialization files
   character(len=256), public ::  gcam_gridfile ! definition of iac grid
@@ -148,9 +149,11 @@ module gcam_var_mod
   
   ! define coupling control variables
   ! these booleans define what is passed between gcam & e3sm.
-  logical, public :: elm_iac_carbon_scaling ! if .TRUE., changes in
-  ! land productivity from elm are used in gcam.
-  logical, public :: iac_elm_co2_emissions ! if .TRUE., energy system
+  logical, public :: elm_ehc_agyield_scaling ! if .TRUE., changes in
+  ! land productivity from elm scale ag yield in gcam.
+  logical, public :: elm_ehc_carbon_scaling ! if .TRUE., changes in
+  ! land productivity from elm scale carbon density in gcam.
+  logical, public :: ehc_elm_co2_emissions ! if .TRUE., energy system
   ! co2 is passed from gcam to eam.
 
   logical, public :: gcam_spinup  ! if true do gcam spinup

@@ -1456,11 +1456,13 @@ contains
 
                 past_pos_f = sumavail_landA
                 cumsum_sorted_farea=0.
+
                 call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
                 where(glu_weights(g,:,:) > 0)
                    glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 * &
                       fnfforest / cellarea
                 end where
+
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
                 sortind = MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>(past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)))
                 if (sortind(1)==0) then
@@ -2078,6 +2080,7 @@ end function fround
    integer, intent (in) :: n
    real(r8), intent (out):: cumsumvecout(:)
    integer             ::j
+
    cumsumvecout(1)=arrayin(sortcol(1),sortrow(1))
    do j=2,n
       cumsumvecout(j)=cumsumvecout(j-1)+arrayin(sortcol(j),sortrow(j))

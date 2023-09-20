@@ -78,13 +78,13 @@ contains
          base_co2_surface_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
-         gcam2elm_woodharvest_mapping_file, &
+         gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
-         elm_iac_carbon_scaling, iac_elm_co2_emissions, &
-         gcam_spinup, run_gcam   
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_elm_co2_emissions,&
+         gcam_spinup, run_gcam
  
     nlfilename_iac = "gcam_in"
 

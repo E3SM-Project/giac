@@ -452,6 +452,8 @@ contains
        ! this is called regardless in order to calculate and write scalars
        !call gcam_setdensity_mod()
 
+!!!! end delete
+
        ! Run GCAM, for this timestep.  
        ! Inputs taken care of by gcam_setdensity_mod(), so both of these
        ! are outputs, for input to glm and for export to atm (emis)
