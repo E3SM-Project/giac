@@ -1,4 +1,4 @@
 [submodule "gcam"]
 	path = iac/gcam
 	url = git@github.com:JGCRI/gcam-core
-	branch = e3sm-integration
+	branch = aldivi/gcam_gcam6

@@ -115,13 +115,16 @@ module gcam_var_mod
   integer, public ::  num_iac2elm_landtypes     ! number of gcamo land fields
   integer, public ::  num_emiss_sectors         ! for emis downscaling
   integer, public ::  num_emiss_regions         ! for emis downscaling
+  integer, public ::  num_emiss_ctys            ! for emis downscaling
+  integer, public ::  num_periods               ! for emis downscaling
 
   ! gcam config and init files
   character(len=256), public ::  gcam_config
   character(len=256), public ::  base_gcam_co2_file  ! baseline gcam out
   character(len=256), public ::  base_gcam_lu_wh_file  ! baseline gcam out
   character(len=256), public ::  base_co2_surface_file ! gridded basline
-  character(len=256), public ::  base_co2_aircraft_file ! ridded baseline
+  character(len=256), public ::  base_co2_shipment_file ! gridded basline
+  character(len=256), public ::  base_co2_aircraft_file ! gridded baseline
   character(len=256), public ::  base_npp_file   ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_hr_file    ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_pft_file   ! by pft, lat, lon, for land scalars
@@ -136,6 +139,17 @@ module gcam_var_mod
   character(len=256), public :: gcam2glm_glumap
   character(len=256), public :: gcam2glm_baselu
   character(len=256), public :: gcam2glm_basebiomass
+
+  ! Config and input files for emiss downscaling
+  character(len=256), public :: country2grid_map
+  character(len=256), public :: country2region_map
+  character(len=256), public :: pop_iiasa_file
+  character(len=256), public :: gdp_iiasa_file
+  character(len=256), public :: pop_gcam_file
+  character(len=256), public :: gdp_gcam_file
+  character(len=256), public :: co2_gcam_file
+  character(len=256), public :: surface_co2_downscaling_method
+ 
 
   ! Name only of the dynamic landuse timeseries file
   character(len=256), public ::  fdyndat_ehc

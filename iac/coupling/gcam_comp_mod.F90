@@ -25,7 +25,6 @@ module gcam_comp_mod
 
   public :: gcam_init_mod               ! gcam initialization
   public :: gcam_run_mod                ! gcam run phase
-  !public :: gcam_setdensity_mod         ! gcam set density phase
   public :: gcam_final_mod              ! gcam finalization/cleanup
 
 ! !PUBLIC DATA MEMBERS: None
@@ -239,15 +238,38 @@ contains
     gcam2elm_cdensity_mapping_file(len+1:len+1) = c_null_char
     len = len_trim(base_co2_surface_file)
     base_co2_surface_file(len+1:len+1) = c_null_char
+    len = len_trim(base_co2_shipment_file)
+    base_co2_shipment_file(len+1:len+1) = c_null_char
     len = len_trim(base_co2_aircraft_file)
     base_co2_aircraft_file(len+1:len+1) = c_null_char
+    len = len_trim(base_gcam_co2_file)
+    base_gcam_co2_file(len+1:len+1) = c_null_char
+    len = len_trim(country2grid_map)
+    country2grid_map(len+1:len+1) = c_null_char
+    len = len_trim(country2region_map)
+    country2region_map(len+1:len+1) = c_null_char
+    len = len_trim(pop_iiasa_file)
+    pop_iiasa_file(len+1:len+1) = c_null_char
+    len = len_trim(gdp_iiasa_file)
+    gdp_iiasa_file(len+1:len+1) = c_null_char
+    len = len_trim(pop_gcam_file)
+    pop_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(gdp_gcam_file)
+    gdp_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(co2_gcam_file)
+    co2_gcam_file(len+1:len+1) = c_null_char
+    len = len_trim(surface_co2_downscaling_method)
+    surface_co2_downscaling_method(len+1:len+1) = c_null_char
+
+
 
     call initcGCAM(trim(case_name), &
          trim(gcam_config),&
          trim(gcam2elm_co2_mapping_file),&
          trim(gcam2elm_luc_mapping_file),&
          trim(gcam2elm_woodharvest_mapping_file),&
-         trim(gcam2elm_cdensity_mapping_file))
+         trim(gcam2elm_cdensity_mapping_file),&
+         num_emiss_regions, num_emiss_sectors)
     
   end subroutine gcam_init_mod
 
@@ -400,8 +422,8 @@ contains
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
                 iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file_loc, &
-                iac_first_coupled_year, rs, ws, ays, cs, &
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, ws, ays, cs,&
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
@@ -424,98 +446,19 @@ contains
           gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
-          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,        &
-          base_co2_aircraft_file, num_emiss_regions, num_emiss_sectors,       &
-          num_lon, num_lat, wc, ymd)
+          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,  &
+          base_co2_shipment_file, base_co2_aircraft_file,		      &
+ 	  elm2gcam_mapping_file_loc, country2grid_map, country2region_map,    &
+          pop_iiasa_file, gdp_iiasa_file,                                     &
+          pop_gcam_file, gdp_gcam_file, co2_gcam_file,                        &
+	  num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
+          num_lon, num_lat, wc, ymd,                                          &
+          surface_co2_downscaling_method)
 
   end if
 
   end subroutine gcam_run_mod
 
-
-!---------------------------------------------------------------------------
-!BOP
-
-!!!!!!!!!!!!todo: delete gcam_setdensity_mod
-
-! !IROUTINE: gcam_setdensity_mod
-
-! !INTERFACE:
-!  subroutine gcam_setdensity_mod()
-
-! !DESCRIPTION:
-! Setdensity interface for gcam
-
-! !USES:
-!   use iac_data_mod, only : iac_spval, iac_cdatal_rest, iac_cdatai_logunit
-!   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt, iac_cdatal_rest
-!   use iac_data_mod, only : iac_first_coupled_year, lnd2iac_vars
-!   use iso_c_binding
-!    implicit none
-
-! !ARGUMENTS:
-
-! !LOCAL VARIABLES:
-!    logical :: restart_now
-!    integer :: ymd, tod, dt, yyyymmdd
-!    integer :: i,j,r,w,s,len
-!    character(len=*),parameter :: subname='(gcam_setdensity_mod)'
-
-
-! !REVISION HISTORY:
-! Author: T Craig
-! Author: JET - added interface files for cesm/gcam communication
-
-!EOP
-!-----------------------------------------------------------------------
-
-!  restart_now = cdata%l(iac_cdatal_rest)
-
-!  ymd = EClock(iac_eclock_ymd)
-!  tod = EClock(iac_eclock_tod)
-!  dt  = EClock(iac_eclock_dt)
-
-!  write(iulog,*) trim(subname),' date= ',ymd,tod
-
-  ! convert logical to boolean for read_scalars and write_scalars                        
-!  if ( read_scalars ) then
-!     r = 1
-!  else
-!     r = 0
-!  end if
-
-!  if ( write_scalars ) then
-!     w = 1
-!  else
-!     w = 0
-!  end if
-
-
-!  if ( elm_ehc_carbon_scaling ) then
-!     s = 1
-!  else
-!     s = 0
-!  end if
-
-!  write(iulog,*) trim(subname),' elm_ehc_carbon_scaling is ', &
-!     elm_ehc_carbon_scaling,'s is ', s
-
-  ! Null terminate                                           
-  !len = len_trim(elm2gcam_mapping_file)
-  !elm2gcam_mapping_file(len+1:len+1) = c_null_char
-!  elm2gcam_mapping_file=trim(elm2gcam_mapping_file)//c_null_char
-!  base_npp_file=trim(base_npp_file)//c_null_char
-!  base_hr_file=trim(base_hr_file)//c_null_char
-!  base_pft_file=trim(base_pft_file)//c_null_char
-
-  !  Call setdensity method of GCAM-E3SM Interface 
-!  call setdensitycGCAM(ymd, iac_ctl%area, &
-!       lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-!       iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, elm2gcam_mapping_file,&
-!       iac_first_coupled_year, r, w, s, base_npp_file, base_hr_file, base_pft_file) 
-  
-!  end subroutine gcam_setdensity_mod
-!!!!!! end delete
 
 
 !---------------------------------------------------------------------------

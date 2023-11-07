@@ -445,17 +445,14 @@ contains
 
     if ( run_gcam ) then  
 
-!!!todo: delete and update note for gcam_run_mod!
-
        ! This calcs and pushes the carbon density scalars to gcam
        !   the push happens only if elm_iac_carbon_scaling is true
        ! this is called regardless in order to calculate and write scalars
-       !call gcam_setdensity_mod()
-
-!!!! end delete
+       !    and also to interpolate the co2 outputs to annual values and
+       !    to downscale them
 
        ! Run GCAM, for this timestep.  
-       ! Inputs taken care of by gcam_setdensity_mod(), so both of these
+       ! Inputs taken care of in gcam_comp_mod, so these
        ! are outputs, for input to glm and for export to atm (emis)
        call gcam_run_mod(gcam2glm_data, gcam_emis_data,                          &
              gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
