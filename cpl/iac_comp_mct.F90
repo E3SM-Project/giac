@@ -150,6 +150,7 @@ contains
     logical :: brnch_retain_casename                 ! flag if should retain the case name on a branch start type
     integer :: lbnum                                 ! input to memory diagnostic
     integer :: shrlogunit,shrloglev                  ! old values for log unit and log level
+    integer :: ymd                                   ! current model year
 
     ! Possibly not useful, as we expect gcam to run with just one proc
     integer :: begg, endg                            ! Region indeces
@@ -217,7 +218,7 @@ contains
                                    start_tod=start_tod, ref_ymd=ref_ymd, &
                                    ref_tod=ref_tod, stop_ymd=stop_ymd,   &
                                    stop_tod=stop_tod,                    &
-                                   calendar=calendar )
+                                   calendar=calendar, curr_ymd=ymd )
     call seq_infodata_GetData(infodata, case_name=caseid,                  &
                               case_desc=ctitle, start_type=starttype,      &
                               brnch_retain_casename=brnch_retain_casename, &
@@ -245,6 +246,9 @@ contains
     ! Do whatever init gcam needs
     ! I.e. read namelist and grid, etc.
     call iac_init(EClock)
+
+    ! assign ymd to GClock
+    GClock(iac_eclock_ymd) = ymd
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 

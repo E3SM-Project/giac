@@ -119,7 +119,7 @@ contains
 ! !LOCAL VARIABLES:
     character(len=*),parameter :: subname='(gcam_init_mod)'
     character(len=128) :: casename
-    integer      :: i, unitn, ier, len
+    integer      :: i, unitn, ier, char_len, rr, ymd
     logical      :: lexist
     character(len=128) :: nlfilename_in
 
@@ -138,7 +138,7 @@ contains
     ! gcam/coupling functions that need them - through gdata.
     allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamo',ier)
-    allocate(gcamoemis(num_emiss_sectors,num_emiss_regions), stat=ier)
+    allocate(gcamoemis(num_emiss_sectors,num_gcam_energy_regions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamoemis',ier)
 
     ! Allocate variables to store gridded CO2 emissions from GCAM
@@ -219,57 +219,69 @@ contains
     if(ier/=0) call mct_die(subName,'allocate gcamoco2airhidec',ier)
 
     ! create CCSM_GCAM_interface Object 
-    call inite3sminterface()
+    call inite3sminterface(iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors)
     
     ! Call initcGCAM method of e3sm/GCAM Interface 
 
     ! Null terminate
-    len = len_trim(case_name)
-    case_name(len+1:len+1) = c_null_char
-    len = len_trim(gcam_config)
-    gcam_config(len+1:len+1) = c_null_char
-    len = len_trim(gcam2elm_co2_mapping_file)
-    gcam2elm_co2_mapping_file(len+1:len+1) = c_null_char
-    len = len_trim(gcam2elm_luc_mapping_file)
-    gcam2elm_luc_mapping_file(len+1:len+1) = c_null_char
-    len = len_trim(gcam2elm_woodharvest_mapping_file)
-    gcam2elm_woodharvest_mapping_file(len+1:len+1) = c_null_char
-    len = len_trim(gcam2elm_cdensity_mapping_file)
-    gcam2elm_cdensity_mapping_file(len+1:len+1) = c_null_char
-    len = len_trim(base_co2_surface_file)
-    base_co2_surface_file(len+1:len+1) = c_null_char
-    len = len_trim(base_co2_shipment_file)
-    base_co2_shipment_file(len+1:len+1) = c_null_char
-    len = len_trim(base_co2_aircraft_file)
-    base_co2_aircraft_file(len+1:len+1) = c_null_char
-    len = len_trim(base_gcam_co2_file)
-    base_gcam_co2_file(len+1:len+1) = c_null_char
-    len = len_trim(country2grid_map)
-    country2grid_map(len+1:len+1) = c_null_char
-    len = len_trim(country2region_map)
-    country2region_map(len+1:len+1) = c_null_char
-    len = len_trim(pop_iiasa_file)
-    pop_iiasa_file(len+1:len+1) = c_null_char
-    len = len_trim(gdp_iiasa_file)
-    gdp_iiasa_file(len+1:len+1) = c_null_char
-    len = len_trim(pop_gcam_file)
-    pop_gcam_file(len+1:len+1) = c_null_char
-    len = len_trim(gdp_gcam_file)
-    gdp_gcam_file(len+1:len+1) = c_null_char
-    len = len_trim(co2_gcam_file)
-    co2_gcam_file(len+1:len+1) = c_null_char
-    len = len_trim(surface_co2_downscaling_method)
-    surface_co2_downscaling_method(len+1:len+1) = c_null_char
+    char_len = len_trim(case_name)
+    case_name(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam_config)
+    gcam_config(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_co2_mapping_file)
+    gcam2elm_co2_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_luc_mapping_file)
+    gcam2elm_luc_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_woodharvest_mapping_file)
+    gcam2elm_woodharvest_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_cdensity_mapping_file)
+    gcam2elm_cdensity_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_surface_file)
+    base_co2_surface_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_shipment_file)
+    base_co2_shipment_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_aircraft_file)
+    base_co2_aircraft_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_gcam_co2_file)
+    base_gcam_co2_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(country2grid_map)
+    country2grid_map(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(country2region_map)
+    country2region_map(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(pop_iiasa_file)
+    pop_iiasa_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gdp_iiasa_file)
+    gdp_iiasa_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(pop_gcam_file)
+    pop_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gdp_gcam_file)
+    gdp_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(co2_gcam_file)
+    co2_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(surface_co2_downscaling_method)
+    surface_co2_downscaling_method(char_len+1:char_len+1) = c_null_char
 
+    ! get restart state
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       rr = 1
+    else
+       rr = 0
+    end if
+    write(iulog,*) trim(subname),' rr (nsrest) = ',rr
 
+    ! get e3sm model year
+    ymd = EClock(iac_eclock_ymd)
+    write(iulog,*) trim(subname),' e3sm year = ',ymd
 
-    call initcGCAM(trim(case_name), &
+    call initcGCAM(ymd, trim(case_name), &
          trim(gcam_config),&
          trim(gcam2elm_co2_mapping_file),&
          trim(gcam2elm_luc_mapping_file),&
          trim(gcam2elm_woodharvest_mapping_file),&
          trim(gcam2elm_cdensity_mapping_file),&
-         num_emiss_regions, num_emiss_sectors)
+         trim(base_gcam_co2_file), trim(base_co2_surface_file),&
+         trim(base_co2_shipment_file), trim(base_co2_aircraft_file),&
+         iac_ctl%area, iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors, rr)
     
   end subroutine gcam_init_mod
 
@@ -422,12 +434,12 @@ contains
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
                 iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
                 elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, ws, ays, cs,&
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
-  if ( ehc_elm_co2_emissions ) then
+  if ( ehc_eam_co2_emissions ) then
      ! Convert logical to int for interface with C/C++
      if ( write_co2 ) then
         wc = 1
@@ -446,12 +458,11 @@ contains
           gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
-          gcamoco2airhidec, trim(base_gcam_co2_file), base_co2_surface_file,  &
-          base_co2_shipment_file, base_co2_aircraft_file,		      &
+          gcamoco2airhidec, &
  	  elm2gcam_mapping_file_loc, country2grid_map, country2region_map,    &
           pop_iiasa_file, gdp_iiasa_file,                                     &
           pop_gcam_file, gdp_gcam_file, co2_gcam_file,                        &
-	  num_emiss_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
+	  num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
           num_lon, num_lat, wc, ymd,                                          &
           surface_co2_downscaling_method)
 

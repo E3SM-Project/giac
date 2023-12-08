@@ -114,7 +114,6 @@ module gcam_var_mod
   integer, public ::  num_gcam_land_regions     ! gcam land units: regionXglu
   integer, public ::  num_iac2elm_landtypes     ! number of gcamo land fields
   integer, public ::  num_emiss_sectors         ! for emis downscaling
-  integer, public ::  num_emiss_regions         ! for emis downscaling
   integer, public ::  num_emiss_ctys            ! for emis downscaling
   integer, public ::  num_periods               ! for emis downscaling
 
@@ -167,7 +166,7 @@ module gcam_var_mod
   ! land productivity from elm scale ag yield in gcam.
   logical, public :: elm_ehc_carbon_scaling ! if .TRUE., changes in
   ! land productivity from elm scale carbon density in gcam.
-  logical, public :: ehc_elm_co2_emissions ! if .TRUE., energy system
+  logical, public :: ehc_eam_co2_emissions ! if .TRUE., energy system
   ! co2 is passed from gcam to eam.
 
   logical, public :: gcam_spinup  ! if true do gcam spinup

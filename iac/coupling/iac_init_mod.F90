@@ -54,7 +54,7 @@ contains
          case_name, &
          num_pft, num_harvest, num_lat, num_lon, &
          num_gcam_energy_regions, num_gcam_land_regions, &
-         num_iac2elm_landtypes, num_emiss_sectors, num_emiss_regions, &
+         num_iac2elm_landtypes, num_emiss_sectors, &
          num_emiss_ctys, num_periods, &
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
@@ -68,7 +68,7 @@ contains
          surface_co2_downscaling_method, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
-         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_elm_co2_emissions, &
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
     nlfilename_iac = "gcam_in"
@@ -116,7 +116,6 @@ contains
        write(iulog, '(A,I)') "num_gcam_land_regions = ",num_gcam_land_regions
        write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
        write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
-       write(iulog, '(A,I)') "num_emiss_regions = ",num_emiss_regions
        write(iulog, '(A,I)') "num_emiss_ctys = ", num_emiss_ctys
        write(iulog, '(A,I)') "num_periods = ", num_periods
 
@@ -163,7 +162,7 @@ contains
        write(iulog, '(A,L)') "write_co2 = ",write_co2
        write(iulog, '(A,L)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
        write(iulog, '(A,L)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
-       write(iulog, '(A,L)') "ehc_elm_co2_emissions = ", ehc_elm_co2_emissions
+       write(iulog, '(A,L)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
        write(iulog, '(A,L)') "gcam_spinup = ",gcam_spinup
        write(iulog, '(A,L)') "run_gcam = ",run_gcam
 
