@@ -1368,7 +1368,7 @@ subroutine mksurfdat_run(year,plodata)
                 nj=(n-1)/iac_ctl%nlon+1
                 ni=modulo((n-1), iac_ctl%nlon)+1
                 iac2lnd_vars%pct_pft(ni,nj,k) = pctnatpft(n,k-1)
-                if(k <= mkharvest_numtypes()) then
+                if(k <= iac_ctl%nharvest) then
                    iac2lnd_vars%harvest_frac(ni,nj,k) = harvest(n,k)
                 endif
              enddo

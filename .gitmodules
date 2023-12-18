@@ -2,7 +2,3 @@
 	path = iac/gcam
 	url = git@github.com:JGCRI/gcam-core
 	branch = aldivi/gcam_gcam6_merge_co2
-[submodule "gcam-core"]
-	path = gcam-core
-	url = git@github.com:JGCRI/gcam-core
-	branch = aldivi/gcam_gcam6_merge_co2
