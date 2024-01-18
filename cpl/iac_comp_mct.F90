@@ -34,6 +34,7 @@ module iac_comp_mct
   !use iac_fields_mod
   use ESMF
   use mct_mod
+  use netcdf
 
 ! Stub in other moduals for running iac
 ! use IacMod
@@ -373,6 +374,9 @@ contains
     !type(bounds_type)               :: bounds               ! bounds
     character(len=32)               :: rdate                ! date char string for restart file names
     character(len=32), parameter    :: sub = "(iac_run_mct)"
+    integer :: ierr,nmode, ncid
+    integer :: dimid(3),varid_co2sfc, varid_co2airhi, varid_co2airlo
+    character(len=128) :: hfile
 
 
     ! I feel this is probably important
@@ -480,6 +484,24 @@ contains
 
        ! Copy gcamo atm variables to iac2atm_vars
        call gcam2iac_copy()
+
+       ! output co2 data to nc file
+       write(iulog,*) "CO2 output, GCAM current time, Y,M,D,T: ", yr, mon, day, tod
+       write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') 'giac.co2.',yr,'-',mon,'-',day,'.nc'
+       write(iulog,*) "CO2 output file:", hfile
+       nmode = ior(NF90_CLOBBER,NF90_64BIT_OFFSET)
+       ierr = nf90_create(trim(hfile),nmode,ncid)
+       ierr = nf90_def_dim(ncid,'lat' ,iac_ctl%nlat,dimid(3))
+       ierr = nf90_def_dim(ncid,'lon' ,iac_ctl%nlon,dimid(2))
+       ierr = nf90_def_dim(ncid,'month' ,12,dimid(1))
+       ierr = nf90_def_var(ncid,'co2sfc',NF90_DOUBLE,dimid,varid_co2sfc)
+       ierr = nf90_def_var(ncid,'co2airhi',NF90_DOUBLE,dimid,varid_co2airhi)
+       ierr = nf90_def_var(ncid,'co2airlo',NF90_DOUBLE,dimid,varid_co2airlo)
+       ierr = nf90_enddef(ncid)
+       ierr = nf90_put_var(ncid,varid_co2sfc,iac2atm_vars%co2sfc)
+       ierr = nf90_put_var(ncid,varid_co2airhi,iac2atm_vars%co2airhi)
+       ierr = nf90_put_var(ncid,varid_co2airlo,iac2atm_vars%co2airlo)
+       ierr = nf90_close(ncid)
     
     end if
 
