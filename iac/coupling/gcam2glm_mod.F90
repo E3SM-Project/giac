@@ -102,7 +102,14 @@ Module gcam2glm_mod
 
 ! !REVISION HISTORY:
 ! Author: T Craig
-
+! Author: A Di Vittorio: major revision to correct downscaling errors
+! Note that there is still a problem with cells containing multiple land units
+!    tracking only the fraction of the whole cell, with just the fixed land unit
+!    weights, and not tracking the changing land unit weights of
+!    fores/nonforest, causes errors
+! Note that these erros are small (so far < 0.5%) for global crop/pasture area
+!   and also for the area changes, that we are considering this acceptable
+!   this is because the fix requires serious structural changes
 
 ! !PRIVATE DATA MEMBERS:
     real(r8), allocatable :: gcamo_base(:,:)
@@ -135,10 +142,6 @@ contains
     integer :: iun,tmpyears(2),ier,t,yy,g
     real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
-
-    !character(len=512) :: gcam2glm_baselu
-    !character(len=512) :: gcam2glm_glumap
-    !character(len=512) :: gcam2glm_basebiomass
 
     character(len=512) :: dum
 
@@ -254,7 +257,7 @@ contains
     allocate(gcam_past(gcamsize, 2), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcam_past',ier)
     allocate(gcam_forest_area(gcamsize, 2), stat=ier)
-    if(ier/=0) call mct_die(subName,'allocate gcam_forest_ara',ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_forest_area',ier)
     allocate(unmet_neg_past(gcamsize), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate unmet_neg_past',ier)
     allocate(unmet_neg_crop(gcamsize), stat=ier)
@@ -306,19 +309,29 @@ contains
     count3(1)=numLons
     start3(2)=1
     count3(2)=numLats
-    tmp=MAXLOC(datearr,mask=datearr.EQ.2015)
+    ! there should be only one 2015 record in this file
+    tmp(1)=0
+    do t=1,size(datearr)
+       if(datearr(t) == 2015) then
+          tmp(1) = t
+          exit
+       endif
+    enddo
+    if(tmp(1)==0) then
+       write(iulog,*) subname,' ERROR: start year 2015 not found in file ', gcam2glm_baselu
+    endif
+
     start3(3)=tmp(1)
     count3(3)=1
     start2=1
     count2(1)=numLons
     count2(2)=numLats
-! read in hyde data - now from the single glm init file
+    ! read in luh2 data - now from the single glm init file
 
     status = nf90_inq_varid(ncid,'gcrop',varid)
     status = nf90_get_var(ncid,varid,hydeGCROP2015,start3,count3)
     status = nf90_inq_varid(ncid,'gpast',varid)
     status = nf90_get_var(ncid,varid,hydeGPAST2015,start3,count3)
-! need to add together the primary (gothr) and secondary (gsecd) from the initial file to get total other
     status = nf90_inq_varid(ncid,'gothr',varid)
     status = nf90_get_var(ncid,varid,hydeGOTHR2015,start3,count3)
     status = nf90_inq_varid(ncid,'gsecd',varid)
@@ -326,7 +339,6 @@ contains
     status = nf90_inq_varid(ncid,'cell_area',varid)
     status = nf90_get_var(ncid,varid,cellarea,start3,count3)
     status = nf90_close(ncid)
-    hydeGOTHR2015 = hydeGOTHR2015 + hydeGSECD2015
     cellarea=cellarea/1.e6
 
     status = nf90_open(gcam2glm_basebiomass,nf90_nowrite,ncid)
@@ -339,6 +351,10 @@ contains
     if(status /= nf90_NoErr) call handle_err(status)
 
     ! Read in glumap csv file
+    ! the glu_weights are the proportions of the cell covered by each land unit 
+    ! the weights sum to 1 within each cell
+    ! there were calculated based on the proportions of land covered by each land unit
+
     glu_weights=0.
     rgmin = 1000
     rgmax = 0
@@ -353,12 +369,7 @@ contains
        endif
 
        ! Need to find the lon and lat index for these x,y (which are lon,lat values at center of cell)
-       ! Probably should do some idiot checking to see if 
-       !lonx=findloc(lon,x)
-       !laty=findloc(lat,y)
-
-       ! If findloc isn't available (it's f2008 standard), do it the
-       ! 70s way
+       ! 70s way, cuz findloc and minloc and etc are messed up
        do lonx=1,numLons
           if (x .eq. lon(lonx)) then 
              exit
@@ -377,6 +388,9 @@ contains
           call shr_sys_abort(subname//' ERROR: weights file')
        endif
        glu_weights(g,lonx,latx) = weight
+       where ( glu_weights(g,:,:) < 0. )
+          glu_weights(g,:,:) = 0.
+       end where
 
        ! Find region of glus for each r
        if (g .lt. rgmin(r)) rgmin(r) = g
@@ -390,27 +404,9 @@ contains
     cellarea_forest(:,:)=0.
     pot_veg=pot_veg*0.75
     pctland_in2015(:,:) = 0.
-    pctland_in2015=hydeGCROP2015+hydeGPAST2015+hydeGOTHR2015
-
-    ! if gcam_spinup == .true. this file does not exist yet
-!    if (.not. gcam_spinup) then
-       ! Read in gcam base file 
-!       open(5,file=base_gcam_lu_wh_file)
-       ! Read header
-!       read(5,*) dum
-!       do
-!          read(5,*,iostat=io) g,t,yy,v
-!          if (io < 0) then
-!             exit
-!          endif
-!          gcamo_base(t,g) = v
-!       end do
-!       close(5)
-!    end if
+    pctland_in2015=hydeGCROP2015 + hydeGPAST2015 + hydeGOTHR2015 + hydeGSECD2015
 
 
-! KVC: Temp -- set this to false. 
-!restart_run = .false.
     if (.not. restart_run) then
 
         ! if gcam_spinup == .true. this file does not exist yet
@@ -429,8 +425,10 @@ contains
           close(5)
        end if
 
-       glm_crop(:,:,1)=hydeGCROP2015;
-       glm_past(:,:,1)=hydeGPAST2015;
+       glm_crop(:,:,n)=hydeGCROP2015
+       glm_past(:,:,n)=hydeGPAST2015
+       glm_crop(:,:,np1)=hydeGCROP2015
+       glm_past(:,:,np1)=hydeGPAST2015
 
        ! Set initial gcam land
        ! current baseline has been converted from billion m^3 of biomass
@@ -438,10 +436,10 @@ contains
        !      conv fact is 0.250 tonnes C per m^3 (MgC per m^3); same as in gcam
        ! but do it only if not gcam spinup
        if (.not. gcam_spinup) then
-          gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
-          gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
-          gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:)
-          gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+          gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
+          gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
+          gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
+          gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
        end if
 
        ! Set years 
@@ -542,7 +540,7 @@ contains
 
 ! !PARAMETERS:
 
-    character(len=*),parameter :: subname='(gcam2glm_run_mod)'
+    character(len=*),parameter :: subname='(gcam2glm_run_mod) '
 
     real(r8), parameter :: crop_forest_abandon_percent = 0.9
     real(r8), parameter :: past_forest_abandon_percent = 0.9
@@ -552,7 +550,7 @@ contains
     character(len=512) :: dum
     character*4 :: yearc
     character(256) :: filename
-    integer :: i,j,ij,r,i1,j1,aez,ind,h,z
+    integer :: i,j,ij,r,i1,j1,aez,h,z
     integer :: row,g,t,y,yy
     integer :: iun,iyr,ier
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
@@ -565,7 +563,7 @@ contains
     integer :: totrglus, nrglu
     integer, allocatable  ::indxdn(:),indxup(:),sortlatsup(:),sortlonsup(:),sortlatsdn(:),sortlonsdn(:),indxa(:),indxadn(:),v1u(:),v2u(:),v1d(:),v2d(:)
     real(r8), allocatable   :: tmparr(:)
-    integer :: sortind(1),max_aez_ind(1),regional_unmet_reassign
+    integer :: sortind(1),sortind2(1),max_aez_ind(1),regional_unmet_reassign
     real(r8)  :: crop_pos_f,crop_pos_nf,pot_forest_to_crop,pot_forest_from_crop,reassign_crop, &
                crop_neg_f,crop_neg_nf,crop_nfarea,crop_farea, &
                past_pos_f,past_pos_nf,pot_forest_to_past,pot_forest_from_past,reassign_past, &
@@ -583,6 +581,16 @@ contains
 
    integer :: nmode, ierr
    character(len=128) :: hfile
+
+   real(r8) :: curr_crop, curr_past, gcam_glb_forest_change, gcam_glb_past_change
+   real(r8) :: curr_crop_g, curr_past_g, temp_crop, temp_past
+   real(r8) :: start_crop, start_crop_g, start_past, start_past_g
+
+   integer,allocatable :: glatinds(:), gloninds(:)
+   integer :: count_gcells
+   logical :: found
+   real(r8), allocatable :: temp_past_grid(:,:)
+   real(r8), parameter :: diff_tol = 1.e-8
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -648,6 +656,14 @@ contains
     allocate(unmet_regional_farea(nreg), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate unmet_regional_farea',ier)
 
+    allocate(glatinds(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glatinds',ier)
+    allocate(gloninds(numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gloninds',ier)
+
+    allocate(temp_past_grid(numLons, numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate temp_past_grid',ier)
+
     avail_farea=0.
     avail_nfarea=0.
     avail_ag_farea=0.
@@ -662,49 +678,21 @@ contains
     ! the annual interpolation is after this conditional if
     if (gcam_alarm) then
 
-    ! TRS refactor
-    ! This stuff attempts to set to default anywhere not covered by an
-    ! aez.  I'm not sure if that's still a concern here, but for now
-    ! we'll have to implement it as a loop, because we don't have a
-    ! one-to-one mapping of lat,lon to regions anymore
-    !where (  aez_regions  >= 1 .and.   aez_regions <= 14)
-    !where ( glu_val >= 1 .and. glu_val <= nglu )
-    !   glm_crop(:,:,np1)=0
-    !   glm_past(:,:,np1)=0
-    !elsewhere
-    !   glm_crop(:,:,np1)=hydeGCROP2015;
-    !   glm_past(:,:,np1)=hydeGPAST2015;
-    !end where
-
-    glm_crop(:,:,np1)=hydeGCROP2015;
-    glm_past(:,:,np1)=hydeGPAST2015;
-
-    do g=1,nglu
-       where (glm_crop(:,:,np1) == 0 .or. glu_weights(g,:,:) > 0)
-          glm_crop(:,:,np1)=0
-          glm_past(:,:,np1)=0
-       end where
-    enddo
-
-#ifdef notdef
-    ! Ugly triple loop
-    do g=1,nglu
-       do lonx=1,numLons
-          do latx,1,numLats
-             if (glu_weights(g,lonx,latx) > 0) then 
-                glm_crop(lonx,latx,np1)=0
-                glm_past(lonx,latx,np1)=0
-             endif
-          enddo
-       enddo
-    enddo
-#endif 
+    ! the glm np1 values are initially set to the n state, as needed
+    ! this should always be the case in a gcam model run year
+    ! for intermediate years (gcam_alarm==.false.) the n and np1 values do not change,
+    ! and if there is a restart the appropriate values are read from the restart file
 
 #ifdef DEBUG
-    write(6,*) subname, 'sum 0 glm_crop='
-    write(6,fmt="(1ES25.15)") sum(glm_crop(:,:,np1))
-    write(6,*) 'sum 0 glm_past='
-    write(6,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
+    write(iulog,*) subname, 'these n and np1 should initially be the same'
+    write(iulog,*) 'sum start n glm_crop='
+    write(iulog,fmt="(1ES25.15)") sum(glm_crop(:,:,n))
+    write(iulog,*) 'sum start n glm_past='
+    write(iulog,fmt="(1ES25.15)") sum(glm_past(:,:,n))
+    write(iulog,*) 'sum start np1 glm_crop='
+    write(iulog,fmt="(1ES25.15)") sum(glm_crop(:,:,np1))
+    write(iulog,*) 'sum start np1 glm_past='
+    write(iulog,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
 #endif     
     ! Unpack gcamo field
     ! the previous field (n) is initialized by file or by previous year, so read gcamo into next (np1) field
@@ -727,10 +715,10 @@ contains
        end do
        close(5)
 
-       gcam_crop(:,1) = gcamo_base(iac_gcamo_crop,:)
-       gcam_past(:,1) = gcamo_base(iac_gcamo_pasture,:)
-       gcam_wh(:,1) = gcamo_base(iac_gcamo_woodharv,:)
-       gcam_forest_area(:,1) = gcamo_base(iac_gcamo_forest,:)
+       gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
+       gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
+       gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
+       gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
     end if
  
     ! avd - write the harvest data to a diag file
@@ -751,16 +739,33 @@ contains
 
     ! note that the GCAM coupling now converts wh to MgC
 
-    ! todo: delete the commented if - using the gcam_alarm control
-    ! try setting these only if gcam has run
-    !    which is when the node year is the first year of gcam period
-    !eclockyr=ymd/10000
-    !if (eclockyr == year1) then
-       gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
-       gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
-       gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
-       gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
-    !end if
+    gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
+    gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
+    gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
+    gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
+
+    write(iulog,*) subname, 'initial global change in GCAM crop area km^2 = ', &
+       real(nint(sum(1000*gcam_crop(:,np1))*100))/100. - real(nint(sum(1000*gcam_crop(:,n))*100))/100.
+    write(iulog,*) subname, 'initial global change in GCAM pasture area km^2 = ', &
+       sum(real(nint(1000*gcam_past(:,np1)*100))/100.) - sum(real(nint(1000*gcam_past(:,n)*100))/100.)
+    write(iulog,*) subname, 'initial global change in GCAM forest area km^2 = ', &
+       sum(real(nint(1000*gcam_forest_area(:,np1)*100))/100.) - sum(real(nint(1000*gcam_forest_area(:,n)*100))/100.)
+
+    write(iulog,*) subname, 'initial n global GCAM crop area km^2 = ', &
+       real(nint(sum(1000*gcam_crop(:,n))*100))/100.
+    write(iulog,*) subname, 'initial np1 global GCAM crop area km^2 = ', &
+       real(nint(sum(1000*gcam_crop(:,np1))*100))/100.
+
+    write(iulog,*) subname, 'initial n global GCAM pasture area km^2 = ', &
+       sum(real(nint(1000*gcam_past(:,n)*100))/100.)
+    write(iulog,*) subname, 'initial np1 global GCAM pasture area km^2 = ', &
+       sum(real(nint(1000*gcam_past(:,np1)*100))/100.)
+
+    write(iulog,*) subname, 'initial n global GCAM forest area km^2 = ', &
+       sum(real(nint(1000*gcam_forest_area(:,n)*100))/100.)
+    write(iulog,*) subname, 'initial np1 global GCAM forest area km^2 = ', &
+       sum(real(nint(1000*gcam_forest_area(:,np1)*100))/100.)
+
 
 !avd - write some data to the log
 !do g=1,gcamsize
@@ -780,29 +785,49 @@ contains
     write(iulog,*) subname,' year1 year2 ',year1,year2
 #endif
     call shr_sys_flush(iulog)
-    ind=1
 
-    !do r = 1,nreg
-    !   do aez = 1,naez
+    gcam_glb_forest_change = 0.
+    gcam_glb_past_change = 0.
+
     do g=1,nglu
-       
-       !write(6,*) subname, 'land unit index for transitions = ', g
 
-       ! Round GCAM results to two decimal places before using as LUC
-       crop_d = (real(nint(gcam_crop(g,np1)*100)/100)-real(nint(gcam_crop(g,n)*100)/100))*1000
-       past_d = (real(nint(gcam_past(g,np1)*100)/100)-real(nint(gcam_past(g,n)*100)/100))*1000
-       farea_d = (real(nint(gcam_forest_area(g,np1)*100)/100)-real(nint(gcam_forest_area(g,n)*100)/100))*1000
+#ifdef DEBUG       
+       write(iulog,*) subname, '***** land unit index for transitions = ', g
+
+       write(iulog,*) subname, 'initial n g GCAM crop area km^2 = ', &
+          real(nint(1000*gcam_crop(g,n)*100))/100.
+       write(iulog,*) subname, 'initial np1 g GCAM crop area km^2 = ', &
+          real(nint(1000*gcam_crop(g,np1)*100))/100.
+
+       write(iulog,*) subname, 'initial n g GCAM pasture area km^2 = ', &
+          real(nint(1000*gcam_past(g,n)*100))/100.
+       write(iulog,*) subname, 'initial np1 g GCAM pasture area km^2 = ', &
+          real(nint(1000*gcam_past(g,np1)*100))/100.
+
+       write(iulog,*) subname, 'initial n g GCAM forest area km^2 = ', &
+          real(nint(1000*gcam_forest_area(g,n)*100))/100.
+       write(iulog,*) subname, 'initial np1 g GCAM forest area km^2 = ', &
+          real(nint(1000*gcam_forest_area(g,np1)*100))/100.
+#endif
+
+       ! convert to km^2 and Round GCAM results to 2 decimal places before using as LUC
+       crop_d = real(nint(1000*gcam_crop(g,np1)*100))/100.-real(nint(1000*gcam_crop(g,n)*100))/100.
+       past_d = real(nint(1000*gcam_past(g,np1)*100))/100.-real(nint(1000*gcam_past(g,n)*100))/100.
+       farea_d = real(nint(1000*gcam_forest_area(g,np1)*100))/100.-real(nint(1000*gcam_forest_area(g,n)*100))/100.
+
+       gcam_glb_forest_change = gcam_glb_forest_change + farea_d
+       gcam_glb_past_change = gcam_glb_past_change + past_d
 
        ! convert area changes into positive and negative changes
 
-       if (crop_d <= 0) then
+       if (crop_d <= 0.) then
           crop_neg = -1.*crop_d
           crop_pos = 0.
        else
           crop_neg = 0.
           crop_pos = crop_d
        end if
-       if (past_d <= 0) then
+       if (past_d <= 0.) then
           past_neg = -1.*past_d
           past_pos = 0.
        else
@@ -810,20 +835,41 @@ contains
           past_pos = past_d
        end if
 
-       ! compute the potentially forested and potentially non-forested
-       ! area currently occupied by cropland or pasture  in each
-       ! region/AEZ. Also compute the *actual* forested and non-forested area
-       ! currently available in each region/AEZ        
+       ! the glu_weights are the proportions of each land unit in each cell (they sum to 1 in a cell)
+       ! these were calculated based on their respective proportions of land area in each cell
+       ! using these and the land area fraction we can determine the actual
+       ! areas of different components in a cell and apply the appropriate changes
 
        ! TRS - we are now looping by glu.  So instead of finding this
        ! specific combo of aez and region, each glu implies a region.
 
        ! Find lon/lat where we have any weights at all
        rglus=0
-       where ( glu_weights(g,:,:) .gt. 0 )
+       where ( glu_weights(g,:,:) .gt. 0. )
           rglus=1
        end where
+       totrglus=sum(rglus)      
+       write(iulog,*), subname, 'totrglus = ', totrglus 
+       glatinds = 0
+       gloninds = 0
+       count_gcells = 0
+       do j=1,numLats
+          do i=1,numLons
+             if (rglus(i,j) == 1) then
+                count_gcells = count_gcells+1
+                glatinds(count_gcells) = j
+                gloninds(count_gcells) = i
+             endif
+          enddo
+       enddo
+       if (count_gcells /= totrglus) then
+          write(iulog,*), subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
+       endif
 
+       ! note that a cell is potentially forest or non-forest; it is never mixed
+       ! fnf values are the glu weights for this land unit, masked by forest or non-forest
+       ! cellarea_forest and cellarea_nonforest are the fractions of cell area
+       ! in this land unit, masked by forest or non-forest
        cellarea_forest(:,:)=0.
        cellarea_nonforest(:,:)=0.
        fnfnonforest=0.
@@ -835,18 +881,20 @@ contains
           fnfnonforest(:,:)=1.
           cellarea_nonforest(:,:)=cellarea(:,:)
        end where
-       cellarea_nonforest=cellarea_nonforest*glu_weights(g,:,:)
-       cellarea_forest=cellarea_forest*glu_weights(g,:,:)
        fnfforest=fnfforest*glu_weights(g,:,:)
        fnfnonforest=fnfnonforest*glu_weights(g,:,:)
+       cellarea_nonforest=cellarea_nonforest*fnfnonforest
+       cellarea_forest=cellarea_forest*fnfforest
 
-       crop_farea =sum(glm_crop(:,:,n)*cellarea_forest)
-       crop_nfarea =sum(glm_crop(:,:,n)*cellarea_nonforest)
-       past_farea =sum(glm_past(:,:,n)*cellarea_forest)
-       past_nfarea =sum(glm_past(:,:,n)*cellarea_nonforest)
-       GLM_nfarea = sum((pctland_in2015 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_nonforest)
-       GLM_farea = sum((pctland_in2015 - glm_crop(:,:,n) - glm_past(:,:,n))*cellarea_forest)
-       totrglus=sum(rglus)
+       ! these always need to start with the current np1 state
+       ! otherwise cells with multiple land units will not be updated correctly
+       ! np1 values initially equal n
+       crop_farea =sum(glm_crop(:,:,np1)*cellarea_forest)
+       crop_nfarea =sum(glm_crop(:,:,np1)*cellarea_nonforest)
+       past_farea =sum(glm_past(:,:,np1)*cellarea_forest)
+       past_nfarea =sum(glm_past(:,:,np1)*cellarea_nonforest)
+       GLM_nfarea = sum((pctland_in2015 - glm_crop(:,:,np1) - glm_past(:,:,np1))*cellarea_nonforest)
+       GLM_farea = sum((pctland_in2015 - glm_crop(:,:,np1) - glm_past(:,:,np1))*cellarea_forest)
        if (allocated(v1u)) deallocate(v1u)
        if (allocated(v2u)) deallocate(v2u)
        if (allocated(v1d)) deallocate(v1d)
@@ -862,32 +910,71 @@ contains
        if(ier/=0) call mct_die(subName,'allocate v2d',ier)
        indxup(:)=(/(i,i=1,numlons*numlats)/)
        indxdn=indxup
+
+       ! force the opposite sign to ensure the non-glu cells are not sorted into
+       ! the glu space
        pot_veg_rev=transpose(pot_veg)
        glu_weights_rev=transpose(glu_weights(g,:,:))
+
+       where (transpose(rglus) == 0)
+          glu_weights_rev = -1.
+          pot_veg_rev = 1.
+       end where
+
        call D_mrgrnk(pot_veg_rev*glu_weights_rev,indxup,numlons*numlats)
        call D_mrgrnk(pot_veg_rev*glu_weights_rev*-1.,indxdn,numlons*numlats)
        !	  
        !  The sortxxxup and sortxxxdn arrays are only good 1:totrglus these arrays are also based on arrays lat first (360,720)
        !  sorting to match original matlab scripts.  Thats why I transposed the arrays above.  Also didn't use qsort because it
        !  isn't a stable sort.
-       !
+       !  These calcs below reflect that the sort was done with transposed matrices
        sortlonsdn=(indxdn-1)/numlats+1
        sortlatsdn=mod(indxdn-1,numlats)+1
        sortlonsup=(indxup-1)/numlats+1
        sortlatsup=mod(indxup-1,numlats)+1
+       ! these are correct now because non-glu cells are beyond the totrglus range
        v1u=sortlonsup(numlons*numlats-totrglus+1:numlons*numlats)
        v2u=sortlatsup(numlons*numlats-totrglus+1:numlons*numlats)
        v1d=(sortlonsdn(:totrglus))
        v2d=(sortlatsdn(:totrglus))
 
+#ifdef DEBUG
+       ! check that sorted cells are all in the land unit
+       z = 0
+       do ij=1,totrglus
+          ! start with lon
+          found = .false.
+          do i1=1,count_gcells
+            if (v1d(ij) == gloninds(i1)) then
+               ! check for matching lat
+               if(v2d(ij) == glatinds(i1)) then
+                  z=z+1
+                  found = .true.
+               endif
+            endif
+          enddo
+          if ( .not. found ) then
+             write(iulog,*) subname, 'Error: Did not find sorted cell ', ij, ' lonind=', v1d(ij), ' latind=', v2d(ij)
+          endif
+       enddo
+       if (z /= totrglus) then
+          write(iulog,*) subname, 'Error: found ', z, ' sorted cells out of ', totrglus
+       endif
+#endif
        ! limit abandonment to existing glm crop and pasture
-       if ((past_neg >= (past_farea + past_nfarea)).and.(past_neg>0)) then
-          unmet_neg_past(ind) = past_neg - (past_farea + past_nfarea)
+       if ((past_neg >= (past_farea + past_nfarea)).and.(past_neg>0.)) then
+          unmet_neg_past(g) = past_neg - (past_farea + past_nfarea)
           past_neg = past_farea + past_nfarea
+#ifdef DEBUG
+             write(iulog,*) subname, 'not enough pasture: reducing pasture loss  by km^2', unmet_neg_past(g)
+#endif
        end if
-       if ((crop_neg >= (crop_farea + crop_nfarea)).and.(crop_neg>0)) then
-          unmet_neg_crop(ind) = crop_neg - (crop_farea + crop_nfarea)
+       if ((crop_neg >= (crop_farea + crop_nfarea)).and.(crop_neg>0.)) then
+          unmet_neg_crop(g) = crop_neg - (crop_farea + crop_nfarea)
           crop_neg = crop_farea + crop_nfarea
+#ifdef DEBUG
+             write(iulog,*) subname, 'not enough crop: reducing crop loss by km^2', unmet_neg_crop(g)
+#endif
        end if
 
        ! compute the potential glm forest that could be created from cropland
@@ -921,46 +1008,59 @@ contains
        ! note that pot_### values are already limited to glm limits
 
        ! cropland
-       if ((crop_pos>0).and.( crop_pos > (GLM_nfarea+pot_nonforest_from_past) )) then
+       if ((crop_pos>0.).and.( crop_pos > (GLM_nfarea+pot_nonforest_from_past) )) then
           pot_forest_to_crop = crop_pos - (GLM_nfarea+pot_nonforest_from_past)
           pot_nonforest_to_crop = GLM_nfarea+pot_nonforest_from_past
           if (pot_forest_to_crop >= GLM_farea) then
+#ifdef DEBUG
+             write(iulog,*) subname, 'not enough land area: reducing crop expansion by km^2', pot_forest_to_crop - GLM_farea
+#endif
              pot_forest_to_crop = GLM_farea
           end if
        else
-          pot_forest_to_crop = 0
+          pot_forest_to_crop = 0.
           pot_nonforest_to_crop = crop_pos
        end if
 
        ! pasture
-       if ((past_pos>0).and.( past_pos > (GLM_nfarea - pot_nonforest_to_crop + pot_nonforest_from_crop) )) then
+       if ((past_pos>0.).and.( past_pos > (GLM_nfarea - pot_nonforest_to_crop + pot_nonforest_from_crop) )) then
           pot_forest_to_past = past_pos - (GLM_nfarea - pot_nonforest_to_crop + pot_nonforest_from_crop)
           pot_nonforest_to_past = GLM_nfarea - pot_nonforest_to_crop + &
                                   pot_nonforest_from_crop
+          if (pot_forest_to_past >= GLM_farea - pot_forest_to_crop) then
+#ifdef DEBUG
+             write(iulog,*) subname, 'not enough land area: reducing pasture expansion by km^2', pot_forest_to_past - (GLM_farea - pot_forest_to_crop)
+#endif
+             pot_forest_to_past = GLM_farea - pot_forest_to_crop
+          end if
        else
-          pot_forest_to_past = 0
+          pot_forest_to_past = 0.
           pot_nonforest_to_past = past_pos
        end if
 
 #ifdef DEBUG
-!          write(6,*) subname, 'crop_farea=', crop_farea, ' crop_nfarea=', &
-!                              crop_nfarea
-!          write(6,*) subname, 'past_farea=', past_farea, ' past_nfarea=', &
-!                              past_nfarea
-!          write(6,*) subname, 'GLM_farea=', GLM_farea, ' GLM_nfarea=', &
-!                              GLM_nfarea
-!          write(6,*) subname, 'crop_pos=', crop_pos, ' crop_neg=', crop_neg
-!          write(6,*) subname, 'past_pos=', past_pos, ' past_neg=', past_neg
-!          write(6,*) subname, 'potential transition areas'
-!          write(6,*) subname, 'pot_forest_to_crop=', pot_forest_to_crop
-!          write(6,*) subname, 'pot_nonforest_to_crop=', pot_nonforest_to_crop
-!          write(6,*) subname, 'pot_forest_from_crop=', pot_forest_from_crop
-!          write(6,*) subname, 'pot_nonforest_from_crop=', pot_nonforest_from_crop
-!          write(6,*) subname, 'pot_forest_to_past=', pot_forest_to_past
-!          write(6,*) subname, 'pot_nonforest_to_past=', pot_nonforest_to_past
-!          write(6,*) subname, 'pot_forest_from_past=', pot_forest_from_past
-!          write(6,*) subname, 'pot_nonforest_from_past=', &
-!                              pot_nonforest_from_past
+          write(iulog,*) subname, 'all units are km^2'
+          write(iulog,*) subname, 'current global crop = ' ,sum(glm_crop(:,:,np1)*cellarea),' pasture = ', sum(glm_past(:,:,np1)*cellarea)
+          write(iulog,*) subname, 'current g crop = ' , sum(glm_crop(:,:,np1)*cellarea*glu_weights(g,:,:)), &
+             ' pasture = ', sum(glm_past(:,:,np1)*cellarea*glu_weights(g,:,:))
+          write(iulog,*) subname, 'crop_farea=', crop_farea, ' crop_nfarea=', &
+                              crop_nfarea
+          write(iulog,*) subname, 'past_farea=', past_farea, ' past_nfarea=', &
+                              past_nfarea
+          write(iulog,*) subname, 'GLM_farea=', GLM_farea, ' GLM_nfarea=', &
+                              GLM_nfarea
+          write(iulog,*) subname, 'crop_pos=', crop_pos, ' crop_neg=', crop_neg
+          write(iulog,*) subname, 'past_pos=', past_pos, ' past_neg=', past_neg
+          write(iulog,*) subname, 'potential transition areas'
+          write(iulog,*) subname, 'pot_forest_to_crop=', pot_forest_to_crop
+          write(iulog,*) subname, 'pot_nonforest_to_crop=', pot_nonforest_to_crop
+          write(iulog,*) subname, 'pot_forest_from_crop=', pot_forest_from_crop
+          write(iulog,*) subname, 'pot_nonforest_from_crop=', pot_nonforest_from_crop
+          write(iulog,*) subname, 'pot_forest_to_past=', pot_forest_to_past
+          write(iulog,*) subname, 'pot_nonforest_to_past=', pot_nonforest_to_past
+          write(iulog,*) subname, 'pot_forest_from_past=', pot_forest_from_past
+          write(iulog,*) subname, 'pot_nonforest_from_past=', &
+                              pot_nonforest_from_past
 #endif
 
        ! the problem here is that GCAM forest area changes are not necessarily
@@ -977,16 +1077,18 @@ contains
        crop_pos_f = pot_forest_to_crop
        crop_pos_nf = pot_nonforest_to_crop
        crop_neg_f = pot_forest_from_crop
-       ! note that crop_neg_nf is a fraction
-       crop_neg_nf = pot_nonforest_from_crop/(crop_nfarea+1e-12)
+       ! no !note that crop_neg_nf is a fraction
+       !crop_neg_nf = pot_nonforest_from_crop/(crop_nfarea+1e-12)
+       crop_neg_nf = pot_nonforest_from_crop
        past_pos_f = pot_forest_to_past
        past_pos_nf = pot_nonforest_to_past
        past_neg_f = pot_forest_from_past
        ! note that past_neg_nf is a fraction
-       past_neg_nf = pot_nonforest_from_past/(past_nfarea+1e-12)
+       !past_neg_nf = pot_nonforest_from_past/(past_nfarea+1e-12)
+       past_neg_nf = pot_nonforest_from_past
 
        ! only if the GCAM forest expansion is not met is there an adjustment
-       if (farea_d > 0 .and. (pot_forest_from_crop + pot_forest_from_past - &
+       if (farea_d > 0. .and. (pot_forest_from_crop + pot_forest_from_past - &
            pot_forest_to_crop - pot_forest_to_past) < farea_d) then
 
           f_diff = farea_d - (pot_forest_from_crop + pot_forest_from_past -&
@@ -1003,144 +1105,434 @@ contains
              pot_forest_to_crop + pot_forest_to_past
 
           ! skip if no ag forest area to convert
-          if (ag_farea_new > 0 ) then
-             reassign_crop = (crop_farea - pot_forest_from_crop + &
+          if (ag_farea_new > 0. ) then
+             reassign_crop = f_diff * (crop_farea - pot_forest_from_crop + &
                 pot_forest_to_crop) / ag_farea_new
              GLM_nfarea_new = GLM_nfarea - pot_nonforest_to_crop - &
                 pot_nonforest_to_past + pot_nonforest_from_crop + &
                 pot_nonforest_from_past
 
 #ifdef DEBUG
-!             write(6,*) subname, 'matching farea_d'
-!             write(6,*) subname, 'farea_d=', farea_d, ' f_diff=', f_diff
-!             write(6,*) subname, 'reassign_crop1=', reassign_crop, &
-!                              ' GLM_nfarea_new1=', GLM_nfarea_new
+             write(iulog,*) subname, 'matching farea_d'
+             write(iulog,*) subname, 'farea_d=', farea_d, ' f_diff=', f_diff
+             write(iulog,*) subname, 'reassign_crop1=', reassign_crop, &
+                              ' GLM_nfarea_new1=', GLM_nfarea_new
 #endif
 
              ! do crop transitions first
-             if (crop_farea < reassign_crop .or. GLM_nfarea_new < reassign_crop) then
-                reassign_crop = min(crop_farea, GLM_nfarea_new)
+             if ((crop_farea - pot_forest_from_crop + pot_forest_to_crop) < reassign_crop .or. GLM_nfarea_new < reassign_crop) then
+                reassign_crop = min((crop_farea - pot_forest_from_crop + pot_forest_to_crop), GLM_nfarea_new)
              end if
-             crop_pos_nf = crop_pos_nf + reassign_crop
-             crop_neg_f = crop_neg_f + reassign_crop
+             ! adjust nf crop trans
+             if(crop_pos_nf > 0.) then
+                crop_pos_nf = crop_pos_nf + reassign_crop
+             else if (crop_neg_nf > 0. .and. crop_neg_nf >= reassign_crop) then
+                crop_neg_nf = crop_neg_nf - reassign_crop
+             else if (crop_neg_nf > 0. .and. crop_neg_nf < reassign_crop) then
+                crop_neg_nf = 0.
+                crop_pos_nf = reassign_crop - crop_neg_nf
+             else
+                ! both crop_neg_nf and crop_pos_nf are zero; they can never both be positive
+                crop_pos_nf = crop_pos_nf + reassign_crop
+             endif
+             ! adjust f crop trans
+             if(crop_neg_f > 0.) then
+                crop_neg_f = crop_neg_f + reassign_crop
+             else if (crop_pos_f > 0. .and. crop_pos_f >= reassign_crop) then
+                crop_pos_f = crop_pos_f - reassign_crop
+             else if (crop_pos_f > 0. .and. crop_pos_f < reassign_crop) then
+                crop_pos_f = 0.
+                crop_neg_f = reassign_crop - crop_pos_f
+             else
+                ! both crop_neg_f and crop_pos_f are zero; they can never both be positive
+                crop_neg_f = crop_neg_f + reassign_crop
+             endif
+             ! determine the pasture reassignment
              GLM_nfarea_new = GLM_nfarea_new - reassign_crop
              reassign_past = f_diff - reassign_crop
 
 #ifdef DEBUG
-!             write(6,*) subname, 'reassign_crop2=', reassign_crop
-!             write(6,*) subname, 'reassign_past1=', reassign_past, &
-!                              ' GLM_nfarea_new2=', GLM_nfarea_new
+             write(iulog,*) subname, 'reassign_crop2=', reassign_crop
+             write(iulog,*) subname, 'reassign_past1=', reassign_past, &
+                              ' GLM_nfarea_new2=', GLM_nfarea_new
 #endif
 
              ! do pasture transitions second
-             if (past_farea < reassign_past .or. &
+             if ((past_farea - pot_forest_from_past + pot_forest_to_past) < reassign_past .or. &
                  GLM_nfarea_new < reassign_past) then
-                reassign_past = min(past_farea, GLM_nfarea_new)
+                reassign_past = min((past_farea - pot_forest_from_past + pot_forest_to_past), GLM_nfarea_new)
              end if
-             past_pos_nf = past_pos_nf + reassign_past
-             past_neg_f = past_neg_f + reassign_past
+             ! adjust nf pasture trans
+             if(past_pos_nf > 0.) then
+                past_pos_nf = past_pos_nf + reassign_past
+             else if (past_neg_nf > 0. .and. past_neg_nf >= reassign_past) then
+                past_neg_nf = past_neg_nf - reassign_past
+             else if (past_neg_nf > 0. .and. past_neg_nf < reassign_past) then
+                past_neg_nf = 0.
+                past_pos_nf = reassign_past - past_neg_nf
+             else
+                ! both past_neg_nf and past_pos_nf are zero; they can never both be positive
+                past_pos_nf = past_pos_nf + reassign_past
+             endif
+             ! adjust f pasture trans
+             if(past_neg_f > 0.) then
+                past_neg_f = past_neg_f + reassign_past
+             else if (past_pos_f > 0. .and. past_pos_f >= reassign_past) then
+                past_pos_f = past_pos_f - reassign_past
+             else if (past_pos_f > 0. .and. past_pos_f < reassign_past) then
+                past_pos_f = 0.
+                past_neg_f = reassign_past - past_pos_f
+             else
+                ! both past_neg_f and past_pos_f are zero; they can never both be positive
+                past_neg_f = past_neg_f + reassign_past
+             endif
+
           else
-             reassign_crop = 0
-             reassign_past = 0
+             ! no ag area to reassign
+             reassign_crop = 0.
+             reassign_past = 0.
           end if
  
           ! now set unmet_farea
-          unmet_farea(ind) = f_diff - (reassign_crop + reassign_past)
+          unmet_farea(g) = f_diff - (reassign_crop + reassign_past)
 
 #ifdef DEBUG
-!          write(6,*) subname, 'reassign_past2=', reassign_past, &
-!                              ' unmet_farea(',ind,')=', unmet_farea(ind)
+          write(iulog,*) subname, 'reassign_past2=', reassign_past, &
+                              ' unmet_farea(',g,')=', unmet_farea(g)
 #endif
 
        end if
 
 #ifdef DEBUG
-!          write(6,*) subname, 'crop_pos_f=', crop_pos_f, ' crop_pos_nf=', &
-!                              crop_pos_nf
-!          write(6,*) subname, 'crop_neg_f=', crop_neg_f, ' crop_neg_nf=', &
-!                              crop_neg_nf
-!          write(6,*) subname, 'past_pos_f=', past_pos_f, ' past_pos_nf=', &
-!                              past_pos_nf
-!          write(6,*) subname, 'past_neg_f=', past_neg_f, ' past_neg_nf=', &
-!                              past_neg_nf
+          write(iulog,*) subname, 'crop_pos_f=', crop_pos_f, ' crop_pos_nf=',crop_pos_nf
+          write(iulog,*) subname, 'crop_neg_f=', crop_neg_f, ' crop_neg_nf =',crop_neg_nf
+          write(iulog,*) subname, 'past_pos_f=', past_pos_f, ' past_pos_nf=',past_pos_nf
+          write(iulog,*) subname, 'past_neg_f=', past_neg_f, ' past_neg_nf =',past_neg_nf
 #endif
 
        ! apply the cropland and pature changes (both forested and non-forested)
        ! to individual gridcells in each region/AEZ
 
-       ! crop_neg_nf and crop_neg_f
-       where (glu_weights(g,:,:) > 0) 
-          glm_crop(:,:,np1) = glm_crop(:,:,n)   -  glm_crop(:,:,n)*fnfnonforest*crop_neg_nf
-       endwhere
-       !jt             [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'descend')
-       if (crop_neg_f>0) then 
+       ! the approach is to expand onto nonforest first,
+       ! and to abandon on forest land first
+
+       ! np1 values initially = n values, and so always use np1 for calcs
+       ! otherwise cells with multiple land units will not be updated correctly
+
+       !!!!!!!!!!!!!!!
+       ! the problem is that the glu_weights for forest, nonforest, crop, and
+       ! pasture change with each transition, while the their land weights
+       ! remain the same
+       ! so to do this properly the type-specific weights need to be updated and
+       ! tracked, and also stored and restored via restart
+       ! for now, just use rglus mask to determine whether the appropriate cells
+       ! have changed properly
+
+       start_crop = sum(glm_crop(:,:,np1)*cellarea)
+       start_crop_g = sum(glm_crop(:,:,np1)*cellarea*rglus)
+       start_past = sum(glm_past(:,:,np1)*cellarea)
+       start_past_g = sum(glm_past(:,:,np1)*cellarea*rglus)
+
+       ! crop_neg_nf and crop_neg_f !!!!!!!!!!!!!!!!!!!!!!!
+       curr_crop = sum(glm_crop(:,:,np1)*cellarea)
+       curr_crop_g = sum(glm_crop(:,:,np1)*cellarea*rglus)
+#ifdef DEBUG
+       write(iulog,*) subname, 'before crop loss, global crop ', curr_crop
+       write(iulog,*) subname, 'before crop loss, g crop ', curr_crop_g
+       !avail_landA = 0.
+       !where ( glu_weights(g,:,:) > 0. )
+       !   avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+       !end where
+       !sumavail_landA=sum(avail_landA)
+       !write(iulog,*) subname, 'sumavail_landA  = ', sumavail_landA
+       write(iulog,*) subname, '*crop to nonforest ', sum((glm_crop(:,:,np1)*cellarea_nonforest)*crop_neg_nf/(crop_nfarea+1e-12))
+#endif
+       if (crop_nfarea > 0.) then
+#ifdef DEBUG
+          if (abs(sum((glm_crop(:,:,np1)*cellarea_nonforest)*crop_neg_nf/(crop_nfarea)) - crop_neg_nf) > diff_tol) then
+             write(iulog,*) subname, 'Warning: crop to nonforest != crop_neg_nf ', crop_neg_nf 
+          end if
+#endif
+          where (glu_weights(g,:,:) > 0. .and. glm_crop(:,:,np1) > 0.) 
+             glm_crop(:,:,np1) = glm_crop(:,:,np1)   -  ((glm_crop(:,:,np1)*cellarea_nonforest)*crop_neg_nf/crop_nfarea)/cellarea
+          endwhere
+       endif
+
+#ifdef DEBUG
+       !avail_landA = 0.
+       !where ( glu_weights(g,:,:) > 0. )
+       !   avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+       !end where
+       !sumavail_landA=sum(avail_landA)
+       !write(iulog,*) subname, 'sumavail_landA  = ', sumavail_landA
+       write(iulog,*) subname, 'global crop after crop2nf ', sum(glm_crop(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'g crop after crop2nf ',sum(glm_crop(:,:,np1)*cellarea*rglus)
+#endif
+       if (crop_neg_f>0.) then
+          temp_crop = 0. 
           cumsum_sorted_farea=0.
-          call cumsum(glm_crop(:,:,n)*cellarea_forest,v1d,v2d,cumsum_sorted_farea(:totrglus),totrglus)
-          sortind=MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>crop_neg_f)
+          call cumsum(glm_crop(:,:,np1)*cellarea_forest,v1d,v2d,cumsum_sorted_farea(:totrglus),totrglus)
+
+          ! for some reason minloc returns 1 now if the array is all zeros or the mask is all false
+          ! so don't use minloc; it isn't faster than a loop
+          sortind(1) = 0
+          do i1=1,totrglus
+             if(cumsum_sorted_farea(i1)>crop_neg_f) then
+                sortind(1) = i1
+                exit
+             endif
+          enddo
+#ifdef DEBUG
+          write(iulog,*) subname, 'initial sortind(1) = ', sortind(1)
+          write(iulog,*) subname, 'total cumsum crop_fa ', cumsum_sorted_farea(totrglus)
+#endif
           if (sortind(1)==0) then
              if ( abs(crop_neg_f-cumsum_sorted_farea(totrglus)) .lt. 1e-10) then 
                 crop_neg_f=cumsum_sorted_farea(totrglus)
-                sortind=MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>=crop_neg_f)
+#ifdef DEBUG
+                write(iulog,*) subname, 'setting crop_neg_f to total cumsum ', cumsum_sorted_farea(totrglus)
+#endif
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if(cumsum_sorted_farea(i1) >= crop_neg_f) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
+                if(sortind(1)==0) then
+                   sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum pasture farea ', cumsum_sorted_farea(totrglus), ' to meet past_neg_f ', past_neg_f
+#endif
+                endif
              else
                 sortind(1) = totrglus
+#ifdef DEBUG
+                write(iulog,*) subname, 'Warning: not enough cum crop farea ', cumsum_sorted_farea(totrglus), ' to meet crop_neg_f ', crop_neg_f
+#endif
              end if
           end if
+#ifdef DEBUG
+          write(iulog,*) subname, 'final sortind(1) = ', sortind(1)
+#endif
           if (sortind(1)>1) then
+             z=0
              sortsitesdn=0
-             do i=1,sortind(1)-1
-                sortsitesdn(v1d(i),v2d(i))=1
+             do ij=1,sortind(1)-1
+                found = .false.
+                ! get lon first
+                do i1=1,count_gcells
+                   if (v1d(ij) == gloninds(i1)) then
+                      ! check for matching lat
+                      if(v2d(ij) == glatinds(i1)) then
+                         z=z+1
+                         found = .true.
+                      endif
+                   endif
+                enddo
+#ifdef DEBUG
+                if ( .not. found ) then
+                   write(iulog,*) subname, 'Error crop loss: Did not find sorted cell ', ij, ' lonind=', v1d(ij), ' latind=', v2d(ij)
+                endif
+#endif
+                sortsitesdn(v1d(ij),v2d(ij))=1
              end do
+#ifdef DEBUG
+             if (z /= sortind(1)-1) then
+                write(iulog,*) subname, 'Error: found ', z, ' sorted cells out of ', sortind(1)-1
+             endif
+#endif
+             temp_crop = sum(glm_crop(:,:,np1) * fnfforest * cellarea * sortsitesdn)
              where(sortsitesdn>0)
-                glm_crop(:,:,np1)= glm_crop(:,:,np1) - glm_crop(:,:,n) * fnfforest
+                glm_crop(:,:,np1)= glm_crop(:,:,np1) - glm_crop(:,:,np1) * fnfforest
              end where
+
              final_area_needed =  crop_neg_f - cumsum_sorted_farea(sortind(1)-1)
           else
              final_area_needed =  crop_neg_f
           end if
+#ifdef DEBUG
+          write(iulog,*) subname, 'temp_crop ', temp_crop
+          write(iulog,*) subname, 'final_area_needed ', final_area_needed
+          write(iulog,*) subname, 'last cell crop_fa ', &
+             glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))*cellarea(v1d(sortind(1)),v2d(sortind(1)))
+          write(iulog,*) subname, '*crop to forest ', temp_crop + &
+          min(final_area_needed,&
+                   glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))* cellarea(v1d(sortind(1)),v2d(sortind(1))))
+          if( abs(temp_crop + &
+              min(final_area_needed,&
+                   glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))* cellarea(v1d(sortind(1)),v2d(sortind(1)))) - &
+              crop_neg_f) > diff_tol) then
+              write(iulog,*) subname, 'Error: crop to forest != crop_neg_f ', crop_neg_f
+          end if
+#endif
           glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1) = &
                glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1) - &
                min(final_area_needed/cellarea(v1d(sortind(1)),v2d(sortind(1))), &
-               glm_crop(v1d(sortind(1)),v2d(sortind(1)),n)*fnfforest(v1d(sortind(1)),v2d(sortind(1))))
+               glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1))))
        end if
 
-       ! past_neg_f and past_neg_nf
+#ifdef DEBUG
+       write(iulog,*) subname, 'after crop loss, global crop ', sum(glm_crop(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'after crop loss, g crop ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+       write(iulog,*) subname, '*crop change (global) ', sum(glm_crop(:,:,np1)*cellarea) - curr_crop
+       write(iulog,*) subname, '*crop change (g) ', sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g
+       if ( abs( (sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g) -  -(crop_neg_nf + crop_neg_f)) >  diff_tol ) then
+          write(iulog,*) subname, 'Error: crop change (g) != -(crop_neg_f+crop_neg_nf) ', -(crop_neg_f+crop_neg_nf)
+       endif
+       write(iulog,*) subname, 'before pasture loss,  global pasture ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'before pasture loss, g pasture ', sum(glm_past(:,:,np1)*cellarea*rglus)
+#endif
 
-       where(glu_weights(g,:,:) > 0) 
-          glm_past(:,:,np1) = glm_past(:,:,n) - glm_past(:,:,n)*fnfnonforest*past_neg_nf
-       end where
+
+       ! past_neg_f and past_neg_nf !!!!!!!!!!!!!!!!!!!!!!!!!!!
+       curr_past = sum(glm_past(:,:,np1)*cellarea)
+       curr_past_g = sum(glm_past(:,:,np1)*cellarea*rglus)
+#ifdef DEBUG
+!       avail_landA = 0.
+!       where ( glu_weights(g,:,:) > 0. )
+!          avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+!       end where
+!       sumavail_landA=sum(avail_landA)
+       !write(iulog,*) subname, 'sumavail_landA  = ', sumavail_landA
+       write(iulog,*) subname, '*pasture to nonforest ', sum((glm_past(:,:,np1)*cellarea_nonforest)*past_neg_nf/(past_nfarea+1e-12))
+ !      temp_past_grid = 0.
+ !      where (glu_weights(g,:,:) > 0. .and. glm_past(:,:,np1) > 0.)
+ !         temp_past_grid = (glm_past(:,:,np1)*cellarea_nonforest)*past_neg_nf/(past_nfarea+1e-12)
+ !      endwhere 
+ !      write(iulog,*) subname, '*pasture to nonforest filtered ',sum(temp_past_grid)
+#endif
+       if (past_nfarea > 0.) then
+#ifdef DEBUG
+          if ( abs( sum((glm_past(:,:,np1)*cellarea_nonforest)*past_neg_nf/(past_nfarea)) - past_neg_nf) > diff_tol ) then
+             write(iulog,*) subname, 'Warning: pasture to nonforest != past_neg_nf ', past_neg_nf
+          endif
+#endif
+          where(glu_weights(g,:,:) > 0. .and. glm_past(:,:,np1) > 0.) 
+             glm_past(:,:,np1) = glm_past(:,:,np1) - ((glm_past(:,:,np1)*cellarea_nonforest)*past_neg_nf/past_nfarea)/cellarea
+          end where
+
+       endif
+#ifdef DEBUG
+!       avail_landA = 0.
+!       where ( glu_weights(g,:,:) > 0. )
+!          avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+!       end where
+!       sumavail_landA=sum(avail_landA)
+       !write(iulog,*) subname, 'sumavail_landA  = ', sumavail_landA
+       write(iulog,*) subname, 'global pasture after past2nf ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'g pasture after past2nf  ',sum(glm_past(:,:,np1)*cellarea*rglus)
+!       avail_landA = 0.
+!       where ( glu_weights(g,:,:) > 0. )
+!          avail_landA=(pctland_in2015*cellarea_nonforest - glm_crop(:,:,np1)*cellarea_nonforest-glm_past(:,:,np1)*cellarea_nonforest)
+!       end where
+!       sumavail_landA=sum(avail_landA)
+       !write(iulog,*) subname, 'alternative sumavail_landA  = ', sumavail_landA
+#endif
+
        if (past_neg_f>0) then
-          !jt             [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'descend')
+          temp_past = 0.
           cumsum_sorted_farea=0.
-          call cumsum(glm_past(:,:,n)*cellarea_forest(:,:),v1d,v2d,cumsum_sorted_farea(:totrglus),totrglus)
-          sortind=MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>past_neg_f)
+          call cumsum(glm_past(:,:,np1)*cellarea_forest(:,:),v1d,v2d,cumsum_sorted_farea(:totrglus),totrglus)
+          sortind(1) = 0
+          do i1=1,totrglus
+             if(cumsum_sorted_farea(i1) > past_neg_f) then
+                sortind(1) = i1
+                exit
+             endif
+          enddo
+#ifdef DEBUG
+          write(iulog,*) subname, 'initial sortind(1) = ', sortind(1)
+          write(iulog,*) subname, 'total cumsum past_fa ', cumsum_sorted_farea(totrglus)
+#endif
           if (sortind(1)==0) then
              if ( abs(past_neg_f-cumsum_sorted_farea(totrglus)) .lt. 1e-10) then 
                 past_neg_f=cumsum_sorted_farea(totrglus)
-                sortind=MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>=past_neg_f)
+#ifdef DEBUG
+                write(iulog,*) subname, 'setting past_neg_f to total cumsum ', cumsum_sorted_farea(totrglus)
+#endif
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if(cumsum_sorted_farea(i1) >= past_neg_f) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
+                if(sortind(1)==0) then
+                   sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum pasture farea ', cumsum_sorted_farea(totrglus), ' to meet past_neg_f ', past_neg_f
+#endif
+                endif
              else
                 sortind(1) = totrglus
+#ifdef DEBUG
+                write(iulog,*) subname, 'Warning: not enough cum pasture farea ', cumsum_sorted_farea(totrglus), ' to meet past_neg_f ', past_neg_f
+#endif
              end if
           end if
+#ifdef DEBUG
+          write(iulog,*) subname, 'final sortind(1) = ', sortind(1)
+#endif
           if (sortind(1)>1) then
              sortsitesdn=0
+             z=0
              do i=1,sortind(1)-1
+                z=z+1
                 sortsitesdn(v1d(i),v2d(i))=1
              end do
+             temp_past = sum(glm_past(:,:,np1) * fnfforest * cellarea * sortsitesdn)
+#ifdef DEBUG
+             write(iulog,*) subname, 'z = ', z, 'sorting(1) = ', sortind(1), ' totrglus = ', totrglus
+             write(iulog,*) subname, 'temp_past = ', temp_past
+#endif
              where(sortsitesdn>0)
-                glm_past(:,:,np1) = glm_past(:,:,np1) - glm_past(:,:,n) * fnfforest(:,:)
+                glm_past(:,:,np1) = glm_past(:,:,np1) - glm_past(:,:,np1) * fnfforest
              end where
              final_area_needed =  past_neg_f - cumsum_sorted_farea(sortind(1)-1)
           else
              final_area_needed =  past_neg_f
           end if
+#ifdef DEBUG
+          write(iulog,*) subname, 'temp_past ', temp_past
+          write(iulog,*) subname, 'final_area_needed ', final_area_needed
+          write(iulog,*) subname, 'last cell past_fa ', &
+             glm_past(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))*cellarea(v1d(sortind(1)),v2d(sortind(1)))
+          write(iulog,*) subname, '*pasture to forest ', temp_past + &
+          min(final_area_needed,&
+                   glm_past(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))*cellarea(v1d(sortind(1)),v2d(sortind(1))))
+
+          if (  abs( temp_past + &
+                min(final_area_needed,&
+                   glm_past(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1)))*cellarea(v1d(sortind(1)),v2d(sortind(1)))) - &
+                past_neg_f) > diff_tol ) then
+             write(iulog,*) subname, 'Error: pasture to forest != past_neg_f ', past_neg_f
+          endif
+
+#endif
           glm_past(v1d(sortind(1)),v2d(sortind(1)),np1) = &
                glm_past(v1d(sortind(1)),v2d(sortind(1)),np1) - &
                min(final_area_needed/cellarea(v1d(sortind(1)),v2d(sortind(1))), &
-               glm_past(v1d(sortind(1)),v2d(sortind(1)),n)*fnfforest(v1d(sortind(1)),v2d(sortind(1))))
+               glm_past(v1d(sortind(1)),v2d(sortind(1)),np1)*fnfforest(v1d(sortind(1)),v2d(sortind(1))))
        end if
 
-       ! crop_pos_nf
-       avail_land0 = 0
+#ifdef DEBUG
+          write(iulog,*) subname, 'after pasture loss,  global pasture ', sum(glm_past(:,:,np1)*cellarea)
+          write(iulog,*) subname, 'after pasture loss,  g pasture ',sum(glm_past(:,:,np1)*cellarea*rglus)
+          write(iulog,*) subname, '*pasture change (global)', sum(glm_past(:,:,np1)*cellarea) - curr_past
+          write(iulog,*) subname, '*pasture change (g) ', sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g
+          if ( abs( (sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g) - -(past_neg_nf + past_neg_f) ) > diff_tol ) then
+             write(iulog,*) subname, 'Error: pasture change (g) != -(past_neg_nf + past_neg_f) ', -(past_neg_nf + past_neg_f)
+          endif
+          write(iulog,*) subname, 'before crop nf gain,  global crop ', sum(glm_crop(:,:,np1)*cellarea)
+          write(iulog,*) subname, 'before crop nf gain,  g crop ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+#endif
+
+
+       ! crop_pos_nf !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       curr_crop = sum(glm_crop(:,:,np1)*cellarea)
+       curr_crop_g = sum(glm_crop(:,:,np1)*cellarea*rglus)
+       avail_land0 = 0.
        where ( glu_weights(g,:,:)>0. .and. glm_crop(:,:,np1)>0. )
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        endwhere
@@ -1150,120 +1542,196 @@ contains
           if (abs(crop_pos_nf)<=1e-6) then
              crop_pos_nf=0.
           end if
+
+         if (sumavail_land0 > 0.) then
+
 #ifdef DEBUG
-          !write(6,*) subname, 'cropland increase on non-forested land - land available'
+            write(iulog,*) subname, 'cropland increase on non-forested land - land available'
+            !write(iulog,*) subname, 'sumavail_land0  = ', sumavail_land0
+            write(iulog,*) subname, '*nonforest to crop 0 ', sum((avail_land0/(sumavail_land0)*crop_pos_nf))
+            if ( abs( sum((avail_land0/(sumavail_land0)*crop_pos_nf)) - crop_pos_nf) > diff_tol ) then
+               write(iulog,*) subname, 'Warning: nonforest to crop 0 != crop_post_nf ', crop_pos_nf
+            endif
 #endif
-          where(glu_weights(g,:,:) > 0) 
-             glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*crop_pos_nf*fnfnonforest)/cellarea
-          end where
+            where(glu_weights(g,:,:) > 0. .and. glm_crop(:,:,np1)>0. ) 
+               glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_land0/(sumavail_land0)*crop_pos_nf)/cellarea
+            end where
+
+          endif
+
+#ifdef DEBUG
+          !avail_land0 = 0.
+          !where ( glu_weights(g,:,:) > 0. .and. glm_crop(:,:,np1)>0.)
+          !   avail_land0=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
+          !end where
+          !sumavail_land0=sum(avail_land0)
+          !write(iulog,*) subname, 'sumavail_land0  = ', sumavail_land0
+#endif
+
        else
           avail_landA = 0.
-          where ( glu_weights(g,:,:) > 0 )
+          where ( glu_weights(g,:,:) > 0. )
              avail_landA=(pctland_in2015 - glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
-          if (crop_pos_nf - sumavail_landA < 1e-6) then
+          if (sumavail_landA >= crop_pos_nf .and. (sumavail_landA-sumavail_land0) > 0.) then
 #ifdef DEBUG
-             !write(6,*) subname, 'cropland increase - land available'
+             write(iulog,*) subname, 'cropland increase on non-forest - land available'
+             !write(iulog,*) subname, 'sumavail_landA  = ', sumavail_landA
+             write(iulog,*) subname, '*nonforest to crop A ', sum(avail_land0) + &
+                sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0)*(crop_pos_nf-sumavail_land0)))
+             if ( abs( sum(avail_land0) + &
+                sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0)*(crop_pos_nf-sumavail_land0))) - crop_pos_nf) > diff_tol ) then
+                write(iulog,*) subname, 'Warning: nonforest to crop A != crop_pos_nf ', crop_pos_nf
+             endif
 #endif 
-             where(glu_weights(g,:,:) > 0) 
-                glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfnonforest/cellarea
+             where(glu_weights(g,:,:) > 0.) 
+                glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0/cellarea
                 glm_crop(:,:,np1) = glm_crop(:,:,np1) + &
-                     ((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(crop_pos_nf-sumavail_land0)*fnfnonforest)/cellarea
+                     ((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0)*(crop_pos_nf-sumavail_land0))/cellarea
              end where
           else
-             write(6,*) subname, 'crop increase on non-forest - land not available - this should not happen'
-             write(6,*) subname, 'reducing crop increase to sumavail_landA'
-             write(6,*) subname, 'crop_pos_nf=', crop_pos_nf, &
-                        'sumavail_landA=', sumavail_landA, &
-                        'sumavail_land0=', sumavail_land0
+
+#ifdef DEBUG
+             write(iulog,*) subname, 'Warning: crop increase on non-forest - land not available'
+             write(iulog,*) subname, 'reducing crop increase to sumavail_landA'
+             write(iulog,*) subname, 'crop_pos_nf=', crop_pos_nf, &
+                                     ' sumavail_landA=', sumavail_landA, &
+                                     ' sumavail_land0=', sumavail_land0
+             write(iulog,*) subname, '*nonforest to crop ', sum(avail_land0) + &
+                sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(crop_pos_nf-sumavail_land0)))
+# endif
 
              crop_pos_nf = sumavail_landA
-             where(glu_weights(g,:,:) > 0)
+             where(glu_weights(g,:,:) > 0.)
                 glm_crop(:,:,np1) = glm_crop(:,:,np1) + &
-                   avail_land0*fnfnonforest/cellarea
+                   avail_land0/cellarea
                 glm_crop(:,:,np1) = glm_crop(:,:,np1) + &
-                     ((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(crop_pos_nf-sumavail_land0)*fnfnonforest)/cellarea
+                     ((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(crop_pos_nf-sumavail_land0))/cellarea
              end where
 
-             !call abort
           end if
        end if
+#ifdef DEBUG
+       write(iulog,*) subname, 'after crop nf gain, global crop ', sum(glm_crop(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'after crop nf gain, g crop ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+       write(iulog,*) subname, '*crop change (global) ', sum(glm_crop(:,:,np1)*cellarea) - curr_crop
+       write(iulog,*) subname, '*crop change (g) ', sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g
+       if ( abs(sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g - crop_pos_nf) > diff_tol  ) then
+          write(iulog,*) subname, 'Warning: crop change (g) != crop_pos_nf ', crop_pos_nf
+       endif
+       write(iulog,*) subname, 'before pasture nf gain, global pasture ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'before pasture nf gain, g pasture ', sum(glm_past(:,:,np1)*cellarea*rglus)
+#endif
 
-       ! past_pos_nf
-       avail_land0 = 0
-       where ( glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
+
+       ! past_pos_nf !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       curr_past = sum(glm_past(:,:,np1)*cellarea)
+       curr_past_g = sum(glm_past(:,:,np1)*cellarea*rglus)
+       avail_land0 = 0.
+       where ( glu_weights(g,:,:) > 0. .and.glm_past(:,:,np1)>0.)
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
        end where
        sumavail_land0=sum(avail_land0)
        if ( sumavail_land0 >= past_pos_nf .or. abs(past_pos_nf)<=1e-6) then
           if (abs(past_pos_nf)<=1e-6) then
-             past_pos_nf=0
+             past_pos_nf=0.
           end if
+
+          if (sumavail_land0 > 0.) then
 #ifdef DEBUG
-          !write(6,*) subname, 'pasture increase on non-forested land - land available'
+             write(iulog,*) subname, 'pasture increase on non-forested land - land available'
+             write(iulog,*) subname, '*nonforest to pasture 0 ', sum((avail_land0/(sumavail_land0)*past_pos_nf))
+             if ( abs( sum((avail_land0/(sumavail_land0)*past_pos_nf)) - past_pos_nf) > diff_tol  ) then
+                write(iulog,*) subname, 'Warning: nonforest to pasture 0 != past_pos_nf ', past_pos_nf
+             endif
 #endif
-          where(glu_weights(g,:,:) > 0) 
-             glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0/(sumavail_land0+1e-12)*past_pos_nf*fnfnonforest)/cellarea
-          end where
+             where(glu_weights(g,:,:) > 0. .and. glm_past(:,:,np1)>0.) 
+                glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0/(sumavail_land0)*past_pos_nf)/cellarea
+             end where
+          endif
        else
-          avail_landA = 0
-          where ( glu_weights(g,:,:) > 0 )
+          avail_landA = 0.
+          where ( glu_weights(g,:,:) > 0. )
              avail_landA=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest
           end where
           sumavail_landA=sum(avail_landA)
-          if ( sumavail_landA >= past_pos_nf) then
+          if ( sumavail_landA >= past_pos_nf .and. sumavail_landA-sumavail_land0 > 0. ) then
 #ifdef DEBUG
-             !write(6,*) subname, 'pasture increase on non-forested land - land available'
+             write(iulog,*) subname, 'pasture increase on non-forested land - land available'
+             write(iulog,*) subname, '*nonforest to pasture A ', sum(avail_land0) + &
+                sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0)*(past_pos_nf-sumavail_land0)))
+             if ( abs( sum(avail_land0) + &
+                  sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0)*(past_pos_nf-sumavail_land0))) - past_pos_nf) > diff_tol  ) then
+                write(iulog,*) subname, 'Warning: nonforest to pasture A != past_pos_nf ', past_pos_nf
+             end if
 #endif
-             where(glu_weights(g,:,:) > 0) 
-                glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0*fnfnonforest/cellarea
+             where(glu_weights(g,:,:) > 0.) 
+                glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0/cellarea
                 glm_past(:,:,np1) = glm_past(:,:,np1) + &
-                     ((avail_landA-avail_land0)/(sumavail_landA -sumavail_land0+1e-12) * &
-                     (past_pos_nf-sumavail_land0) * fnfnonforest)/cellarea
+                     ((avail_landA-avail_land0)/(sumavail_landA -sumavail_land0) * &
+                     (past_pos_nf-sumavail_land0))/cellarea
              end where
           else
 #ifdef DEBUG
-             write(6,*) subname, 'pasture increase on non-forest - land NOT available, reducing pasture increase to accomodate'
-             write(6,*) subname, '--this should not happen'
-             write(6,*) subname, 'past_pos_nf=', past_pos_nf, &
-                        'sumavail_landA=', sumavail_landA, &
-                        'sumavail_land0=', sumavail_land0
+             write(iulog,*) subname, 'Warning: pasture increase on non-forest - land NOT available, reducing pasture increase to accomodate'
+             write(iulog,*) subname, 'past_pos_nf=', past_pos_nf, &
+                                     'sumavail_landA=', sumavail_landA, &
+                                     'sumavail_land0=', sumavail_land0
+             write(iulog,*) subname, '*nonforest to pasture ', sum(avail_land0) + &
+                sum(((avail_landA-avail_land0)/(sumavail_landA-sumavail_land0+1e-12)*(past_pos_nf-sumavail_land0)))
 #endif
              past_pos_nf = sumavail_landA
-             where(glu_weights(g,:,:) > 0) 
-                glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0*fnfnonforest/cellarea)
+             where(glu_weights(g,:,:) > 0.) 
+                glm_past(:,:,np1) = glm_past(:,:,np1) + (avail_land0/cellarea)
                 glm_past(:,:,np1) = glm_past(:,:,np1) + ((avail_landA - avail_land0) / &
-                     (sumavail_landA - sumavail_land0 + 1e-12)*(past_pos_nf-sumavail_land0)*fnfnonforest)/cellarea
+                     (sumavail_landA - sumavail_land0 + 1e-12)*(past_pos_nf-sumavail_land0))/cellarea
              end where
           end if
        end if
 
-       ! crop_pos_f
-       avail_land0 = 0
-       where ( glu_weights(g,:,:) > 0 .and.glm_crop(:,:,np1)>0.)
-          avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
-       end where
-       sumavail_land0=sum(avail_land0)
+#ifdef DEBUG
+       write(iulog,*) subname, 'after pasture nf gain, global pasture ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'after pasture nf gain, g pasture ', sum(glm_past(:,:,np1)*cellarea*rglus)
+       write(iulog,*) subname, '*pasture change (global)', sum(glm_past(:,:,np1)*cellarea) - curr_past
+       write(iulog,*) subname, '*pasture change (g) ', sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g
+       if ( abs(sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g - past_pos_nf) > diff_tol ) then
+          write(iulog,*) subname, 'Warning: pasture change (g) != past_pos_nf ', past_pos_nf
+       endif
+       write(iulog,*) subname, 'before crop f gain, global crop ', sum(glm_crop(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'before crop f gain, g crop ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+#endif
+
+
+       ! crop_pos_f !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       curr_crop = sum(glm_crop(:,:,np1)*cellarea)
+       curr_crop_g = sum(glm_crop(:,:,np1)*cellarea*rglus)
        if (abs(crop_pos_f)>1e-6) then
           if (sumavail_land0>=crop_pos_f) then
 #ifdef DEBUG
-             !write(6,*) subname, 'cropland increase on forested land - land available'
+             write(iulog,*) subname, 'cropland increase on forested land - land available'
 #endif
-             !jt              [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
              call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-             sortind=MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>crop_pos_f)
+             sortind(1) = 0
+             do i1=1,totrglus
+                if(cumsum_sorted_farea(i1) >= crop_pos_f) then
+                   sortind(1) = i1
+                   exit
+                endif
+             enddo
              if (sortind(1)==0) then
+                ! may need another check here for precision tolerance?
                 sortind(1) = totrglus
+                write(iulog,*) subname, 'Warning: not enough cum avail forest 0 ',cumsum_sorted_farea(totrglus) , ' to meet crop_pos_f ', crop_pos_f
              end if
              if (sortind(1)>1) then
                 sortsitesup=0
                 do i=1,sortind(1)-1
                    sortsitesup(v1u(i),v2u(i))=1
                 end do
-                where(sortsitesup>0)
-                   glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0 * fnfforest / cellarea
+                where(sortsitesup>0 .and. glm_crop(:,:,np1)>0.)
+                   glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0 / cellarea
                 end where
                 final_area_needed =  crop_pos_f - cumsum_sorted_farea(sortind(1)-1)
              else
@@ -1272,8 +1740,8 @@ contains
              glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) = &
                   glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) + &
                   min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))), &
-                  avail_land0(v1u(sortind(1)),v2u(sortind(1))) * &
-                  fnfforest(v1u(sortind(1)),v2u(sortind(1)))/cellarea(v1u(sortind(1)),v2u(sortind(1))))
+                  avail_land0(v1u(sortind(1)),v2u(sortind(1))) / &
+                  cellarea(v1u(sortind(1)),v2u(sortind(1))))
           else
              avail_landA = 0.
              where ( glu_weights(g,:,:) > 0 )
@@ -1281,20 +1749,29 @@ contains
              end where
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >=crop_pos_f) then
-                !jt  [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 cumsum_sorted_farea=0.
                 call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                where(glu_weights(g,:,:) > 0)
-                   glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0*fnfforest/cellarea
+                where(glu_weights(g,:,:) > 0 .and. glm_crop(:,:,np1)>0.)
+                   glm_crop(:,:,np1) = glm_crop(:,:,np1) + avail_land0/cellarea
                 end where
 #ifdef DEBUG
-                !write(6,*) subname, 'cropland increase on forested land - land available'
+                write(iulog,*) subname, 'cropland increase on forested land - land available'
 #endif                   
-                !jt  [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                sortind = MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>(crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)))
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if( cumsum_sorted_farea(i1) >= (crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)) ) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
                 if (sortind(1)==0) then
+                   ! may need another precision check here?
                    sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum avail forest A ',cumsum_sorted_farea(totrglus) ,&
+                      ' to meet remaining crop_pos_f ', (crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0))
+#endif
                 end if
                 if (sortind(1)>1) then
                    sortsitesup=0
@@ -1302,7 +1779,7 @@ contains
                       sortsitesup(v1u(i),v2u(i))=1
                    end do
                    where(sortsitesup>0)
-                      glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_landA - avail_land0) * fnfforest / cellarea
+                      glm_crop(:,:,np1) = glm_crop(:,:,np1) + (avail_landA - avail_land0) / cellarea
                    end where
                    final_area_needed =  crop_pos_f - sumavail_land0-cumsum_sorted_farea(sortind(1)-1)
                 else
@@ -1311,33 +1788,42 @@ contains
                 glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) = &
                      glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) +&
                      min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))), &
-                     (avail_landA(v1u(sortind(1)),v2u(sortind(1)))) * &
-                     fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
+                     (avail_landA(v1u(sortind(1)),v2u(sortind(1)))) / &
                      cellarea(v1u(sortind(1)),v2u(sortind(1))))
              else
-                write(6,*) subname, 'crop increase on forest - land not available'
-                write(6,*) subname, '--maybe this should not happen any more'
-                write(6,*) subname, 'reducing crop increase to sumavail_landA'
-                write(6,*) subname, 'crop_pos_f=', crop_pos_f, &
+#ifdef DEBUG
+                write(iulog,*) subname, 'Warning: crop increase on forest - land not available'
+                write(iulog,*) subname, 'reducing crop increase to sumavail_landA'
+                write(iulog,*) subname, 'crop_pos_f=', crop_pos_f, &
                            'sumavail_landA=', sumavail_landA, &
                            'sumavail_land0=', sumavail_land0
-
+#endif
                 crop_pos_f = sumavail_landA
                 cumsum_sorted_farea=0.
                 call cumsum(avail_land0(:,:),v1u,v2u,&
                    cumsum_sorted_farea(:totrglus),totrglus)
-                where(glu_weights(g,:,:) > 0)
+                where(glu_weights(g,:,:) > 0 .and. glm_crop(:,:,np1)>0.)
                    glm_crop(:,:,np1) = glm_crop(:,:,np1) +&
-                      avail_land0*fnfforest/cellarea
+                      avail_land0/cellarea
                 end where
 
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,&
                    cumsum_sorted_farea(:totrglus),totrglus)
-                sortind = MINLOC(cumsum_sorted_farea(:totrglus),&
-                   mask=cumsum_sorted_farea(:totrglus)> &
-                   (crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)))
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if( cumsum_sorted_farea(i1) >= (crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)) ) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
+
                 if (sortind(1)==0) then
+                   ! may need another precision check here?
                    sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum avail forest A ',cumsum_sorted_farea(totrglus) ,& 
+                      ' to meet remaining crop_pos_f ', (crop_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0))
+#endif
                 end if
                 if (sortind(1)>1) then
                    sortsitesup=0
@@ -1346,7 +1832,7 @@ contains
                    end do
                    where(sortsitesup>0)
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + &
-                         (avail_landA - avail_land0) * fnfforest / cellarea
+                         (avail_landA - avail_land0) / cellarea
                    end where
                    final_area_needed =  crop_pos_f - &
                       sumavail_land0-cumsum_sorted_farea(sortind(1)-1)
@@ -1356,18 +1842,29 @@ contains
                 glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) = &
                    glm_crop(v1u(sortind(1)),v2u(sortind(1)),np1) +&
                    min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))),&
-                   (avail_landA(v1u(sortind(1)),v2u(sortind(1)))) * &
-                   fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
+                   (avail_landA(v1u(sortind(1)),v2u(sortind(1)))) / &
                    cellarea(v1u(sortind(1)),v2u(sortind(1))))   
 
-
-                !call abort
              end if
           end if
 
        end if
+#ifdef DEBUG
+       write(iulog,*) subname, 'after crop f gain, global crop ', sum(glm_crop(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'after crop f gain, g crop ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+       write(iulog,*) subname, '*crop change (global) ', sum(glm_crop(:,:,np1)*cellarea) - curr_crop
+       write(iulog,*) subname, '*crop change (g) ', sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g
+       if ( abs(sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g - crop_pos_f) > diff_tol ) then
+          write(iulog,*) subname, 'Warning: crop change (g) != crop_pos_f ', crop_pos_f
+       endif
+       write(iulog,*) subname, 'before pasture f gain, global pasture ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'before pasture f gain, g pasture ', sum(glm_past(:,:,np1)*cellarea*rglus)
+#endif
 
-       ! past_pos_f
+
+       ! past_pos_f !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       curr_past = sum(glm_past(:,:,np1)*cellarea)
+       curr_past_g = sum(glm_past(:,:,np1)*cellarea*rglus)
        avail_land0 = 0.
        where ( glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
           avail_land0=(pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest
@@ -1376,22 +1873,32 @@ contains
        if (abs(past_pos_f)>1e-6) then 
           if (sumavail_land0>=past_pos_f) then
 #ifdef DEBUG
-             !write(6,*) subname, 'pasture increase on forest - land available'
+             write(iulog,*) subname, 'pasture increase on forest - land available'
 #endif                
-             !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
              cumsum_sorted_farea=0.
              call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-             sortind = MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>past_pos_f)
+             sortind(1) = 0
+             do i1=1,totrglus
+                if (cumsum_sorted_farea(i1) >= past_pos_f) then
+                   sortind(1) = i1
+                   exit
+                endif
+             enddo
+
              if (sortind(1)==0) then
+                ! may need another precision check here?
                 sortind(1) = totrglus
+#ifdef DEBUG
+                write(iulog,*) subname, 'Warning: not enough cum avail forest 0 ',cumsum_sorted_farea(totrglus) , ' to meet past_pos_f ', past_pos_f
+#endif
              end if
              if (sortind(1)>1) then 
                 sortsitesup=0
                 do i=1,sortind(1)-1
                    sortsitesup(v1u(i),v2u(i))=1
                 end do
-                where(sortsitesup>0)
-                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 * fnfforest / cellarea
+                where(sortsitesup>0 .and.glm_past(:,:,np1)>0.)
+                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 / cellarea
                 end where
                 final_area_needed =  past_pos_f - cumsum_sorted_farea(sortind(1)-1)
              else
@@ -1400,8 +1907,7 @@ contains
              glm_past(v1u(sortind(1)),v2u(sortind(1)),np1) = &
                   glm_past(v1u(sortind(1)),v2u(sortind(1)),np1) + &
                   min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))) , &
-                  avail_land0(v1u(sortind(1)),v2u(sortind(1))) * &
-                  fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
+                  avail_land0(v1u(sortind(1)),v2u(sortind(1))) / &
                   cellarea(v1u(sortind(1)),v2u(sortind(1))))
           else
              avail_landA = 0.
@@ -1411,21 +1917,30 @@ contains
              sumavail_landA=sum(avail_landA)
              if (sumavail_landA >= past_pos_f) then 
 #ifdef DEBUG
-                !write(6,*) subname, 'pasture increase on forest - land available'
+                write(iulog,*) subname, 'pasture increase on forest - land available'
 #endif
-                !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
                 cumsum_sorted_farea=0.
                 call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                where(glu_weights(g,:,:) > 0)
-                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 * fnfforest / cellarea
+                where(glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
+                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 / cellarea
                 end where
 
-                !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'ascend')
-
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                sortind = MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>(past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)))
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if ( cumsum_sorted_farea(i1) >= (past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)) ) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
+
                 if (sortind(1)==0) then
+                   ! may need another precision check here?
                    sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum avail forest A ',cumsum_sorted_farea(totrglus) ,&
+                      ' to meet remaining past_pos_f ', (past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0))
+#endif
                 end if
                 if (sortind(1)>1) then
                    sortsitesup=0
@@ -1433,7 +1948,7 @@ contains
                       sortsitesup(v1u(i),v2u(i))=1
                    end do
                    where(sortsitesup>0)
-                      glm_past(:,:,np1) = glm_past(:,:,np1)+(avail_landA-avail_land0)*fnfforest/cellarea
+                      glm_past(:,:,np1) = glm_past(:,:,np1)+(avail_landA-avail_land0)/cellarea
                    end where
                    final_area_needed =  past_pos_f - sumavail_land0-cumsum_sorted_farea(sortind(1)-1)
                 else
@@ -1443,30 +1958,40 @@ contains
                      glm_past(v1u(sortind(1)),v2u(sortind(1)),np1) + &
                      min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))), &
                      (avail_landA(v1u(sortind(1)),v2u(sortind(1))) - &
-                     avail_landA(v1u(sortind(1)),v2u(sortind(1)))) * &
-                     fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
+                     avail_landA(v1u(sortind(1)),v2u(sortind(1)))) / &
                      cellarea(v1u(sortind(1)),v2u(sortind(1))))
              else
-                write(6,*) subname, 'pasture increase on forest - land not available'
-                write(6,*) subname, '--maybe this should not happen any more;'
-                write(6,*) subname, 'reducing pasture increase to sumavail_landA'
-                write(6,*) subname, 'past_pos_f=', past_pos_f, &
+#ifdef DEBUG
+                write(iulog,*) subname, 'Warning: pasture increase on forest - land not available'
+                write(iulog,*) subname, 'reducing pasture increase to sumavail_landA'
+                write(iulog,*) subname, 'past_pos_f=', past_pos_f, &
                         'sumavail_landA=', sumavail_landA, &
                         'sumavail_land0=', sumavail_land0
-
+#endif
                 past_pos_f = sumavail_landA
                 cumsum_sorted_farea=0.
 
                 call cumsum(avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                where(glu_weights(g,:,:) > 0)
-                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 * &
-                      fnfforest / cellarea
+                where(glu_weights(g,:,:) > 0 .and.glm_past(:,:,np1)>0.)
+                   glm_past(:,:,np1) = glm_past(:,:,np1) + avail_land0 / cellarea
                 end where
 
                 call cumsum(avail_landA(:,:)-avail_land0(:,:),v1u,v2u,cumsum_sorted_farea(:totrglus),totrglus)
-                sortind = MINLOC(cumsum_sorted_farea(:totrglus),mask=cumsum_sorted_farea(:totrglus)>(past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)))
+                sortind(1) = 0
+                do i1=1,totrglus
+                   if ( cumsum_sorted_farea(i1) >= (past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0)) ) then
+                      sortind(1) = i1
+                      exit
+                   endif
+                enddo
+
                 if (sortind(1)==0) then
+                   ! may need another precision check here?
                    sortind(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum avail forest A ',cumsum_sorted_farea(totrglus) ,&
+                      ' to meet remaining past_pos_f ', (past_pos_f-sum(avail_land0(:,:),mask=glu_weights(g,:,:)>0))
+#endif
                 end if
                 if (sortind(1)>1) then
                    sortsitesup=0
@@ -1474,7 +1999,7 @@ contains
                       sortsitesup(v1u(i),v2u(i))=1
                    end do
                    where(sortsitesup>0)
-                      glm_past(:,:,np1) = glm_past(:,:,np1)+(avail_landA-avail_land0)*fnfforest/cellarea
+                      glm_past(:,:,np1) = glm_past(:,:,np1)+(avail_landA-avail_land0)/cellarea
                    end where
                    final_area_needed =  past_pos_f - sumavail_land0-cumsum_sorted_farea(sortind(1)-1)
                 else
@@ -1484,32 +2009,78 @@ contains
                    glm_past(v1u(sortind(1)),v2u(sortind(1)),np1) + &
                    min(final_area_needed/cellarea(v1u(sortind(1)),v2u(sortind(1))),&
                    (avail_landA(v1u(sortind(1)),v2u(sortind(1))) - &
-                   avail_landA(v1u(sortind(1)),v2u(sortind(1)))) * &
-                   fnfforest(v1u(sortind(1)),v2u(sortind(1))) / &
+                   avail_landA(v1u(sortind(1)),v2u(sortind(1)))) / &
                    cellarea(v1u(sortind(1)),v2u(sortind(1))))
 
-
-                !call abort
              end if
           end if
 
        end if
+
+#ifdef DEBUG
+       write(iulog,*) subname, 'units = km^2'
+       write(iulog,*) subname, 'after pasture f gain, global pasture ', sum(glm_past(:,:,np1)*cellarea)
+       write(iulog,*) subname, 'after pasture f gain, g pasture ', sum(glm_past(:,:,np1)*cellarea*rglus)
+       write(iulog,*) subname, '*pasture change (global)', sum(glm_past(:,:,np1)*cellarea) - curr_past
+       write(iulog,*) subname, '*pasture change (g) ', sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g
+       if ( abs(sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g - past_pos_f) > diff_tol ) then
+          write(iulog,*) subname, 'Error: pasture change (g) != past_pos_f ', past_pos_f
+       endif
+       write(iulog,*) subname, '***** at end of initial land unit g loop, g cell values: ', g
+       write(iulog,*) subname, 'crop before = ', start_crop_g 
+       write(iulog,*) subname, 'pasture before = ', start_past_g 
+       write(iulog,*) subname, 'prescribed crop change = ', crop_d 
+       write(iulog,*) subname, 'prescribed pasture change = ', past_d
+       write(iulog,*) subname, 'calced crop change = ', sum(glm_crop(:,:,np1)*cellarea*rglus) - start_crop_g
+       write(iulog,*) subname, 'calced pasture change = ', sum(glm_past(:,:,np1)*cellarea*rglus) - start_past_g 
+       if ( abs(sum(glm_crop(:,:,np1)*cellarea*rglus) - start_crop_g - crop_d) > diff_tol ) then
+          write(iulog,*) subname, 'Warning: g cell prescribed crop change != prescribed crop change '
+       endif
+       if ( abs(sum(glm_past(:,:,np1)*cellarea*rglus) - start_past_g - past_d) > diff_tol ) then
+          write(iulog,*) subname, 'Warning: g cell prescribed pasture change != prescribed pasture change '
+       endif
+
+#endif
+
     end do ! end glu loop
 
-!       end do ! end aez loop
-!    end do ! end nreg loop
+
+#ifdef DEBUG
+    cellarea_forest(:,:)=0.
+    where ( pot_veg > 1.)
+       cellarea_forest(:,:)=cellarea(:,:)
+    end where
+
+    write(iulog,*) subname, '***** after initial land unit loop, model year = ', eclockyr
+    write(iulog,*) subname, 'global GCAM forest area km^2 = ',sum(1000*gcam_forest_area(:,n)),'model year'
+    write(iulog,*) subname, 'global g2g forest area km^2 = ',sum((pctland_in2015-glm_crop(:,:,n)-glm_past(:,:,n))*cellarea_forest),'model year'
+    write(iulog,*) subname, 'global change in GCAM forest area km^2 = ', &
+       sum(real(nint(1000*gcam_forest_area(:,np1)*100))/100.) - sum(real(nint(1000*gcam_forest_area(:,n)*100))/100.)
+    write(iulog,*) subname, 'global change in g2g forest area km^2 = ', sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest) - &
+       sum((pctland_in2015-glm_crop(:,:,n)-glm_past(:,:,n))*cellarea_forest)
+    write(iulog,*) subname, 'global g2g crop on forest area km^2 =',sum(glm_crop(:,:,n)*cellarea_forest),'model year'
+    write(iulog,*) subname, 'global g2g crop n area km^2 = ', sum(glm_crop(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global g2g crop np1 area km^2 = ', sum(glm_crop(:,:,np1)*cellarea)
+    write(iulog,*) subname, 'global g2g crop change km^2 = ', sum(glm_crop(:,:,np1)*cellarea)-sum(glm_crop(:,:,n)*cellarea) 
+    write(iulog,*) subname, 'global GCAM crop change km^2 = ', &
+       real(nint(sum(1000*gcam_crop(:,np1))*100))/100. - real(nint(sum(1000*gcam_crop(:,n))*100))/100.
+    write(iulog,*) subname, 'global g2g pasture n area km^2 = ',sum(glm_past(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global g2g pasture np1 area km^2 = ',sum(glm_past(:,:,np1)*cellarea)
+    write(iulog,*) subname, 'global g2g pasture change km^2 = ',sum(glm_past(:,:,np1)*cellarea)-sum(glm_past(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global GCAM past change km^2 = ', &
+       sum(real(nint(1000*gcam_past(:,np1)*100))/100.) - sum(real(nint(1000*gcam_past(:,n)*100))/100.)
+#endif
+
 
     if (regional_unmet_reassign==1) then
        ! Here we are looping over regions, using the rgmin(r) and
        ! rgmax(r) to find the g's inside this region
        do r = 1,nreg
 
-          !regional_farea_needed = sum(unmet_farea(((r-1)*18+1):r*18))
           regional_farea_needed = sum(unmet_farea(rgmin(r):rgmax(r)))
           
           ! number of glus in this region
           ! nrglu = rgmax(r)-rgmin(r)-1
-          ! TRS - zounds! I'm pretty sure -1 is wrong, just from arithmetic
           nrglu = rgmax(r)-rgmin(r)+1
 
           ! Just in case
@@ -1520,7 +2091,6 @@ contains
           unmet_aez_farea = 0.
 
           do g = rgmin(r),rgmax(r)
-             ! g1 =  1:nrglu
              g1 = g-rgmin(r)+1
 
              cellarea_forest(:,:)=0.
@@ -1539,7 +2109,7 @@ contains
              fnfforest=fnfforest*glu_weights(g,:,:)
              fnfnonforest=fnfnonforest*glu_weights(g,:,:)
 
-             ! May need to zero-init all these each loop, becasue we
+             ! above these are zero-init before each loop, becasue we
              ! now have variable nrglu per region.
              avail_farea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
              avail_nfarea(g1) = sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_nonforest)
@@ -1548,8 +2118,6 @@ contains
              unmet_aez_farea(g1) = regional_farea_needed - reassign_ag(g1)
           end do
           
-          !jt [sorted_reassign_ag,sort_aez] = sort(reassign_ag,'descend')
-          ! TRS - not sure this will work with variable nrglu
           indxa=(/(i,i=1,nrglu)/)
           indxadn=(/(i,i=1,nrglu)/)
 
@@ -1560,7 +2128,14 @@ contains
           do i=2,nrglu
              cumsum_sorted_reassign_ag(i)=cumsum_sorted_reassign_ag(i-1)+reassign_ag(indxadn(i))
           end do
-          sortind = MINLOC(cumsum_sorted_reassign_ag(:),mask=cumsum_sorted_reassign_ag(:) >= regional_farea_needed)
+          sortind(1) = 0
+          do i1=1,nrglu
+             if(cumsum_sorted_reassign_ag(i1) >= regional_farea_needed) then
+                sortind(1) = i1
+                exit
+             endif
+          enddo
+
           if (sortind(1).eq.0) then
              sortind(1) = nrglu
              reassign_ag_at_max_aez_ind = reassign_ag(indxadn(sortind(1)))
@@ -1575,23 +2150,61 @@ contains
           
           ! TRS - Here's my take on what's happening here.  We loop
           ! over the sortind(1) most important glus in this region,
-          ! and then reassign forest in them.  I'm not sure what is
-          ! going to happen when we only have one glu, or one
-          ! important glu, but whatever, let's go with it.
+          ! and then reassign forest in them.
+#ifdef DEBUG
+          write(iulog,*) subname, '***** land unit r ', r, 'model year ', eclockyr
+          write(iulog,*) subname, 'regional_farea_needed = ', regional_farea_needed
+          write(iulog,*) subname, 'unmet_regional_area = ', unmet_regional_farea(r)
+          write(iulog,*) subname, 'sortind(1) = ', sortind(1)
+#endif
           do zz=1,sortind(1)
               z=indxadn(zz)
               ! Remember, z = 1,nrglu(r).  So convert to a global g.
               g=z+rgmin(r)-1
 
+#ifdef DEBUG
+              write(iulog,*) subname, '** land unit in forest reassign loop r = ', r, 'g = ', g
+              write(iulog,*) subname, 'global crop before reassign = ', sum(glm_crop(:,:,np1)*cellarea)
+              write(iulog,*) subname, 'global pasture before reassign = ', sum(glm_past(:,:,np1)*cellarea)
+              write(iulog,*) subname, 'g cell crop before reassign = ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+              write(iulog,*) subname, 'g cell pasture before reassign = ', sum(glm_past(:,:,np1)*cellarea*rglus)
+#endif
+
               if (reassign_ag(z)>0) then
-                 crop_before_decrease = sum(glm_crop(:,:,np1)*cellarea)
-                 past_before_decrease = sum(glm_past(:,:,np1)*cellarea)
+
+
+#ifdef DEBUG
+              write(iulog,*) subname, 'reassign_ag = ', reassign_ag(z)
+#endif
+                crop_before_decrease = sum(glm_crop(:,:,np1)*cellarea)
+                past_before_decrease = sum(glm_past(:,:,np1)*cellarea)
                 rglus=0
                 where ( glu_weights(g,:,:) .gt. 0)
                    rglus=1
                 end where
                 totrglus=sum(rglus)
-                
+
+                curr_crop = sum(glm_crop(:,:,np1)*cellarea)
+                curr_crop_g = sum(glm_crop(:,:,np1)*cellarea*rglus)
+                curr_past = sum(glm_past(:,:,np1)*cellarea)
+                curr_past_g = sum(glm_past(:,:,np1)*cellarea*rglus)
+               
+                glatinds = 0
+                gloninds = 0
+                count_gcells = 0
+                do j=1,numLats
+                   do i=1,numLons
+                      if (rglus(i,j) == 1) then
+                         count_gcells = count_gcells+1
+                         glatinds(count_gcells) = j
+                         gloninds(count_gcells) = i
+                      endif
+                   enddo
+                enddo
+                if (count_gcells /= totrglus) then
+                   write(iulog,*), subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
+                endif
+ 
                 cellarea_forest(:,:)=0.
                 cellarea_nonforest(:,:)=0.
                 fnfnonforest=0.
@@ -1611,12 +2224,20 @@ contains
                 indxdn=indxup
                 pot_veg_rev=transpose(pot_veg)
                 glu_weights_rev=transpose(glu_weights(g,:,:))
+
+                ! forcing the opposite sign for non-glu cells
+                ! to make sure they are outside the totrglus range
+                where (transpose(rglus) == 0)
+                   glu_weights_rev = -1.
+                   pot_veg_rev = 1.
+                end where
+
                 call D_mrgrnk(pot_veg_rev*glu_weights_rev, indxup,numlons*numlats)
                 call D_mrgrnk(pot_veg_rev*glu_weights_rev*-1., indxdn,numlons*numlats)
-                
+                     
                 !jt  The sortxxxup and sortxxxdn arrays are only good 1:totrglus these arrays are also based on row major
-                !jt  sorting to match original matlab scripts.  We can get rid of this after validation.
-                
+                !jt  sorting to match original matlab scripts.
+                ! these calcs reflect the transposed sort 
                 sortlonsdn=(indxdn-1)/numlats+1
                 sortlatsdn=mod(indxdn-1,numlats)+1
                 sortlonsup=(indxup-1)/numlats+1
@@ -1635,21 +2256,61 @@ contains
                 if(ier/=0) call mct_die(subName,'allocate v1d',ier)
                 allocate(v2d(totrglus), stat=ier)
                 if(ier/=0) call mct_die(subName,'allocate v2d',ier)
+                ! these are set correctly because the cells are sorted correctly
                 v1u=sortlonsup(numlons*numlats-totrglus+1:numlons*numlats)
                 v2u=sortlatsup(numlons*numlats-totrglus+1:numlons*numlats)
                 v1d=(sortlonsdn(:totrglus))
                 v2d=(sortlatsdn(:totrglus))
-                
-                !jt [sorted_pot_veg,sort_ind] = sort(pot_veg(rAEZ_sites),'descend')
+               
+
+#ifdef DEBUG
+       ! check that sorted cells are all in the land unit
+       j1 = 0
+       do ij=1,totrglus
+          ! start with lon
+          found = .false.
+          do i1=1,count_gcells
+            if (v1d(ij) == gloninds(i1)) then
+               ! check for matching lat
+               if(v2d(ij) == glatinds(i1)) then
+                  j1=j1+1
+                  found = .true.
+               endif
+            endif
+          enddo
+          if ( .not. found ) then
+             write(iulog,*) subname, 'Error: Did not find sorted cell ', ij, ' lonind=', v1d(ij), ' latind=', v2d(ij)
+          endif
+       enddo
+       if (j1 /= totrglus) then
+          write(iulog,*) subname, 'Error: found ', j1, ' sorted cells out of ', totrglus
+       endif
+#endif
+ 
                 cumsum_sorted_farea=0.
                 call cumsum((glm_crop(:,:,np1)+glm_past(:,:,np1))*cellarea_forest,v1d,v2d,cumsum_sorted_farea(:totrglus),totrglus)
-                sortind = MINLOC(cumsum_sorted_farea(:totrglus),cumsum_sorted_farea(:totrglus) > reassign_ag(z))
-                if (sortind(1)==0) then
-                      sortind(1) = totrglus
+                sortind2(1) = 0
+                do i1=1,totrglus
+                   if(cumsum_sorted_farea(i1) >= reassign_ag(z)) then
+                      sortind2(1) = i1
+                      exit
+                   endif
+                enddo
+
+#ifdef DEBUG
+                write(iulog,*) subname, 'sortind2(1) = ' ,sortind2(1), ' totrglus(totcells) = ', totrglus
+#endif
+
+                if (sortind2(1)==0) then
+                   ! may need another precision check here?
+                   sortind2(1) = totrglus
+#ifdef DEBUG
+                   write(iulog,*) subname, 'Warning: not enough cum ag forest', cumsum_sorted_farea(totrglus) ,' to meet reassign_ag ', reassign_ag(z)
+#endif
                 end if
-                if (sortind(1)>1) then
+                if (sortind2(1)>1) then
                    sortsitesdn=0
-                   do i=1,sortind(1)-1
+                   do i=1,sortind2(1)-1
                       sortsitesdn(v1d(i),v2d(i))=1
                    end do
                    where(sortsitesdn>0)
@@ -1660,31 +2321,70 @@ contains
                       glm_past(:,:,np1) = glm_past(:,:,np1) - glm_past(:,:,np1) * fnfforest
                    end where
 
-                   final_area_needed =  reassign_ag(z) - cumsum_sorted_farea(sortind(1)-1)
+                   final_area_needed =  reassign_ag(z) - cumsum_sorted_farea(sortind2(1)-1)
                 else
                    final_area_needed =  reassign_ag(z)
                 end if
-                ag_area_avail = (glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1) + glm_past(v1d(sortind(1)),v2d(sortind(1)),np1))*cellarea(v1d(sortind(1)),v2d(sortind(1)))
-                crop_area_avail = glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1)*cellarea(v1d(sortind(1)),v2d(sortind(1)))
-                glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1) = &
-                     glm_crop(v1d(sortind(1)),v2d(sortind(1)),np1) - &
-                     min(crop_area_avail/(ag_area_avail+1e-12)*final_area_needed / &
-                     cellarea(v1d(sortind(1)),v2d(sortind(1))), &
-                     crop_area_avail/cellarea(v1d(sortind(1)),v2d(sortind(1))))
 
-                glm_past(v1d(sortind(1)),v2d(sortind(1)),np1) = &
-                     glm_past(v1d(sortind(1)),v2d(sortind(1)),np1) - &
-                     (final_area_needed/cellarea(v1d(sortind(1)),v2d(sortind(1))) - &
+                ag_area_avail = (glm_crop(v1d(sortind2(1)),v2d(sortind2(1)),np1) + glm_past(v1d(sortind2(1)),v2d(sortind2(1)),np1))*&
+                   cellarea_forest(v1d(sortind2(1)),v2d(sortind2(1)))
+                crop_area_avail = glm_crop(v1d(sortind2(1)),v2d(sortind2(1)),np1)*cellarea_forest(v1d(sortind2(1)),v2d(sortind2(1)))
+
+#ifdef DEBUG
+                write(iulog,*) subname, 'final_area_needed before crop decrease = ' , final_area_needed
+                write(iulog,*) subname, 'current cell crop forest area = ', crop_area_avail
+#endif
+
+                glm_crop(v1d(sortind2(1)),v2d(sortind2(1)),np1) = &
+                     glm_crop(v1d(sortind2(1)),v2d(sortind2(1)),np1) - &
                      min(crop_area_avail/(ag_area_avail+1e-12)*final_area_needed / &
-                     cellarea(v1d(sortind(1)),v2d(sortind(1))),crop_area_avail / &
-                     cellarea(v1d(sortind(1)),v2d(sortind(1)))))
+                     cellarea(v1d(sortind2(1)),v2d(sortind2(1))), &
+                     glm_crop(v1d(sortind2(1)),v2d(sortind2(1)),np1)*fnfforest(v1d(sortind2(1)),v2d(sortind2(1))))
+
+                final_area_needed = final_area_needed - &
+                     min(crop_area_avail/(ag_area_avail+1e-12)*final_area_needed,crop_area_avail)
+
+                temp_past = glm_past(v1d(sortind2(1)),v2d(sortind2(1)),np1)*cellarea_forest(v1d(sortind2(1)),v2d(sortind2(1)))
+
+#ifdef DEBUG
+                write(iulog,*) subname, 'final_area_needed before pasture decrease =' , final_area_needed
+                write(iulog,*) subname, 'current cell pasture forest area = ', temp_past
+#endif
+
+                glm_past(v1d(sortind2(1)),v2d(sortind2(1)),np1) = &
+                     glm_past(v1d(sortind2(1)),v2d(sortind2(1)),np1) - &
+                     min(final_area_needed / cellarea(v1d(sortind2(1)),v2d(sortind2(1))), &
+                     glm_past(v1d(sortind2(1)),v2d(sortind2(1)),np1)*fnfforest(v1d(sortind2(1)),v2d(sortind2(1))))
+
+                ! this should be zero after this calc
+                final_area_needed = final_area_needed - &
+                     min(final_area_needed,temp_past)
+                if (final_area_needed < 0) then
+                   final_area_needed = 0.
+                endif
                 
                 crop_after_decrease = sum(glm_crop(:,:,np1)*cellarea)
                 past_after_decrease = sum(glm_past(:,:,np1)*cellarea)
                 total_ag_decrease = crop_before_decrease+past_before_decrease - crop_after_decrease - past_after_decrease
                 crop_decrease_ratio = (crop_before_decrease - crop_after_decrease)/(total_ag_decrease+1e-12)
                 past_decrease_ratio = 1-crop_decrease_ratio
-                
+
+#ifdef DEBUG
+                write(iulog,*) subname, '*reassign to meet forest demand (km^2), based on global values'               
+                write(iulog,*) subname, 'crop decrease = ', (crop_before_decrease - crop_after_decrease)
+                write(iulog,*) subname, 'past decrease = ', (past_before_decrease - past_after_decrease)
+                write(iulog,*) subname, 'final_area_needed (should be zero) = ', final_area_needed
+                if (abs(final_area_needed) > diff_tol) then
+                   write(iulog,*) subname, 'Warning: final_area_needed not zero!'
+                endif
+
+                write(iulog,*) subname, 'global crop after decrease = ', sum(glm_crop(:,:,np1)*cellarea)
+                write(iulog,*) subname, 'global pasture after decrease = ', sum(glm_past(:,:,np1)*cellarea)
+                write(iulog,*) subname, 'g cell crop after decrease = ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+                write(iulog,*) subname, 'g cell pasture after decrease = ', sum(glm_past(:,:,np1)*cellarea*rglus)
+#endif
+                reassign_ag(z) = reassign_ag(z) - final_area_needed
+
                 avail_land0 = 0.
                 
                 where ( glu_weights(g,:,:) > 0 .and.(glm_crop(:,:,np1)>0..or.glm_past(:,:,np1)>0.))
@@ -1692,15 +2392,22 @@ contains
                 end where
                 sumavail_land0=sum(avail_land0)
                 if (sumavail_land0 >=reassign_ag(z)) then 
-#ifdef DEBUG
-                   !write(6,*) subname, 'crop and pasture increase on nonforest - land available'
-#endif
-                   where(glu_weights(g,:,:) > 0)
+
+                   where(glu_weights(g,:,:) > 0 .and. (glm_crop(:,:,np1)>0. .or. glm_past(:,:,np1)>0.))
                       glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*avail_land0 / &
-                           (sumavail_land0+1e-12) * reassign_ag(z)*fnfnonforest/cellarea
+                           (sumavail_land0+1e-12) * reassign_ag(z)/ cellarea
                       glm_past(:,:,np1) = glm_past(:,:,np1) + past_decrease_ratio*avail_land0 / &
-                           (sumavail_land0+1e-12) * reassign_ag(z)*fnfnonforest/cellarea
+                           (sumavail_land0+1e-12) * reassign_ag(z) /cellarea
                    end where
+
+#ifdef DEBUG
+                   write(iulog,*) subname, 'crop and pasture increase on nonforest - land available'
+                   write(iulog,*) subname, 'actual crop increase = ', sum(crop_decrease_ratio*avail_land0 / &
+                           (sumavail_land0+1e-12) * reassign_ag(z))
+                   write(iulog,*) subname, 'actual pasture increase = ', sum(past_decrease_ratio*avail_land0 / &
+                           (sumavail_land0+1e-12) * reassign_ag(z))
+#endif
+
                 else
                    avail_landA = 0.
                    where ( glu_weights(g,:,:) > 0 )
@@ -1709,34 +2416,98 @@ contains
                    sumavail_landA=sum(avail_landA)
                    if (reassign_ag(z) > sumavail_landA) then 
                       reassign_ag(z) = sum(avail_landA)
-                      write(6,*) subname, 'unavailable nonforest'
-                      write(6,*) subname, '--when trying to meet reg forest'
-                      write(6,*) subname, 'maybe this should not happen'
-                      write(6,*) subname, 'reducing conversion to sumavail_landA'
-                      write(6,*) subname, 'reassign_ag(',z,')=',reassign_ag(z)&
+#ifdef DEBUG
+                      write(iulog,*) subname, 'Warning: unavailable nonforest'
+                      write(iulog,*) subname, '--when trying to meet reg forest'
+                      write(iulog,*) subname, 'reducing conversion to sumavail_landA'
+                      write(iulog,*) subname, 'reassign_ag(',z,')=',reassign_ag(z)&
                                  ,'sumavail_landA=', sumavail_landA, &
                                  'sumavail_land0=', sumavail_land0
-                      !call abort
+#endif
                    end if
 #ifdef DEBUG
-                   !write(6,*) subname, 'cropland and pasture increase on non-forest - land available'
+                   write(iulog,*) subname, 'Warning: cropland and pasture increase on non-forest - land not available'
 #endif
                    where(glu_weights(g,:,:) > 0)
-                      glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*(avail_land0*fnfnonforest)/cellarea
-                      glm_past(:,:,np1) = glm_past(:,:,np1) + past_decrease_ratio*(avail_land0*fnfnonforest)/cellarea
+                      glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*(avail_land0)/cellarea
+                      glm_past(:,:,np1) = glm_past(:,:,np1) + past_decrease_ratio*(avail_land0)/cellarea
                    end where
                       
-                   where(glu_weights(g,:,:) > 0)
-                      glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*((avail_landA-avail_land0) / &
-                           (sumavail_landA-sumavail_land0+1e-12)*(reassign_ag(z)-sumavail_land0)*fnfnonforest)/cellarea
-                      glm_past(:,:,np1) = glm_past(:,:,np1) + past_decrease_ratio*((avail_landA-avail_land0)/ &
-                           (sumavail_landA-sumavail_land0+1e-12)*(reassign_ag(z)-sumavail_land0)*fnfnonforest)/cellarea
+                   if (sumavail_landA-sumavail_land0 > 0.) then
+                      where(glu_weights(g,:,:) > 0)
+                         glm_crop(:,:,np1) = glm_crop(:,:,np1) + crop_decrease_ratio*((avail_landA-avail_land0) / &
+                              (sumavail_landA-sumavail_land0)*(reassign_ag(z)-sumavail_land0))/cellarea
+                         glm_past(:,:,np1) = glm_past(:,:,np1) + past_decrease_ratio*((avail_landA-avail_land0)/ &
+                              (sumavail_landA-sumavail_land0)*(reassign_ag(z)-sumavail_land0))/cellarea
                    end where
+                   endif
                 end if
+
+#ifdef DEBUG
+                write(iulog,*) subname, 'global km^2: crop before decrease ', crop_before_decrease, ' crop after increase ', sum(glm_crop(:,:,np1)*cellarea)
+                write(iulog,*) subname, 'global km^2: pasture before decrease ', past_before_decrease, ' pasture after increase ', sum(glm_past(:,:,np1)*cellarea)
+#endif
+
              end if
+
+#ifdef DEBUG
+             write(iulog,*) subname, 'global crop after reassign km^2 = ', sum(glm_crop(:,:,np1)*cellarea)
+             write(iulog,*) subname, 'global pasture after reassign km^2 = ', sum(glm_past(:,:,np1)*cellarea)             
+             write(iulog,*) subname, 'g cell crop after reassign km^2 = ', sum(glm_crop(:,:,np1)*cellarea*rglus)
+             write(iulog,*) subname, 'g cell pasture after reassign km^2 = ', sum(glm_past(:,:,np1)*cellarea*rglus)
+
+             write(iulog,*) subname, '*reassign crop change (global) ',sum(glm_crop(:,:,np1)*cellarea) - curr_crop
+             write(iulog,*) subname, '*reassign crop change (g) ', sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g
+             write(iulog,*) subname, '*reassign pasture change (global) ',sum(glm_past(:,:,np1)*cellarea) - curr_past
+             write(iulog,*) subname, '*reassign pasture change (g) ', sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g
+
+             if (abs(sum(glm_crop(:,:,np1)*cellarea*rglus) - curr_crop_g) > diff_tol) then
+                write(iulog,*) subname, 'Warning: crop change (g) not zero!'
+             endif
+             if (abs(sum(glm_past(:,:,np1)*cellarea*rglus) - curr_past_g) > diff_tol) then
+                write(iulog,*) subname, 'Warning: pasture change (g) not zero!'
+             endif
+#endif
           end do ! end z loop
        end do !  end r loop
     end if   ! ! if regional_unmet_reassign
+
+
+#ifdef DEBUG
+    write(iulog,*) subname, '***** after reassign loop'
+    write(iulog,*) subname, 'sum final gcrop/gpast n'
+    write(iulog,fmt="(1ES25.15)") sum(glm_crop(:,:,n))
+    write(iulog,fmt="(1ES25.15)") sum(glm_past(:,:,n))
+    write(iulog,*) 'sum final gcrop/gpast np1'
+    write(iulog,fmt="(1ES25.15)") sum(glm_crop(:,:,np1))
+    write(iulog,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
+
+    cellarea_forest(:,:)=0.
+    where ( pot_veg > 1.)
+    cellarea_forest(:,:)=cellarea(:,:)
+    end where
+    
+    write(iulog,*) subname, '*** these are the final values'
+    write(iulog,*) 'final np1 g2g global forest area km^2', sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest)
+    write(iulog,*) 'final change in g2g global forest area km^2', sum((pctland_in2015-glm_crop(:,:,np1)-glm_past(:,:,np1))*cellarea_forest) - &
+       sum((pctland_in2015-glm_crop(:,:,n)-glm_past(:,:,n))*cellarea_forest)
+    write(iulog,*) subname, 'global change in GCAM forest area km^2 = ', &
+       sum(real(nint(1000*gcam_forest_area(:,np1)*100))/100.) -sum(real(nint(1000*gcam_forest_area(:,n)*100))/100.) 
+    write(iulog,*) 'final np1 g2g global crop on forest area km^2', sum(glm_crop(:,:,np1)*cellarea_forest)
+    write(iulog,*) subname, 'global g2g crop n area km^2 = ', sum(glm_crop(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global g2g crop np1 area km^2 = ', sum(glm_crop(:,:,np1)*cellarea)
+    write(iulog,*) subname, 'global g2g crop change km^2 = ', sum(glm_crop(:,:,np1)*cellarea)-sum(glm_crop(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global GCAM crop change km^2 = ', &
+       real(nint(1000*sum(gcam_crop(:,np1))*100))/100. - real(nint(1000*sum(gcam_crop(:,n))*100))/100.
+    write(iulog,*) subname, 'global unmet forest increase km^2 = ', sum(unmet_regional_farea)
+
+    write(iulog,*) subname, 'global g2g pasture n area km^2 = ',sum(glm_past(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global g2g pasture np1 area km^2 = ',sum(glm_past(:,:,np1)*cellarea)
+    write(iulog,*) subname, 'global g2g pasture change km^2 = ',sum(glm_past(:,:,np1)*cellarea)-sum(glm_past(:,:,n)*cellarea)
+    write(iulog,*) subname, 'global GCAM pasture change km^2 = ', &
+       sum(real(nint(1000*gcam_past(:,np1)*100))/100.) - sum(real(nint(1000*gcam_past(:,n)*100))/100.)
+    write(iulog,*) subname, 'global unmet forest increase km^2 = ', sum(unmet_regional_farea(:))
+#endif 
 
  end if ! end if gcam runs this model year
 
@@ -1745,14 +2516,6 @@ contains
  if (allocated(v1d)) deallocate(v1d)
  if (allocated(v2d)) deallocate(v2d)
 
-#ifdef DEBUG
-    write(6,*) subname, 'sum final gcrop/gpast n'
-    write(6,fmt="(1ES25.15)") sum(glm_crop(:,:,n))
-    write(6,fmt="(1ES25.15)") sum(glm_past(:,:,n))
-    write(6,*) 'sum final gcrop/gpast np1'
-    write(6,fmt="(1ES25.15)") sum(glm_crop(:,:,np1))
-    write(6,fmt="(1ES25.15)") sum(glm_past(:,:,np1))
-#endif 
 !
 ! Interpolate data to years needed by GLM
 !
@@ -1985,6 +2748,10 @@ contains
     deallocate(unmet_aez_farea)
     deallocate(cumsum_sorted_reassign_ag)
     deallocate(unmet_regional_farea)
+
+    deallocate(glatinds)
+    deallocate(gloninds)
+    deallocate(temp_past_grid)
 
   end subroutine gcam2glm_run_mod
   
