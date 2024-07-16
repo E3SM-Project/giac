@@ -3357,7 +3357,7 @@ void transitions(int curryear){
         //     printf("predict_b and reg_avail and reg_unmet are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
         //}
 
-	if(rtdata[ir].reg_unmet<rtdata[ir].reg_avail){
+	if(rtdata[ir].reg_unmet<rtdata[ir].reg_avail && rtdata[ir].reg_avail>0){
 	  aez_tdata[ir][ia].whr+=aez_tdata[ir][ia].predict_b/rtdata[ir].reg_avail*rtdata[ir].reg_unmet;
           //if(ir==3){ // africa, and congo is index 4
           //   printf("reassigning unmet harvest loop; enough land\n");
@@ -5946,7 +5946,7 @@ ctdata[i].fh_vbh2+=newdata[it].vbh2[k][m]/1000.;
 
 			     /* first try taking it proportionally */
 
- if(ctdata[i].smb_nf >= (whr_orig-ctdata[i].smb-ctdata[i].vnfb)){
+ if(ctdata[i].smb_nf >= (whr_orig-ctdata[i].smb-ctdata[i].vnfb) && ctdata[i].smb_nf>0){
 
 		    
 			         flowss_add=(newdata[it].s[k][m]-newdata[it].flowsc[k][m]-newdata[it].flowsp[k][m]-newdata[it].flowsu[k][m])*(whr_orig-ctdata[i].smb-ctdata[i].vnfb)/ctdata[i].smb_nf; 
@@ -5994,7 +5994,7 @@ ctdata[i].fh_sbh3+=newdata[it].sbh3[k][m]/1000.;
 
 			     /* first try taking it proportionally */
 
- if(ctdata[i].vnfb >= (whr_orig-ctdata[i].smb-ctdata[i].smb_nf)){
+ if(ctdata[i].vnfb >= (whr_orig-ctdata[i].smb-ctdata[i].smb_nf) && ctdata[i].vnfb>0){
 		    
 			         flowvs_add=(newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m]-newdata[it].flowvu[k][m])*(whr_orig-ctdata[i].smb-ctdata[i].smb_nf)/ctdata[i].vnfb;
 			       
@@ -12666,7 +12666,7 @@ ctdata[i].fh_vbh2+=flowvs_add*dstatic[k][m].vba*garea[k][m]/1000.;
 
 			     /* first try taking it proportionally */
 
- if(ctdata[i].smb_nf >= (whr_orig-ctdata[i].smb-ctdata[i].vnfb)){
+ if(ctdata[i].smb_nf >= (whr_orig-ctdata[i].smb-ctdata[i].vnfb) && ctdata[i].smb_nf>0){
 
     
 			         flowss_add=(newdata[it].s[k][m]-newdata[it].flowsc[k][m]-newdata[it].flowsp[k][m]-newdata[it].flowsu[k][m])*(whr_orig-ctdata[i].smb-ctdata[i].vnfb)/ctdata[i].smb_nf; 
@@ -12716,7 +12716,7 @@ ctdata[i].fh_sbh3+=sbh3/1000.;
 
 			     /* first try taking it proportionally */
 
- if(ctdata[i].vnfb >= (whr_orig-ctdata[i].smb-ctdata[i].smb_nf)){
+ if(ctdata[i].vnfb >= (whr_orig-ctdata[i].smb-ctdata[i].smb_nf) && ctdata[i].vnfb>0){
      
 		    
 			         flowvs_add=(newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m]-newdata[it].flowvs[k][m]-newdata[it].flowvu[k][m])*(whr_orig-ctdata[i].smb-ctdata[i].smb_nf)/ctdata[i].vnfb;

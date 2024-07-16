@@ -3837,7 +3837,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear) {
 		//	proportional addition of available potential pfts upon crop removal
 		//	proportional removal of pfts upon crop addition
 		ADDTREEONLY = 0;	// For crop removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
-		setherbfracrem = 1.0;	// crop addition
+		setherbfracrem = 0.2;	// crop addition
 		setavailtreefracrem = 0.0;	// crop removal
     } else {
 		// Historically, crop addition and removal cause pft changes proportional to respective pft distributions
@@ -4702,7 +4702,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear) {
 	if (modyear >= 2015) {
 		//	proportional addition of available potential pfts upon pasture removals
 		//	proportional removal of pfts upon pasture addition
-		ADDTREEONLY = 0;	// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+		ADDTREEONLY = 1;	// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
 		HERBPASTURE = 0;	// 1=ensure enough herbaceous pfts to cover glmo pasture; 0=let there be some tree pft pasture if necessary
 		setherbfracrem = 1.0;	// pasture addition
 		setavailtreefracrem = 0.0;	// pasture removal
