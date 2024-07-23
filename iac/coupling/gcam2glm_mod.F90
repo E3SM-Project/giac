@@ -1,4 +1,4 @@
-#define DEBUG
+!#define DEBUG
 Module gcam2glm_mod
   
 !---------------------------------------------------------------------------
@@ -849,7 +849,7 @@ contains
           rglus=1
        end where
        totrglus=sum(rglus)      
-       write(iulog,*), subname, 'totrglus = ', totrglus 
+       !write(iulog,*), subname, 'totrglus = ', totrglus 
        glatinds = 0
        gloninds = 0
        count_gcells = 0
