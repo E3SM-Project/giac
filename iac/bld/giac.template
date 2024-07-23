@@ -35,14 +35,16 @@ if ($LND_GRID =~ 0.9x1.25* ) then
   set map_fglctopo = "lnd/clm2/mappingdata/maps/0.9x1.25/map_10minx10min_topo_to_0.9x1.25_aave_da_110307.nc"
   set map_flndtopo = "lnd/clm2/mappingdata/maps/0.9x1.25/map_10minx10min_topo_to_0.9x1.25_aave_da_110307.nc"
   set clmC_bfn_dir = "iac/giac/iac2gcam/iESM_exp1.2"
-  set clm2gcam_mapfile = "iac/giac/iac2gcam/CCSM_2_GCAM_lut.nc"
+  set clm2gcam_mapfile = "iac/giac/iac2gcam/elm0.9x1.25togcam_mapping.csv"
+  # this needs to be updated
   set iac_base_clmfile = "iac/giac/iac2gcam/clm_for_gcam_15yr_means/year_1990-2004_exp1.2/iESM_exp1.2.clm2.h1.1990-2004_mean_exp1.2.nc"
-  set mksurfout_init = "surfdata.pftdyn_0.9x1.25_simyr2005_Expt1.2_c130808.nc"
-  set gcam2glm_basecrop = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gcrop_1500-2005.nc"
-  set gcam2glm_basepast = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gpast_1500-2005.nc"
-  set gcam2glm_baseothr = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gothr_1500-2005.nc"
-  set gcam2glm_basebiomass = "iac/giac/glm/inputs/miami_biomass_conform_0.5x0.5_map.nc"
-  set gcam2glm_aezmap = "iac/giac/glm/inputs/aez_18_reg_14_0.5x0.5_map.nc"
+  # this is for 1850 start
+  #set mksurfout_init = "surfdata.pftdyn_192x288_iESM112_simyear1850_c04232014.nc"
+  # this is an older 2005 file, probably need a new one; the original is surfdata.pftdyn_192x288_iESM112_simyear2005_FC12Hist_c05292014
+  set mksurfout_init = "landuse.timeseries_0.9x1.25_HIST_simyr2015_c201021.nc"
+  set gcam2glm_baselu = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/initial_state_LUH2_2015_v3.nc"
+  set gcam2glm_basebiomass = "iac/giac/glm/inputs/vba_LUH1format.nc"
+  set gcam2glm_glumap = "iac/giac/glm/inputs/gcam2glm_mapping.csv"
 endif
 
 if ($LND_GRID =~ halfdeg* ) then
@@ -55,14 +57,16 @@ if ($LND_GRID =~ halfdeg* ) then
   set map_fglctopo = "lnd/clm2/mappingdata/maps/halfdeg/map_10x10min_nomask_to_0360x0720_nomask_aave_da_c120329.nc"
   set map_flndtopo = "lnd/clm2/mappingdata/maps/halfdeg/map_10x10min_nomask_to_0360x0720_nomask_aave_da_c120329.nc"
   set clmC_bfn_dir = "iac/giac/iac2gcam/iESM_exp1.1"
-  set clm2gcam_mapfile = "iac/giac/iac2gcam/CCSM05d_2_GCAM_Lut.nc"
+  set clm2gcam_mapfile = "iac/giac/iac2gcam/unknown"
+  # this needs to be updated
   set iac_base_clmfile = "iac/giac/iac2gcam/clm_for_gcam_15yr_means/year_1990-2004_exp1.1/iESM_exp1.1.clm2.h1.1990-2004_mean_exp1.1.nc"
+  # this is for 1850 start
+  #set mksurfout_init = "surfdata.pftdyn_360x720_iESM112_simyear1850_c04022014.nc"
+  # this is old 2005 file? need one for 2015 start?
   set mksurfout_init = "surfdata_iESM_ZGICN24a_2006to2005a.nc"
-  set gcam2glm_basecrop = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gcrop_1500-2005.nc"
-  set gcam2glm_basepast = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gpast_1500-2005.nc"
-  set gcam2glm_baseothr = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gothr_1500-2005.nc"
-  set gcam2glm_basebiomass = "iac/giac/glm/inputs/miami_biomass_conform_0.5x0.5_map.nc"
-  set gcam2glm_aezmap = "iac/giac/glm/inputs/aez_18_reg_14_0.5x0.5_map.nc"
+  set gcam2glm_baselu = "iac/giac/glm/inputs/hyde_3.0/half_deg_grids/initial_state_LUH2_2015_v3.nc"
+  set gcam2glm_basebiomass = "iac/giac/glm/inputs/vba_LUH1format.nc"
+  set gcam2glm_glumap = "iac/giac/glm/inputs/gcam2glm_mapping.csv"
 endif
 
 cat >! $CASEBUILD/giac.buildnml.csh << EOF1
@@ -107,9 +111,9 @@ foutput_dir        = output/
 
 [control]
 top level glm dir = \$DIN_LOC_ROOT/iac/giac/glm/
-case name         = test_chdata
+case name         = output
 runtype           = initial   # initial or restart
-start year        = 2005
+start year        = 2015
 stop year         = 2100
 output_text         = 0         # write out text state and lu
 output_netcdf       = 1         # write out netcdf state and lu
@@ -120,7 +124,7 @@ res option          = 2       # 1 (1 degree) or 2 (0.5 degree) only option 2 is 
 number of countries = 192
 future rate option  = 0       # HIST(0) | GCAM(3) | AIM(4) | IMAGE(5) | MESSAGE(6)
 future scenario     = 0       # HIST(0) | GCAM(3) | AIM(4) | IMAGE(5) | MESSAGE(6)
-num_regions         = 14      # HIST=0,GCAM=14,AIM=24,IMAGE=24,MESSAGE=24
+num_regions         = 31      # HIST=0,GCAM=14,AIM=24,IMAGE=24,MESSAGE=24
 gridded_woodharvest = 2       # HIST=0,GCAM=0,AIM=1,IMAGE=0,MESSAGE=1,GCAM_AEZ=2
 logging_option      = 1       #  0=wh=zero,1=standard wh data, 4="nodata"
 zdis_option         = 1       # option for algorithm for spatial allocation of wood harvest
@@ -156,7 +160,7 @@ tb2bb                        = 1.0     # total biomass to bole biomass ratio, va
 phbio_filename               =  inputs/other/phbio.average.7states.txt
 phbio_length                 =  50    # filelength of probability of harvest given biomass
 
-output_updated_states        = 1
+output_updated_states        = 1	# these five lines are not even read-in
 output_updated_states2       = 0
 output_updated_states3       = 0
 output_lu                    = 1
@@ -175,15 +179,15 @@ static_regions_file=static_regions_file.txt
 static_vba_file=static_vba_file.txt
 
 [output directory]
-output dir = /lustre/data/jet/GLM/output
+output dir = $exedir
 
 [hyde_datasets]
 
 hyde_crop_path = \$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gcrop_1500-2005.nc
 hyde_othr_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gothr_1500-2005.nc
 hyde_past_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gpast_1500-2005.nc
-hyde_watr_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gwatr.1500-1501.nc
-hyde_icew_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gicew.1500-1501.nc
+hyde_watr_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gwatr_850_851_half_degree.nc
+hyde_icew_path =\$DIN_LOC_ROOT/iac/giac/glm/inputs/hyde_3.0/half_deg_grids/gicew_850_851_half_degree.nc
 
 [hyde_datasets_nodata]
 
@@ -197,9 +201,9 @@ future_crop_constructed_states = inputs/GCAM_Expt1_constructed_states_2005-2100/
 future_secd_constructed_states = inputs/GCAM_Expt1_constructed_states_2005-2100/gsecd.2005-2100.nc
 future_othr_constructed_states = inputs/GCAM_Expt1_constructed_states_2005-2100/gothr.2005-2100.nc
 future_past_constructed_states = inputs/GCAM_Expt1_constructed_states_2005-2100/gpast.2005-2100.nc
-future_watr_constructed_states = inputs/hyde_3.0/half_deg_grids/gwatr.1500-1501.nc
-future_icew_constructed_states = inputs/hyde_3.0/half_deg_grids/gicew.1500-1501.nc
-updated_initial_state = \$DIN_LOC_ROOT/iac/giac/glm/inputs/initial/initial_state_Expt1_AEZ_2005.nc
+future_watr_constructed_states = inputs/hyde_3.0/half_deg_grids/gwatr_850_851_half_degree.nc
+future_icew_constructed_states = inputs/hyde_3.0/half_deg_grids/gicew_850_851_half_degree.nc
+updated_initial_state = \$DIN_LOC_ROOT/iac/giac/glm/inputs/initial/initial_state_LUH2_2015_v3.nc
 
 [woodharvest_datasets]
 woodharvest_file =\$DIN_LOC_ROOT/iac/giac/glm/inputs/other/wood_harvest/woodharvest_1500-2005.nc
@@ -210,24 +214,23 @@ rcp_woodharvest_aez_file =\$DIN_LOC_ROOT/iac/giac/glm/inputs/other/wood_harvest/
 rcp_woodharvest_nodata_aez_file =\$DIN_LOC_ROOT/iac/giac/glm/inputs/other/wood_harvest/RCP/woodharvest_rcp45_aez_nd_2005_2100.nc
 
 [other_datasets]
-
-wh_region_codes_file   = inputs/other/wood_harvest/codes_halfdeg_minicam.txt
-wh_cont2region_codes_file = inputs/other/wood_harvest/continent_codes_minicam_test.txt
-whcodes2glm_map  = inputs/other/wood_harvest/codes2glm_gcam_turkey_in_ee.txt
-aez_region_grid_file = inputs/other/wood_harvest/AEZ_region_grid.txt
-aez_region_zone_file = inputs/other/wood_harvest/AEZ_zone_grid.txt
+wh_region_codes_file   = inputs/other/wood_harvest/gcam_region_codes.txt
+wh_cont2region_codes_file = inputs/other/wood_harvest/continent_codes_region.txt
+whcodes2glm_map  = inputs/other/wood_harvest/reg2ctry_mapping.txt
+aez_region_grid_file = inputs/other/wood_harvest/gcam_region_grid.txt
+aez_region_zone_file = inputs/other/wood_harvest/gcam_zone_grid.txt
 
 cellinfo_file  = inputs/other/cellarea/cellarea_halfdeg.txt
 ccodes_file    = inputs/other/ccodes/ccodes.txt.sort2wh
 ccodes_map     = inputs/other/ccodes/ccodes_half_deg.txt
 cnames_file    = inputs/other/ccodes/cnames.txt.sort2wh
-regnames_file  = inputs/other/wood_harvest/names_minicam.txt
-contcodes_file = inputs/other/ccodes/continent.codes.txt.sort2wh
-shiftcult_map  = inputs/other/shift_cult/shiftcult_map_halfdeg.txt
-regcodes_map     = inputs/other/wood_harvest/regcodes_halfdeg.txt
+regnames_file  = inputs/other/wood_harvest/gcam_region_names.txt
+contcodes_file = inputs/other/ccodes/new_continent.codes.txt.sort2wh
+shiftcult_map  = inputs/other/shift_cult/shiftcult_LUH1format.txt
+regcodes_map     = inputs/other/wood_harvest/gcam_region_grid.txt # this is not used, and is the same as above
 gcodes_cont_map  = inputs/other/ccodes/gcodes_continent_half_deg_DUMMY.asc
-miami_biomass_file_vba = inputs/other/miami_biomass_v3/miami_halfdeg_conform.txt
-miami_biomass_file_vnppa = inputs/other/miami_npp/miami.half_deg.in_conform
+miami_biomass_file_vba = inputs/other/miami_biomass_v3/vba_LUH1format.txt
+miami_biomass_file_vnppa = inputs/other/miami_npp/npp_LUH1format_v2.txt
 
 [debug options]
 smart_flow_bug_print         = 1
@@ -238,8 +241,8 @@ flow_bug_print               = 1
 EOF
 
 #1 change start stop years in glm config file
-sed -i 's/start year.*/start year =   2005/' glm.fut.conf
-sed -i 's/stop year.*/stop year  =   2085/' glm.fut.conf
+sed -i 's/start year.*/start year =   2015/' glm.fut.conf
+sed -i 's/stop year.*/stop year  =   2100/' glm.fut.conf
 sed -i 's/runtype.*/runtype    =    initial/' glm.fut.conf
 
 if (\${CONTINUE_RUN} == TRUE) then
@@ -278,11 +281,22 @@ cp -f \$giactop/glm2iac/pftregridparams.txt .
 cp -f \$giactop/glm2iac/surfdata_360x720_mcrop2000.nc .
 cp -f \$giactop/glm2iac/surfdata_360x720_potveg.nc .
 cp -f \$giactop/glm2iac/mksrf_landuse_ingrid.nc ./\$mksurfin
-cp -f \$giactop/glm2iac/iESM_Expt1_C_S2_CropPast_Ref.nc ./iESM_Ref_CropPast.nc
-chmod 666 ./iESM_Ref_CropPast.nc   
-if (\${CONTINUE_RUN} == FALSE) then
-  cp -f \$giactop/glm2iac/${mksurfout_init} \${mksurfout}_dyn.nc
+# these are the files for starting in 1850
+#cp -f $giactop/glm2iac/iESM_Ref_CropPast1850_c10142019.nc ./iESM_Init_CropPast.nc
+#cp -f $giactop/glm2iac/surfdata_360x720_mcrop1850_c10142019.nc ./surfdata_360x720_mcrop_init.nc
+# these are the files for starting in 2015
+cp -f $giactop/glm2iac/iESM_Ref_CropPast2015_c10142019.nc ./iESM_Init_CropPast.nc
+cp -f $giactop/glm2iac/surfdata_360x720_mcrop2015_c10142019.nc ./surfdata_360x720_mcrop_init.nc
+# these are needed as the reference for model years <2000
+cp -f $giactop/glm2iac/surfdata_360x720_mcrop2000_c03062014.nc ./surfdata_360x720_mcrop2000.nc
+cp -f $giactop/glm2iac/iESM_Ref_CropPast2000_c10142019.nc ./iESM_Ref_CropPast2000.nc
+
+if (${CONTINUE_RUN} == FALSE) then
+    cp -f $giactop/glm2iac/${mksurfout_init} ${mksurfout}_dyn.nc
+    cp -f ./iESM_Init_CropPast.nc ./iESM_Dyn_CropPast.nc
+    cp -f ./surfdata_360x720_mcrop_init.nc ./surfdata_360x720_mcrop_dyn.nc
 endif
+chmod 666 ./iESM_Dyn_CropPast.nc  ./surfdata_360x720_mcrop_dyn.nc ./iESM_Init_CropPast.nc ./surfdata_360x720_mcrop_init.nc surfdata_360x720_potveg.nc  ${mksurfout}_dyn.nc ./iESM_Ref_CropPast2000.nc ./surfdata_360x720_mcrop2000.nc
 
 # mksrf_fdynuse      = './mksrf_landuse.nc'
 
@@ -333,6 +347,7 @@ cat >! iac_in <<EOF
  map_fglcmec_g2g= '\$DIN_LOC_ROOT/${map_landuse}'
  map_flai       = '\$DIN_LOC_ROOT/${map_landuse}'
  map_fharvest   = '\$DIN_LOC_ROOT/${map_landuse}'
+ map_fpeat      = '\$DIN_LOC_ROOT/${map_landuse}'
  map_flanwat    = '\$DIN_LOC_ROOT/${map_flanwat}'
  map_fvocef     = '\$DIN_LOC_ROOT/${map_fvocef}'
  map_fsoitex    = '\$DIN_LOC_ROOT/${map_fsoitex}'

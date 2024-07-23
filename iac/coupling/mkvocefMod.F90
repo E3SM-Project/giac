@@ -14,6 +14,7 @@ module mkvocefMod
 ! !USES:
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
+  use mkdomainMod , only : domain_checksame
 
   implicit none
   private
@@ -38,8 +39,7 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 ! make volatile organic coumpunds (VOC) emission factors.
 !
 ! !USES:
-  use mkfileutils, only : getfil
-  use mkdomainMod, only : domain1_type, domain1_clean, domain1_read
+  use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
   use mkvarpar	
   use mkvarctl    
@@ -47,7 +47,7 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 !
 ! !ARGUMENTS:
   implicit none
-  type(domain1_type), intent(in) :: ldomain
+  type(domain_type) , intent(in) :: ldomain
   character(len=*)  , intent(in) :: mapfname    ! input mapping file name
   character(len=*)  , intent(in) :: datfname    ! input data file name
   integer           , intent(in) :: ndiag       ! unit number for diagnostic output
@@ -69,8 +69,7 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 !
 ! !LOCAL VARIABLES:
   type(gridmap_type)    :: tgridmap
-  type(domain1_type)    :: tdomain          ! local domain
-  integer , allocatable :: temp_i(:,:)      ! input grid: temporary
+  type(domain_type)     :: tdomain          ! local domain
   real(r8), allocatable :: ef_btr_i(:)      ! input grid: EFs for broadleaf trees
   real(r8), allocatable :: ef_fet_i(:)      ! input grid: EFs for fineleaf evergreen
   real(r8), allocatable :: ef_fdt_i(:)      ! input grid: EFs for fineleaf deciduous
@@ -79,124 +78,45 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
   real(r8), allocatable :: ef_crp_i(:)      ! input grid: EFs for crops
   real(r8) :: sum_fldo                      ! global sum of dummy input fld
   real(r8) :: sum_fldi                      ! global sum of dummy input fld
-  integer  :: k,n,in,jn,no,ni,ns_o,ns_i     ! indices
+  integer  :: k,n,no,ni,ns_o,ns_i           ! indices
   integer  :: ncid,dimid,varid              ! input netCDF id's
   integer  :: ier                           ! error status
   real(r8) :: relerr = 0.00001_r8           ! max error: sum overlap wts ne 1
-  character(len=256) locfn                  ! local dataset file name
   character(len=32) :: subname = 'mkvocef'
 !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make VOC emission factors .....'
   call shr_sys_flush(6)
 
+  ns_o = ldomain%ns
+
   ! -----------------------------------------------------------------
   ! Read input Emission Factors
   ! -----------------------------------------------------------------
 
-  ! TODO: this is hardwired for 720x360, and for a broken dataset, fix this
-
   ! Obtain input grid info, read local fields
 
-  call getfil (datfname, locfn, 0)
-
-  call domain1_read(tdomain,locfn)
+  call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
   allocate(ef_btr_i(ns_i), ef_fet_i(ns_i), ef_fdt_i(ns_i), &
-           ef_shr_i(ns_i), ef_grs_i(ns_i), ef_crp_i(ns_i), stat=ier)
+           ef_shr_i(ns_i), ef_grs_i(ns_i), ef_crp_i(ns_i), &
+           stat=ier)
   if (ier/=0) call abort()
-  ns_o = ldomain%ns
 
-  call check_ret(nf_open(locfn, 0, ncid), subname)
-
-  allocate(temp_i(720,360))
-
+  write (6,*) 'Open VOC file: ', trim(datfname)
+  call check_ret(nf_open(datfname, 0, ncid), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_btr', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-        ef_btr_i(ni)=temp_i(in+360,jn)*1.0_r8
-     end if
-     if (in > 360) then
-        ef_btr_i(ni)=temp_i(in-360,jn)*1.0_r8
-     end if
-  end do
-  end do
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_btr_i), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_fet', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-        ef_fet_i(ni)=temp_i(in+360,jn)*1.0_r8
-     end if
-     if (in > 360) then
-        ef_fet_i(ni)=temp_i(in-360,jn)*1.0_r8
-     end if
-  end do
-  end do
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_fet_i), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_fdt', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-  	  ef_fdt_i(ni)=temp_i(in+360,jn)*1.0_r8
-       end if
-       if (in > 360) then
-	  ef_fdt_i(ni)=temp_i(in-360,jn)*1.0_r8
-       end if
-  end do
-  end do
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_fdt_i), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_shr', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-        ef_shr_i(ni)=temp_i(in+360,jn)*1.0_r8
-     end if
-     if (in > 360) then
-        ef_shr_i(ni)=temp_i(in-360,jn)*1.0_r8
-     end if
-  end do
-  end do
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_shr_i), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_grs', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-        ef_grs_i(ni)=temp_i(in+360,jn)*1.0_r8
-     end if
-     if (in > 360) then
-        ef_grs_i(ni)=temp_i(in-360,jn)*1.0_r8
-     end if
-  end do
-  end do
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_grs_i), subname)
   call check_ret(nf_inq_varid (ncid, 'ef_crp', varid), subname)
-  call check_ret(nf_get_var_int (ncid, varid, temp_i), subname)
-  do in = 1,720
-  do jn = 1,360
-     ni = (361-jn-1)*720 + in
-     if (in < 361) then
-        ef_crp_i(ni)=temp_i(in+360,jn)*1.0_r8
-     end if
-     if (in > 360) then
-        ef_crp_i(ni)=temp_i(in-360,jn)*1.0_r8
-     end if
-  end do
-  end do
-
-  deallocate(temp_i)
-
+  call check_ret(nf_get_var_double(ncid, varid, ef_crp_i), subname)
   call check_ret(nf_close(ncid), subname)
 
   ! Area-average percent cover on input grid to output grid 
@@ -207,74 +127,48 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 
   ! Error checks for domain and map consistencies
 
-  if (tdomain%ns /= tgridmap%na) then
-     write(6,*)'input domain size and gridmap source size are not the same size'
-     write(6,*)' domain size = ',tdomain%ns
-     write(6,*)' map src size= ',tgridmap%na
-     stop
-  end if
-  do n = 1,tgridmap%ns
-     ni = tgridmap%src_indx(n)
-     if (tdomain%mask(ni) /= tgridmap%mask_src(ni)) then
-        write(6,*)'input domain mask and gridmap mask are not the same at ni = ',ni
-        write(6,*)' domain  mask= ',tdomain%mask(ni)
-        write(6,*)' gridmap mask= ',tgridmap%mask_src(ni)
-        stop
-     end if
-     if (tdomain%lonc(ni) /= tgridmap%xc_src(ni)) then
-        write(6,*)'input domain lon and gridmap lon not the same at ni = ',ni
-        write(6,*)' domain  lon= ',tdomain%lonc(ni)
-        write(6,*)' gridmap lon= ',tgridmap%xc_src(ni)
-        stop
-     end if
-     if (tdomain%latc(ni) /= tgridmap%yc_src(ni)) then
-        write(6,*)'input domain lat and gridmap lat not the same at ni = ',ni
-        write(6,*)' domain  lat= ',tdomain%latc(ni)
-        write(6,*)' gridmap lat= ',tgridmap%yc_src(ni)
-        stop
-     end if
-  end do
+  call domain_checksame( tdomain, ldomain, tgridmap )
 
   ! Do mapping from input to output grid
 
-  call gridmap_areaave(tgridmap, ef_btr_i, ef_btr_o)
-  call gridmap_areaave(tgridmap, ef_fet_i, ef_fet_o)
-  call gridmap_areaave(tgridmap, ef_fdt_i, ef_fdt_o)
-  call gridmap_areaave(tgridmap, ef_shr_i, ef_shr_o)
-  call gridmap_areaave(tgridmap, ef_grs_i, ef_grs_o)
-  call gridmap_areaave(tgridmap, ef_crp_i, ef_crp_o)
+  call gridmap_areaave(tgridmap, ef_btr_i, ef_btr_o, nodata=0._r8)
+  call gridmap_areaave(tgridmap, ef_fet_i, ef_fet_o, nodata=0._r8)
+  call gridmap_areaave(tgridmap, ef_fdt_i, ef_fdt_o, nodata=0._r8)
+  call gridmap_areaave(tgridmap, ef_shr_i, ef_shr_o, nodata=0._r8)
+  call gridmap_areaave(tgridmap, ef_grs_i, ef_grs_o, nodata=0._r8)
+  call gridmap_areaave(tgridmap, ef_crp_i, ef_crp_o, nodata=0._r8)
 
   ! Check for conservation
 
   do no = 1, ns_o
      if ( ef_btr_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF btr = ',ef_btr_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
      if ( ef_fet_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF fet = ',ef_fet_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
      if ( ef_fdt_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF fdt = ',ef_fdt_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
      if ( ef_shr_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF shr = ',ef_shr_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
      if ( ef_grs_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF grs = ',ef_grs_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
      if ( ef_crp_o(no) < 0._r8 ) then
         write (6,*) 'MKVOCEF error: EF crp = ',ef_crp_o(no), &
-             ' is negative for col, row = ',no
+             ' is negative for no = ',no
         call abort()
      end if
   enddo
@@ -314,7 +208,7 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 
   deallocate ( ef_btr_i, ef_fet_i, ef_fdt_i, &
                ef_shr_i, ef_grs_i, ef_crp_i )
-  call domain1_clean(tdomain)
+  call domain_clean(tdomain)
   call gridmap_clean(tgridmap)
 
 end subroutine mkvocef

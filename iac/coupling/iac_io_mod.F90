@@ -19,6 +19,7 @@ module iac_io_mod
   use perf_mod       , only : t_startf, t_stopf
   use mct_mod
   use pio
+  use iac_spmd_mod, only : masterproc
 
 ! !PUBLIC TYPES:
   implicit none
@@ -1559,8 +1560,8 @@ contains
           do n = 1,ndims_iod
              status = pio_inq_dimlen(ncid,dids(n),dims(n))
           enddo
-          call ncd_getiodesc(ncid, ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-               xtype, iodnum)
+          !call ncd_getiodesc(ncid, ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+          !     xtype, iodnum)
           iodesc_plus => iodesc_list(iodnum)
           if (present(nt)) then
              call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1584,8 +1585,8 @@ contains
        do n = 1,ndims_iod
           status = pio_inq_dimlen(ncid,dids(n),dims(n))
        enddo
-       call ncd_getiodesc(ncid, ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-            xtype, iodnum)
+       !call ncd_getiodesc(ncid, ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+       !     xtype, iodnum)
        iodesc_plus => iodesc_list(iodnum)
        if (present(nt)) then
           call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1663,8 +1664,8 @@ contains
           do n = 1,ndims_iod
              status = pio_inq_dimlen(ncid,dids(n),dims(n))
           enddo
-          call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-               xtype, iodnum)
+          !call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+          !     xtype, iodnum)
           iodesc_plus => iodesc_list(iodnum)
           if (present(nt)) then
              call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1693,8 +1694,8 @@ contains
        do n = 1,ndims_iod
           status = pio_inq_dimlen(ncid,dids(n),dims(n))
        enddo
-       call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-            xtype, iodnum)
+       !call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+       !     xtype, iodnum)
        iodesc_plus => iodesc_list(iodnum)
        if (present(nt)) then
           call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1777,8 +1778,8 @@ contains
           do n = 1,ndims_iod
              status = pio_inq_dimlen(ncid,dids(n),dims(n))
           enddo
-          call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-               xtype, iodnum)
+          !call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+          !     xtype, iodnum)
           iodesc_plus => iodesc_list(iodnum)
           if (present(nt)) then
              call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1802,8 +1803,8 @@ contains
        do n = 1,ndims_iod
           status = pio_inq_dimlen(ncid,dids(n),dims(n))
        enddo
-       call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
-            xtype, iodnum)
+       !call ncd_getiodesc(ncid,  ndims_iod, dims(1:ndims_iod), dids(1:ndims_iod), &
+       !     xtype, iodnum)
        iodesc_plus => iodesc_list(iodnum)
        if (present(nt)) then
           call pio_setframe(ncid, vardesc, int(nt,kind=PIO_OFFSET_KIND))
@@ -1823,4 +1824,199 @@ contains
 
 !------------------------------------------------------------------------
 
-end module RtmIO
+  subroutine ncd_getiodesc(ncid, clmlevel, ndims, dims, dimids, &
+       xtype, iodnum, switchdim) 
+    !
+    ! !DESCRIPTION: 
+    ! Returns an index to an io descriptor
+    !
+    use shr_sys_mod,    only : shr_sys_abort
+    !
+    ! !ARGUMENTS:
+    class(file_desc_t) , intent(inout) :: ncid       ! PIO file descriptor
+    character(len=8)   , intent(in)    :: clmlevel   ! clmlevel
+    integer            , intent(in)    :: ndims      ! ndims for var      
+    integer            , intent(in)    :: dims(:)    ! dim sizes
+    integer            , intent(in)    :: dimids(:)  ! dim ids
+    integer            , intent(in)    :: xtype      ! file external type
+    integer            , intent(out)   :: iodnum     ! iodesc num in list
+    logical,optional   , intent(in)    :: switchdim  ! switch level dimension and first dim 
+    !
+    ! !LOCAL VARIABLES:
+    integer :: k,m,n,cnt                     ! indices
+    integer :: basetype                      ! pio basetype
+    integer :: gsmap_lsize                   ! local size of gsmap
+    integer :: gsmap_gsize                   ! global size of gsmap
+    integer :: fullsize                      ! size of entire array on cdf
+    integer :: gsize                         ! global size of clmlevel
+    integer :: vsize                         ! other dimensions
+    integer :: vsize1, vsize2                ! other dimensions
+    integer :: status                        ! error status
+    logical :: found                         ! true => found created iodescriptor
+    integer :: ndims_file                    ! temporary
+    character(len=64) dimname_file           ! dimension name on file
+    character(len=64) dimname_iodesc         ! dimension name from io descriptor
+    type(mct_gsMap),pointer       :: gsmap   ! global seg map
+    integer, pointer,dimension(:) :: gsmOP   ! gsmap ordered points
+    integer, pointer  :: compDOF(:)
+    character(len=32) :: subname = 'ncd_getiodesc'
+    !------------------------------------------------------------------------
+
+#if 0
+    ! Determining if need to create a new io descriptor
+
+    n = 1
+    found = .false.
+    do while (n <= num_iodesc .and. .not.found)
+       if (ndims == iodesc_list(n)%ndims .and. xtype == iodesc_list(n)%type) then
+          found = .true.
+          ! First found implies that dimension sizes are the same 
+          do m = 1,ndims
+             if (dims(m) /= iodesc_list(n)%dims(m)) then
+                found = .false.
+             endif
+          enddo
+          ! If found - then also check that dimension names are equal - 
+          ! dimension ids in iodescriptor are only used to query dimension
+          ! names associated with that iodescriptor
+          if (found) then
+             do m = 1,ndims
+                status = PIO_inq_dimname(ncid,dimids(m),dimname_file)
+                status = PIO_inquire(ncid, ndimensions=ndims_file)
+                if (iodesc_list(n)%dimids(m) > ndims_file) then 
+                   found = .false.
+                   exit
+                else
+                   status = PIO_inq_dimname(ncid,iodesc_list(n)%dimids(m),dimname_iodesc)
+                   if (trim(dimname_file) /= trim(dimname_iodesc)) then
+                      found = .false.
+                      exit
+                   end if
+                end if
+             end do
+          end if
+          if (found) then
+             iodnum = n
+             if (iodnum > num_iodesc) then
+                write(iulog,*) trim(subname),' ERROR: iodnum out of range',iodnum,num_iodesc
+                call shr_sys_abort(errMsg(__FILE__, __LINE__))
+             endif
+             RETURN
+          endif
+       endif
+       n = n + 1
+    enddo
+
+    ! Creating a new io descriptor
+
+    if (ndims > 0) then 
+       num_iodesc = num_iodesc + 1
+       if (num_iodesc > max_iodesc) then
+          write(iulog,*) trim(subname),' ERROR num_iodesc gt max_iodesc',max_iodesc
+          call shr_sys_abort(errMsg(__FILE__, __LINE__))
+       endif
+       iodnum = num_iodesc
+       if (masterproc .and. debug > 1) then
+          write(iulog,*) trim(subname),' creating iodesc at iodnum,ndims,dims(1:ndims),xtype',&
+               iodnum,ndims,dims(1:ndims),xtype
+       endif
+    end if
+
+    if (xtype == pio_double ) then
+       basetype = PIO_DOUBLE
+    else if (xtype == pio_real) then
+       basetype  = PIO_DOUBLE
+    else if (xtype == pio_int) then
+       basetype = PIO_INT
+    end if
+
+    !call get_clmlevel_gsmap(clmlevel,gsmap)
+    !gsize = get_clmlevel_gsize(clmlevel)
+    call iac_SetgsMap_mct( mpicom_iac, IACID, gsMap)
+    gsmap_lsize = mct_gsmap_lsize(gsmap,mpicom_iac)
+    gsmap_gsize = mct_gsmap_gsize(gsmap)
+
+    call mct_gsMap_orderedPoints(gsmap,iam,gsmOP)
+
+    fullsize = 1
+    do n = 1,ndims
+       fullsize = fullsize*dims(n)
+    enddo
+
+    vsize = fullsize / gsize
+    if (mod(fullsize,gsize) /= 0) then
+       write(iulog,*) subname,' ERROR in vsize ',fullsize,gsize,vsize
+       call shr_sys_abort(errMsg(__FILE__, __LINE__))
+    endif
+
+    allocate(compDOF(gsmap_lsize*vsize))
+
+    if (present(switchdim)) then
+       if (switchdim) then
+          cnt = 0
+          do m = 1,gsmap_lsize
+             do n = 1,vsize
+                cnt = cnt + 1
+                compDOF(cnt) = (gsmOP(m)-1)*vsize + n
+             enddo
+          enddo
+       else
+          write(iulog,*) subname,' ERROR switch dims present must have switchdim true' 
+          call shr_sys_abort(errMsg(__FILE__, __LINE__))
+       end if
+    else         ! currently allow for up to two vertical dimensions
+       if (vsize /= 1 .and. vsize /= dims(ndims)) then
+          vsize1 = vsize/dims(ndims)
+          vsize2 = dims(ndims)
+          if (vsize1*vsize2 /= vsize) then
+             write(iulog,*)'vsize1= ',vsize1,' vsize2= ',vsize2,' vsize= ',vsize
+             call shr_sys_abort('error in vsize1 and vsize2 computation'//errMsg(__FILE__, __LINE__))
+          end if
+          cnt = 0
+          do k = 1,vsize2
+             do n = 1,vsize1
+                do m = 1,gsmap_lsize
+                   cnt = cnt + 1
+                   compDOF(cnt) = (k-1)*vsize1*gsmap_gsize + (n-1)*gsmap_gsize + gsmOP(m) 
+                enddo
+             enddo
+          end do
+       else
+          cnt = 0
+          do n = 1,vsize
+             do m = 1,gsmap_lsize
+                cnt = cnt + 1
+                compDOF(cnt) = (n-1)*gsmap_gsize + gsmOP(m)
+             enddo
+          enddo
+       end if
+    end if
+
+    if (debug > 1) then
+       do m = 0,npes-1
+          if (iam == m) then
+             write(iulog,*) trim(subname),' sizes1  = ',iam,gsize,gsmap_gsize,gsmap_lsize
+             write(iulog,*) trim(subname),' sizes2  = ',iam,fullsize,npes,vsize
+             write(iulog,*) trim(subname),' compDOF = ',iam,size(compDOF),minval(compDOF),maxval(compDOF)
+             call shr_sys_flush(iulog)
+          endif
+          call mpi_barrier(mpicom,status)
+       enddo
+    endif
+
+    deallocate(gsmOP)
+
+    call pio_initdecomp(pio_subsystem, baseTYPE, dims(1:ndims), compDOF, iodesc_list(iodnum)%iodesc)
+
+    deallocate(compDOF)
+
+    iodesc_list(iodnum)%type  = xtype
+    iodesc_list(iodnum)%ndims = ndims
+    iodesc_list(iodnum)%dims  = 0
+    iodesc_list(iodnum)%dims(1:ndims)   = dims(1:ndims)
+    iodesc_list(iodnum)%dimids(1:ndims) = dimids(1:ndims)
+#endif
+
+  end subroutine ncd_getiodesc
+
+end module iac_io_mod

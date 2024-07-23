@@ -11,8 +11,11 @@ module gcam_comp_mod
  
   use iac_data_mod         , only : cdata => gdata, EClock => GClock, &
                                     lnd2iac_type
-
-  use iac_ctl_type         , only : nlat, nlon, npft
+  use shr_sys_mod , only : shr_sys_abort
+  use iac_data_mod, only : iac_ctl
+  use shr_kind_mod,      only: CX => SHR_KIND_CX
+  use iac_spmd_mod, only : masterproc
+  use gcam_var_mod
 
   implicit none
   SAVE
@@ -22,55 +25,17 @@ module gcam_comp_mod
 
   public :: gcam_init_mod               ! gcam initialization
   public :: gcam_run_mod                ! gcam run phase
-  public :: gcam_setdensity_mod         ! gcam set density phase
   public :: gcam_final_mod              ! gcam finalization/cleanup
 
 ! !PUBLIC DATA MEMBERS: None
+
 
 
 ! !REVISION HISTORY:
 ! Author: T Craig
 ! Author: JET - added interface files for cesm/gcam communication
 
-
 ! !PRIVATE DATA MEMBERS:
-! namelist values, to be used in the gcam functions
-  ! probably need to be moved to the gcam_var_mod.f90 module or
-  ! something, but for now i'll define them up here - they are only
-  ! used within the gcam_comp_mod functions anyway.
-  character(len=*) ::  case_name
-  character(len=*) ::  gcam_config
-  character(len=*) ::  base_co2_file
-  character(len=*) ::  gcam2elm_co2_mapping_file
-  character(len=*) ::  gcam2elm_luc_mapping_file
-  character(len=*) ::  gcam2elm_woodharvest_mapping_file
-  character(len=*) ::  elm2gcam_mapping_file
-
-  logical :: read_scalars = .FALSE. ! if .FALSE., scalars are calculated from npp/hr
-
-  logical :: read_elm_from_file = .TRUE. ! if .FALSE., elm data (npp,
-  ! hr, area, pft weight) are passed from e3sm.
-
-  logical :: write_co2 = .TRUE. ! gridded co2 emissions will be
-  ! written to a file (in addition to passed in code).
-  
-  logical :: write_scalars = .TRUE. ! scalars will be written to a file.
-  
-  ! define coupling control variables
-  ! these booleans define what is passed between gcam & e3sm.
-  logical :: elm_iac_carbon_scaling = .TRUE.; ! if .TRUE., changes in
-  ! land productivity from elm are used in gcam.
-  logical :: iac_elm_co2_emissions = .TRUE.; ! if .TRUE., energy system
-  ! co2 is passed from gcam to eam.
-    
-  ! define size control variables
-  ! these integers define the length of the various arrays used in the coupling
-  integer ::  num_lat = 180; ! number of horizontal grid cells
-  integer ::  num_lon = 360; ! number of vertical grid cells
-  integer ::  num_pft = 16;  ! number of pfts in elm
-  integer ::  num_gcam_energy_regions = 32;
-  integer ::  num_gcam_land_regions = 384;
-  integer ::  num_iac2elm_landtypes = 9;
 
 !EOP
 !===============================================================
@@ -83,23 +48,81 @@ contains
 ! !IROUTINE: gcam_init_mod
 
 ! !INTERFACE:
-  subroutine gcam_init_mod(gcamo, gcamoemis)
+  subroutine gcam_init_mod(gcamo, gcamoemis,gcamoco2sfcjan, gcamoco2sfcfeb,   &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
 
 ! !DESCRIPTION:
 ! Initialize interface for gcam
 
 ! !USES:
+    !use gcam_var, only : NLFilename_in
+    use iac_data_mod
+
+    ! To null-terminate the strings we pass into C++
+    use iso_c_binding
+
+    ! For error checking
+    use mct_mod
+
     implicit none
 
 ! !ARGUMENTS:
     real*8, pointer :: gcamo(:,:)
     real*8, pointer :: gcamoemis(:,:)
-
+    real*8, pointer :: gcamoco2sfcjan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcfeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcsep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcoct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcnov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcdec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlofeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlosep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlooct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlonov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlodec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhifeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhisep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhioct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhinov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    
 ! !LOCAL VARIABLES:
     character(len=*),parameter :: subname='(gcam_init_mod)'
     character(len=128) :: casename
-    integer,save :: iulog = 6
-    integer      :: i, unitn
+    integer      :: i, unitn, ier, char_len, rr, ymd
+    logical      :: lexist
+    character(len=128) :: nlfilename_in
+
 
 ! !REVISION HISTORY:
 ! Author: T Shippert - modified heavily for E3SM/GCAM coupling
@@ -108,65 +131,157 @@ contains
 ! Namelist variables
 !---------------------------------------------------------------------
 
-    namelist /iac_inparm/ &
-         case_name,gcam_config,base_co2_file, &
-         gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file,&
-         gcam2elm_woodharvest_mapping_file, elm2gcam_mapping_file,&
-         read_scalars,read_elm_from_file, write_co2, write_scalars,&
-         elm_iac_carbon_scaling, iac_elm_co2_emissions
+    ! Here is where we put our namelist inputs into the gdata structure
+    ! (remember, we call it cdata in gcam-space, but it's not the same
+    ! as teh cdata_z structure used in e3sm-space).  This is how we
+    ! transmit the namelist variables downstream to all the gcam and
+    ! gcam/coupling functions that need them - through gdata.
+    allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamo',ier)
+    allocate(gcamoemis(num_emiss_sectors,num_gcam_energy_regions), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoemis',ier)
 
-    ! These might get renamed or removed - control values that might
-    ! be duplicated elsewhere (maybe)
-    namelist /iac_inparm/ &
-         num_lat,num_lon,num_pft,num_gcam_energy_regions, &
-         num_gcam_land_regions,num_iac2elm_landtypes
+    ! Allocate variables to store gridded CO2 emissions from GCAM
+    ! KVC: Not sure if this is where this should happen in the long run or not
+    allocate(gcamoco2sfcjan(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcjan',ier)
+    allocate(gcamoco2sfcfeb(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcfeb',ier)
+    allocate(gcamoco2sfcmar(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcmar',ier)
+    allocate(gcamoco2sfcapr(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcapr',ier)
+    allocate(gcamoco2sfcmay(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcmay',ier)
+    allocate(gcamoco2sfcjun(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcjun',ier)
+    allocate(gcamoco2sfcjul(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcjul',ier)
+    allocate(gcamoco2sfcaug(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcaug',ier)
+    allocate(gcamoco2sfcsep(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcsep',ier)
+    allocate(gcamoco2sfcoct(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcoct',ier)
+    allocate(gcamoco2sfcnov(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcnov',ier)
+    allocate(gcamoco2sfcdec(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2sfcdec',ier)
     
-    ! Read in namelist
-    ! Note: no concat with instance number, because we only have one
-    ! instance (proc) currently
-    nlfilename_iac = "gcam_in"
+    allocate(gcamoco2airlojan(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlojan',ier)
+    allocate(gcamoco2airlofeb(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlofeb',ier)
+    allocate(gcamoco2airlomar(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlomar',ier)
+    allocate(gcamoco2airloapr(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airloapr',ier)
+    allocate(gcamoco2airlomay(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlomay',ier)
+    allocate(gcamoco2airlojun(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlojun',ier)
+    allocate(gcamoco2airlojul(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlojul',ier)
+    allocate(gcamoco2airloaug(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airloaug',ier)
+    allocate(gcamoco2airlosep(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlosep',ier)
+    allocate(gcamoco2airlooct(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlooct',ier)
+    allocate(gcamoco2airlonov(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlonov',ier)
+    allocate(gcamoco2airlodec(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airlodec',ier)
 
-    inquire (file = trim(nlfilename_iac), exist = lexist)
-    if ( .not. lexist ) then
-       write(iulog,*) subname // ' ERROR: nlfilename_iac does NOT exist:'&
-            //trim(nlfilename_iac)
-       call shr_sys_abort(trim(subname)//' ERROR nlfilename_rof does not exist')
-    end if
-  
-    if (masterproc) then
-       unitn = shr_file_getunit()
-       write(iulog,*) 'Read in gcam_inparm namelist from: ', trim(nlfilename_iac)
-       open( unitn, file=trim(nlfilename_iac), status='old' )
-       ier = 1
-       do while ( ier /= 0 )
-          read(unitn, gcam_inparm, iostat=ier)
-          if (ier < 0) then
-             call shr_sys_abort( subname//' encountered end-of-file on gcam_inparm read' )
-          endif
-       end do
-       close(unitn)
-       call shr_file_freeUnit(unitn)
-    end if
+    allocate(gcamoco2airhijan(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhijan',ier)
+    allocate(gcamoco2airhifeb(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhifeb',ier)
+    allocate(gcamoco2airhimar(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhimar',ier)
+    allocate(gcamoco2airhiapr(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhiapr',ier)
+    allocate(gcamoco2airhimay(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhimay',ier)
+    allocate(gcamoco2airhijun(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhijun',ier)
+    allocate(gcamoco2airhijul(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhijul',ier)
+    allocate(gcamoco2airhiaug(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhiaug',ier)
+    allocate(gcamoco2airhisep(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhisep',ier)
+    allocate(gcamoco2airhioct(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhioct',ier)
+    allocate(gcamoco2airhinov(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhinov',ier)
+    allocate(gcamoco2airhidec(num_lon,num_lat), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcamoco2airhidec',ier)
 
-    ! Removed a bunch of cdata() allocations, because I don't think
-    ! they apply anymore - everything is handled via namelist and
-    ! module variables, not configuration files.  But, if I'm wrong,
-    ! see unused/giac_comp_mod.F90 and unused/cdata_frag.F90
-
-    ! These allocations are currently wrong
-
-    allocate(gcamo(iac_gcamo_nflds,cdata%i(iac_cdatai_gcamo_size)))
-    allocate(gcamoemis(iac_gcamoemis_nemis,cdata%i(iac_cdatai_gcamoemis_size)))
-    
-    gcami = iac_spval
-    gcamo = iac_spval
-    gcamoemis = iac_spval
-    
     ! create CCSM_GCAM_interface Object 
-    call initCCSMInterface()
+    call inite3sminterface(iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors)
     
-    ! Call initcGCAM method of CCSM/GCAM Interface 
-    call initcGCAM()
+    ! Call initcGCAM method of e3sm/GCAM Interface 
+
+    ! Null terminate
+    char_len = len_trim(case_name)
+    case_name(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam_config)
+    gcam_config(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_co2_mapping_file)
+    gcam2elm_co2_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_luc_mapping_file)
+    gcam2elm_luc_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_woodharvest_mapping_file)
+    gcam2elm_woodharvest_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_cdensity_mapping_file)
+    gcam2elm_cdensity_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_surface_file)
+    base_co2_surface_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_shipment_file)
+    base_co2_shipment_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_co2_aircraft_file)
+    base_co2_aircraft_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(base_gcam_co2_file)
+    base_gcam_co2_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(country2grid_map)
+    country2grid_map(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(country2region_map)
+    country2region_map(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(pop_iiasa_file)
+    pop_iiasa_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gdp_iiasa_file)
+    gdp_iiasa_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(pop_gcam_file)
+    pop_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gdp_gcam_file)
+    gdp_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(co2_gcam_file)
+    co2_gcam_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(surface_co2_downscaling_method)
+    surface_co2_downscaling_method(char_len+1:char_len+1) = c_null_char
+
+    ! get restart state
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       rr = 1
+    else
+       rr = 0
+    end if
+    write(iulog,*) trim(subname),' rr (nsrest) = ',rr
+
+    ! get e3sm model year
+    ymd = EClock(iac_eclock_ymd)
+    write(iulog,*) trim(subname),' e3sm year = ',ymd
+
+    call initcGCAM(ymd, trim(case_name), &
+         trim(gcam_config),&
+         trim(gcam2elm_co2_mapping_file),&
+         trim(gcam2elm_luc_mapping_file),&
+         trim(gcam2elm_woodharvest_mapping_file),&
+         trim(gcam2elm_cdensity_mapping_file),&
+         trim(base_gcam_co2_file), trim(base_co2_surface_file),&
+         trim(base_co2_shipment_file), trim(base_co2_aircraft_file),&
+         iac_ctl%area, iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors, rr)
     
   end subroutine gcam_init_mod
 
@@ -177,24 +292,77 @@ contains
 ! !IROUTINE: gcam_run_mod
 
 ! !INTERFACE:
-  subroutine gcam_run_mod(gcamo, gcamoemis)
+  subroutine gcam_run_mod(gcamo, gcamoemis, gcamoco2sfcjan, gcamoco2sfcfeb,   &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
 
 ! !DESCRIPTION:
 ! Run interface for gcam
+! This includes setting the yield and carbon density scalars
 
 ! !USES:
+   use iac_data_mod, only : iac_spval, iac_cdatai_logunit
+   use iac_data_mod, only : iac_eclock_ymd, iac_eclock_tod, iac_eclock_dt
+   use iac_data_mod, only : iac_first_coupled_year, lnd2iac_vars
+   use iso_c_binding
     implicit none
 
 ! !ARGUMENTS:
-    real*8, pointer :: gcami(:,:)
     real*8, pointer :: gcamo(:,:)
     real*8, pointer :: gcamoemis(:,:)
-
+    real*8, pointer :: gcamoco2sfcjan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcfeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcsep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcoct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcnov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcdec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlofeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlosep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlooct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlonov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlodec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhifeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhisep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhioct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhinov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    
 ! !LOCAL VARIABLES:
-    logical :: restart_now
     integer :: ymd, tod, dt
-    integer :: iu
-    integer :: i,j
+    integer :: i,j,wc,gs,cs,rs,ws,rr,ays
+    character(len=256) :: elm2gcam_mapping_file_loc 
+    character(len=256) :: base_npp_file_loc
+    character(len=256) :: base_hr_file_loc
+    character(len=256) :: base_pft_file_loc
     character(len=*),parameter :: subname='(gcam_run_mod)'
 
 
@@ -205,69 +373,103 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-  restart_now = cdata%l(iac_cdatal_rest)
-  iu  = cdata%i(iac_cdatai_logunit)
+  gcamo = iac_spval
+  gcamoemis = iac_spval
 
   ymd = EClock(iac_eclock_ymd)
   tod = EClock(iac_eclock_tod)
   dt  = EClock(iac_eclock_dt)
 
-  write(iu,*) trim(subname),' date= ',ymd,tod
+  write(iulog,*) trim(subname),' date= ',ymd,tod
+
+  ! get restart state
+  if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+     rr = 1
+  else
+     rr = 0
+  end if
+
+  ! convert logical for gcam spinup
+  if ( gcam_spinup ) then
+     gs = 1
+  else
+     gs = 0
+  end if
+
+  ! get scalar control variables as ints
+  if ( read_scalars ) then
+     rs = 1
+  else
+     rs = 0
+  end if
+
+  if ( write_scalars ) then
+     ws = 1
+  else
+     ws = 0
+  end if
+
+  ! for ag yield scaling
+  if ( elm_ehc_agyield_scaling ) then
+     ays = 1
+  else
+     ays = 0
+  end if
+
+  ! for carbon density scaling
+  if ( elm_ehc_carbon_scaling ) then
+     cs = 1
+  else
+     cs = 0
+  end if
+
+  ! get some file names for scalars
+  ! use local variables to avoid adding multiple null characters to the orig
+  elm2gcam_mapping_file_loc=trim(elm2gcam_mapping_file)//c_null_char
+  base_npp_file_loc=trim(base_npp_file)//c_null_char
+  base_hr_file_loc=trim(base_hr_file)//c_null_char
+  base_pft_file_loc=trim(base_pft_file)//c_null_char
 
   !  Call runcGCAM method of E3SM Interface 
-  call runcGCAM(ymd,gcamo,gcamo_emis,base_co2_file, nlon, nlat, write_co2)
+  !  The yields and carbon density scalars are set within this function also
+  call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
+                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, ws, ays, cs,&
+                base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
+
+  ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
+  if ( ehc_eam_co2_emissions ) then
+     ! Convert logical to int for interface with C/C++
+     if ( write_co2 ) then
+        wc = 1
+     else
+        wc = 0
+     end if
+
+     call downscaleemissionscgcam(gcamoemis, gcamoco2sfcjan, gcamoco2sfcfeb, &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               & 
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec, &
+ 	  elm2gcam_mapping_file_loc, country2grid_map, country2region_map,    &
+          pop_iiasa_file, gdp_iiasa_file,                                     &
+          pop_gcam_file, gdp_gcam_file, co2_gcam_file,                        &
+	  num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
+          num_lon, num_lat, wc, ymd,                                          &
+          surface_co2_downscaling_method)
+
+  end if
 
   end subroutine gcam_run_mod
 
-
-!---------------------------------------------------------------------------
-!BOP
-
-! !IROUTINE: gcam_setdensity_mod
-
-! !INTERFACE:
-  subroutine gcam_setdensity_mod(lnd2iac_vars)
-
-! !DESCRIPTION:
-! Setdensity interface for gcam
-
-! !USES:
-    implicit none
-
-! !ARGUMENTS:
-    type(lnd2iac_type), intent(in) :: lnd2iac_vars
-
-! !LOCAL VARIABLES:
-    logical :: restart_now
-    integer :: ymd, tod, dt, yyyymmdd
-    integer :: iu
-    integer :: i,j
-    character(len=*),parameter :: subname='(gcam_setdensity_mod)'
-
-
-! !REVISION HISTORY:
-! Author: T Craig
-! Author: JET - added interface files for cesm/gcam communication
-
-!EOP
-!-----------------------------------------------------------------------
-
-  restart_now = cdata%l(iac_cdatal_rest)
-  iu  = cdata%i(iac_cdatai_logunit)
-
-  ymd = EClock(iac_eclock_ymd)
-  tod = EClock(iac_eclock_tod)
-  dt  = EClock(iac_eclock_dt)
-
-  write(iu,*) trim(subname),' date= ',ymd,tod
-
-  !  Call setdensity method of CCSM Interface 
-  !call setdensitycGCAM(ymd,tod,gcami,size(gcami,dim=1),size(gcami,dim=2))
-  call setdensitycGCAM(ymd, lnd2iac_vars%area, lnd2iac_vars%landfrac, &
-       lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-       nlon, nlat, npft, mapping_file, read_scalars, write_scalars)
-  
-  end subroutine gcam_setdensity_mod
 
 
 !---------------------------------------------------------------------------
@@ -276,7 +478,18 @@ contains
 ! !IROUTINE: gcam_final_mod
 
 ! !INTERFACE:
-  subroutine gcam_final_mod( )
+  subroutine gcam_final_mod(gcamoco2sfcjan, gcamoco2sfcfeb,   &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec )
 
 ! !DESCRIPTION:
 ! Finalize gcam model
@@ -284,6 +497,42 @@ contains
 
    implicit none
 ! !ARGUMENTS:
+    real*8, pointer :: gcamoco2sfcjan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcfeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcmay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcjul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcsep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcoct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcnov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2sfcdec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlofeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlomay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlojul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airloaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlosep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlooct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlonov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airlodec(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijan(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhifeb(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimar(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiapr(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhimay(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijun(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhijul(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhiaug(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhisep(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhioct(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhinov(:,:)  ! gcam output for eam, needs to be passed through coupler
+    real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -296,7 +545,47 @@ contains
   call finalizecGCAM()
 
   !  Cleanup CCSM Interface Object 
-  call deleteCCSMInterface()
+  call deletee3sminterface()
+
+  !  Deallocate 
+  deallocate(gcamoco2sfcjan)
+  deallocate(gcamoco2sfcfeb)
+  deallocate(gcamoco2sfcmar)
+  deallocate(gcamoco2sfcapr)
+  deallocate(gcamoco2sfcmay)
+  deallocate(gcamoco2sfcjun)
+  deallocate(gcamoco2sfcjul)
+  deallocate(gcamoco2sfcaug)
+  deallocate(gcamoco2sfcsep)
+  deallocate(gcamoco2sfcoct)
+  deallocate(gcamoco2sfcnov)
+  deallocate(gcamoco2sfcdec)
+
+  deallocate(gcamoco2airlojan)
+  deallocate(gcamoco2airlofeb)
+  deallocate(gcamoco2airlomar)
+  deallocate(gcamoco2airloapr)
+  deallocate(gcamoco2airlomay)
+  deallocate(gcamoco2airlojun)
+  deallocate(gcamoco2airlojul)
+  deallocate(gcamoco2airloaug)
+  deallocate(gcamoco2airlosep)
+  deallocate(gcamoco2airlooct)
+  deallocate(gcamoco2airlonov)
+  deallocate(gcamoco2airlodec)
+
+  deallocate(gcamoco2airhijan)
+  deallocate(gcamoco2airhifeb)
+  deallocate(gcamoco2airhimar)
+  deallocate(gcamoco2airhiapr)
+  deallocate(gcamoco2airhimay)
+  deallocate(gcamoco2airhijun)
+  deallocate(gcamoco2airhijul)
+  deallocate(gcamoco2airhiaug)
+  deallocate(gcamoco2airhisep)
+  deallocate(gcamoco2airhioct)
+  deallocate(gcamoco2airhinov)
+  deallocate(gcamoco2airhidec)
 
   end subroutine gcam_final_mod
 

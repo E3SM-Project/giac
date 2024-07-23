@@ -5,7 +5,7 @@ module iac_comp_mct
   !
   ! !uses:
   use seq_flds_mod
-  use shr_kind_mod     , only : r8 => shr_kind_r8
+  use shr_kind_mod     , only : r8 => shr_kind_r8, SHR_KIND_CL
   use shr_file_mod     , only : shr_file_setLogUnit, shr_file_setLogLevel, &
                                 shr_file_getLogUnit, shr_file_getLogLevel, &
                                 shr_file_getUnit, shr_file_setIO
@@ -21,19 +21,20 @@ module iac_comp_mct
   use iac_data_mod        ! including gdata, GClock
   use iac_init_mod
   use iac_import_export
-  use iac2gcam_mod
   use gcam_comp_mod
   use glm_comp_mod
   use gcam2glm_mod
-  use gcam_var           , only : gcam_nlon, gcam_nlat,  iulog, &
+  use glm2iac_mod
+  use gcam_var_mod        , only : run_gcam, gcam_nlon, gcam_nlat,  iulog, &
                                 nsrStartup, nsrContinue, nsrBranch, & 
                                 inst_index, inst_suffix, inst_name, &
-                                gcam_active, gcam_var_set
+                                gcam_active, gcam_var_set, num_lon, num_lat, &
+                                gcam_alarm
   use iac_spmd_mod
-  use iac_fields_mod
-
+  !use iac_fields_mod
   use ESMF
   use mct_mod
+  use netcdf
 
 ! Stub in other moduals for running iac
 ! use IacMod
@@ -50,16 +51,48 @@ module iac_comp_mct
 ! I'm naming these with a _data suffix to differentiate between these
   ! and the lnd2iac_vars, which are AVects.
 
-  real*8, pointer :: lnd2iac_data(:,:)
-  real*8, pointer :: iac2gcam_data(:,:)
-  real*8, pointer :: gcam2glm_data(:,:)  ! gcam output for gcam
+  real*8, pointer :: gcam2glm_data(:,:)  ! gcam output for glm, set by gcam, passed to gcam2glm
   real*8, pointer :: gcam_emis_data(:,:) ! co2 flux output for atm
-  real*8, pointer :: glm2atm_data(:,:)
   real*8, pointer :: glmi_data(:,:)      ! glm input, converted from gcam2glm_data
-  real*8, pointer :: glmo_data(:,:)      ! glm output
-  real*8, pointer :: glm2lnd_data(:,:)   ! or maybe this is glm output
-
+  real*8, pointer :: glm2lnd_data(:,:)   ! This is used for glm output, but it is called glmo in subroutines that use it
   real*8, pointer :: glm_wh_data(:)
+  real*8, pointer :: gcamoco2sfcjan(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcfeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcmar(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcmay(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcjun(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcjul(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcsep(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcoct(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcnov(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2sfcdec(:,:)  ! gcam output for eam, needs to be passed through coupler                                        
+  real*8, pointer :: gcamoco2airlojan(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlofeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlomar(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airloapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlomay(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlojun(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlojul(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airloaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlosep(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlooct(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlonov(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airlodec(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijan(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhifeb(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhimar(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhiapr(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhimay(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijun(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhijul(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhiaug(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhisep(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhioct(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhinov(:,:)  ! gcam output for eam, needs to be passed through coupler                                      
+  real*8, pointer :: gcamoco2airhidec(:,:)  ! gcam output for eam, needs to be passed through coupler
+
 
   !
   ! PUBLIC MEMBER FUNCTIONS:
@@ -74,6 +107,7 @@ module iac_comp_mct
 
   private :: iac_SetgsMap_mct         ! Set the iac model MCT GS map
   private :: iac_domain_mct           ! Set the iac model domain information
+  private :: gcam2iac_copy            ! Copy z->a gcam output to coupler variables
 
 
 ! REVISION HISTORY:
@@ -117,6 +151,7 @@ contains
     logical :: brnch_retain_casename                 ! flag if should retain the case name on a branch start type
     integer :: lbnum                                 ! input to memory diagnostic
     integer :: shrlogunit,shrloglev                  ! old values for log unit and log level
+    integer :: ymd                                   ! current model year
 
     ! Possibly not useful, as we expect gcam to run with just one proc
     integer :: begg, endg                            ! Region indeces
@@ -137,12 +172,16 @@ contains
     call seq_cdata_setptrs(cdata_z, ID=IACID, mpicom=mpicom_iac, &
          gsMap=gsMap_iac, dom=dom_z, infodata=infodata)
 
+    ! Initialize gcam MPI communicator 
+    call spmd_init(mpicom_iac, IACID)
+
+    if (masterproc) then
+       write(iulog,*) "masterproc before gcam_cpl_indices_init is ", masterproc
+    end if
+
     ! Determine attriute vector indices
     call gcam_cpl_indices_init()
     call gcam_cpl_indices_set()
-
-    ! Initialize gcam MPI communicator 
-    call spmd_init(mpicom_iac, IACID)
 
     ! I see this kind of thing everywhere, so why not
 #if (defined _MEMTRACE)
@@ -180,7 +219,7 @@ contains
                                    start_tod=start_tod, ref_ymd=ref_ymd, &
                                    ref_tod=ref_tod, stop_ymd=stop_ymd,   &
                                    stop_tod=stop_tod,                    &
-                                   calendar=calendar )
+                                   calendar=calendar, curr_ymd=ymd )
     call seq_infodata_GetData(infodata, case_name=caseid,                  &
                               case_desc=ctitle, start_type=starttype,      &
                               brnch_retain_casename=brnch_retain_casename, &
@@ -207,13 +246,29 @@ contains
 
     ! Do whatever init gcam needs
     ! I.e. read namelist and grid, etc.
-    call iac_init()
+    call iac_init(EClock)
+
+    ! assign ymd to GClock
+    GClock(iac_eclock_ymd) = ymd
 
     ! Now that we have the grid, we can allocate some of our working
     ! arrays. 
-    call gcam_init_mod(iac2gcam_data,gcamo_data,gcam_emis_data)
-    call gcam2glm_init_mod(glmi_data)
-    call glm_init_mod(glmo_data, glm_wh_data, glm2lnd_data)
+    call gcam_init_mod(gcam2glm_data,gcam_emis_data,                          &
+          gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
+    call gcam2glm_init_mod()
+    call glm_init_mod(glmi_data, glm_wh_data, glm2lnd_data)
+    call glm2iac_init_mod(glm2lnd_data)
 
     ! Here it gets tricky, as I copy from rof and other components.
     ! I'm going to go ahead and use the whole begg,endg domain
@@ -245,12 +300,13 @@ contains
        ! Initialize output attribute vectors
        call mct_aVect_init(z2x_z, rList=seq_flds_z2x_fields, lsize=lsize)
        call mct_aVect_zero(z2x_z) 
-       
-       ! Create mct iac expxort state - try to review what this is.
-       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z)
+
+       ! Create mct iac export state - try to review what this is.
+       call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
     end if
 
     ! Fill in infodata - of course, have to review all this
+    ! this happens before lnd init, so the elm flag is set later 
     call seq_infodata_PutData( infodata, iac_present=gcam_active, &
          iac_prognostic=gcam_active, &
          iac_nx = gcam_nlon, iac_ny = gcam_nlat)
@@ -300,11 +356,9 @@ contains
     integer      :: day                  ! gcam current day
     integer      :: tod                  ! gcam current time of day (sec)
     integer      :: dtime                ! time step increment (sec)
-    integer      :: nstep                ! time step index
-    logical      :: rstwr_sync           ! .true. ==> write restart file before returning
-    logical      :: rstwr                ! .true. ==> write restart file before returning
-    logical      :: nlend_sync           ! Flag signaling last time-step
-    logical      :: nlend                ! .true. ==> last time-step
+    integer,save :: nstep                ! time step index
+!    logical      :: nlend_sync           ! Flag signaling last time-step
+!    logical      :: nlend                ! .true. ==> last time-step
     logical      :: dosend               ! true => send data back to driver
     real(r8)     :: nextsw_cday          ! calday from clock of next radiation computation
     real(r8)     :: caldayp1             ! gcam calday plus dtime offset
@@ -314,13 +368,15 @@ contains
     real(r8)     :: calday               ! calendar day for nstep
     real(r8)     :: recip                ! reciprical
     logical,save :: first_call = .true.  ! first call work
-    logical      :: atm_present
-    logical      :: lnd_present
+    integer      :: rc                   ! return value from Clock functions.
     type(seq_infodata_type),pointer :: infodata             ! CESM information from the driver
     type(mct_gGrid),        pointer :: dom_z                ! iac model domain data
     !type(bounds_type)               :: bounds               ! bounds
     character(len=32)               :: rdate                ! date char string for restart file names
-    character(len=32), parameter    :: sub = "iac_run_mct"
+    character(len=32), parameter    :: sub = "(iac_run_mct)"
+    integer :: ierr,nmode, ncid
+    integer :: dimid(3),varid_co2sfc, varid_co2airhi, varid_co2airlo
+    character(len=128) :: hfile
 
 
     ! I feel this is probably important
@@ -331,6 +387,12 @@ contains
     call shr_file_getLogLevel(shrloglev)
     call shr_file_setLogUnit (iulog)
 
+    if (first_call) then
+       nstep = 1
+    else
+       nstep = nstep+1
+    endif
+
     ! Get the model time - I'm not certain what should be sync and
     ! what shouldn't, but for now we'll just follow the pattern
     call seq_timemgr_EClockGetData(EClock, &
@@ -338,60 +400,133 @@ contains
          curr_yr=yr, curr_mon=mon, curr_day=day,&
          dtime=dtime)
 
+    ! We are going to do our time sync check up top, because iac runs
+    ! first at the top of the year.
+
+    ! Check that internal clock is in sync with master clock
+    ! Again, may need time manager module with these kind of functions
+    ! call get_curr_date( yr, mon, day, tod )
+    !ymd = yr*10000 + mon*100 + day
+    !tod = tod
+    if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
+       call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
+       write(iulog,*) trim(sub), ' gcam ymd=',ymd     ,'  gcam tod= ',tod
+       write(iulog,*)trim(sub), 'sync ymd=',ymd_sync,' sync tod= ',tod_sync
+       call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
+    end if
+
+    write(iulog,*) trim(sub), "Nstep: ", nstep
+    write(iulog,*) trim(sub), "EClock: ", yr,mon,day,tod, ymd, dtime
+
     ! Assign the date to GClock
     GClock(iac_eclock_ymd) = ymd
     GClock(iac_eclock_tod) = tod
     GClock(iac_eclock_dt) = dtime
-    
-    call seq_infodata_GetData(infodata, lnd_present=lnd_present, &
-         atm_present=atm_present) 
+ 
+    ! store whether GCAM runs this model year or not
+    ! use the hardcoded gcam time step to determine this
+    gcam_alarm = .false.
+    if (modulo(yr, iac_gcam_timestep)==0) then
+       gcam_alarm = .true.
+    endif 
 
     ! Import from land model
     !call t_startf('iac_import')
-    !call iac_import(bounds, x2z_z%rattr, lnd2iac_vars)
-    call iac_import(x2z_z, lnd2iac_vars)
+    call iac_import(x2z_z%rattr, lnd2iac_vars)
+    !call iac_import(x2z_z, lnd2iac_vars)
     !call t_stopf('iac_import')
-
     write(rdate,'(i4.4,"-",i2.2,"-",i2.2,"-",i5.5)') yr,mon,day,tod
-    nlend = seq_timemgr_StopAlarmIsOn( EClock )
-    rstwr = seq_timemgr_RestartAlarmIsOn( EClock )
+!    nlend = seq_timemgr_StopAlarmIsOn( EClock )
 
-    ! May need a time manager mod
-    ! call advance_timestep()
+    ! Run gcam and glm, unless it is the historical period
+    ! TODO: make the iac res match the land res
+    ! For now, running the historical period will get the appropriate
+    ! land surface files, until we make the iac res match the land
+    ! Without gcam/glm, glm2iac_run_mod reads in the reformatted luh2 data
 
-    ! Run gcam.  
-    ! Check input/output sequence.  Also, I probably need some timing
-    ! and logging information surrounding all these.
+    ! note that gcam handles its own restarts
+    ! note that the iac does not run in a timestep that handles model restart
+    !    writing
+    ! so gcam2glm and glm will always write restart files each year,
+    ! then the land model code (elm_driver) will write the two appropriate
+    !    restart pointer files when it is time to write the land restart file
 
-    ! This pushes the carbon densities to gcam.  The lnd2iac_vars
-    ! structure holds most of what we want, I think - the rest should
-    ! be in iac_cdata_mod somewhere.
-    call gcam_setdensity_mod(lnd2iac_vars)
+    if ( run_gcam ) then  
 
-    ! Run GCAM, for this timestep.  
-    ! Inputs taken care of by gcam_setdensity_mod(), so both of these
-    ! are outputs, for input to glm and for export to atm (emis)
-    call gcam_run_mod(gcam2glm_data, gcam_emis_data)
+       ! This calcs and pushes the carbon density scalars to gcam
+       !   the push happens only if elm_iac_carbon_scaling is true
+       ! this is called regardless in order to calculate and write scalars
+       !    and also to interpolate the co2 outputs to annual values and
+       !    to downscale them
 
-    ! Set up to run glm
-    call gcam2glm_run_mod(gcam2glm_data, glm_data, glm_wh_data)
+       ! Run GCAM, for this timestep.  
+       ! Inputs taken care of in gcam_comp_mod, so these
+       ! are outputs, for input to glm and for export to atm (emis)
+       call gcam_run_mod(gcam2glm_data, gcam_emis_data,                          &
+             gcamoco2sfcjan, gcamoco2sfcfeb,                                     &
+             gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+             gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+             gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+             gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+             gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+             gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+             gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+             gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+             gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+             gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+             gcamoco2airhidec)
 
-    ! Run glm, which produces the coupled vars to lnd (z->l)
-    call glm_run_mod( GClock, gdata, glm_data, glm_wh_data, glm2lnd_data)
+       ! Set up to run glm
+       call gcam2glm_run_mod(gcam2glm_data, glmi_data, glm_wh_data)
+
+       ! Run glm, which produces the coupled vars to lnd (z->l)
+       call glm_run_mod(glmi_data, glm_wh_data, glm2lnd_data)
+
+       ! Copy gcamo atm variables to iac2atm_vars
+       call gcam2iac_copy()
+
+       ! output co2 data to nc file
+       write(iulog,*) "CO2 output, GCAM current time, Y,M,D,T: ", yr, mon, day, tod
+       write(hfile,'(a,i4.4,a,i2.2,a,i2.2,a)') 'giac.co2.',yr,'-',mon,'-',day,'.nc'
+       write(iulog,*) "CO2 output file:", hfile
+       nmode = ior(NF90_CLOBBER,NF90_64BIT_OFFSET)
+       ierr = nf90_create(trim(hfile),nmode,ncid)
+       ierr = nf90_def_dim(ncid,'lat' ,iac_ctl%nlat,dimid(3))
+       ierr = nf90_def_dim(ncid,'lon' ,iac_ctl%nlon,dimid(2))
+       ierr = nf90_def_dim(ncid,'month' ,12,dimid(1))
+       ierr = nf90_def_var(ncid,'co2sfc',NF90_DOUBLE,dimid,varid_co2sfc)
+       ierr = nf90_def_var(ncid,'co2airhi',NF90_DOUBLE,dimid,varid_co2airhi)
+       ierr = nf90_def_var(ncid,'co2airlo',NF90_DOUBLE,dimid,varid_co2airlo)
+       ierr = nf90_enddef(ncid)
+       ierr = nf90_put_var(ncid,varid_co2sfc,iac2atm_vars%co2sfc)
+       ierr = nf90_put_var(ncid,varid_co2airhi,iac2atm_vars%co2airhi)
+       ierr = nf90_put_var(ncid,varid_co2airlo,iac2atm_vars%co2airlo)
+       ierr = nf90_close(ncid)
     
-    ! Some logging and timing checvks
-    ! Check that internal clock is in sync with master clock
-    ! Again, may need time manager module with these kind of functions
-    ! call get_curr_date( yr, mon, day, tod )
-    ymd = yr*10000 + mon*100 + day
-    tod = tod
-    if ( .not. seq_timemgr_EClockDateInSync( EClock, ymd, tod ) )then
-       call seq_timemgr_EclockGetData( EClock, curr_ymd=ymd_sync, curr_tod=tod_sync )
-       write(iulog,*)' gcam ymd=',ymd     ,'  gcam tod= ',tod
-       write(iulog,*)'sync ymd=',ymd_sync,' sync tod= ',tod_sync
-       call shr_sys_abort( sub//":: GCAM clock is not in sync with Master Sync clock" )
     end if
-    
+
+    ! Run glm2iac, which runs mksurfdat and produces land input files for ELM
+    call glm2iac_run_mod(glm2lnd_data)
+
+    ! Now export the land and atmosphere data
+    call iac_export(iac2lnd_vars, iac2atm_vars, z2x_z%rattr)
+
+    ! Advance our timestep in the gcam clock to next year
+    call ESMF_ClockAdvance( EClock, rc=rc )
+    if (rc .ne. ESMF_SUCCESS) then
+       call shr_sys_abort( sub//":: GCAM clock did not advance correctly" )
+    endif
+
+    ! You know what - let's just check that
+    call seq_timemgr_EClockGetData(EClock, &
+         curr_ymd=ymd, curr_tod=tod,  &
+         curr_yr=yr, curr_mon=mon, curr_day=day,&
+         dtime=dtime)
+
+    write(iulog,*) trim(sub), "EClock post-iac run: ", yr,mon,day,tod, ymd, dtime
+
+    first_call = .false.
+
     ! Reset shr logging to my original values
     call shr_file_setLogUnit (shrlogunit)
     call shr_file_setLogLevel(shrloglev)
@@ -414,8 +549,20 @@ contains
     type(mct_aVect)  , intent(inout) :: z2x_z     ! Export state from iac model
     !-----------------------------------------------------
 
-    ! fill this in
-    ! For now, no cleanup - we'll see later on
+    ! KVC: do we need to call more finalize subroutines?
+    call gcam_final_mod(gcamoco2sfcjan, gcamoco2sfcfeb,   &
+          gcamoco2sfcmar, gcamoco2sfcapr, gcamoco2sfcmay, gcamoco2sfcjun,     &
+          gcamoco2sfcjul, gcamoco2sfcaug, gcamoco2sfcsep, gcamoco2sfcoct,     &
+          gcamoco2sfcnov, gcamoco2sfcdec, gcamoco2airlojan, gcamoco2airlofeb, &
+          gcamoco2airlomar, gcamoco2airloapr, gcamoco2airlomay,               &
+          gcamoco2airlojun, gcamoco2airlojul, gcamoco2airloaug,               &
+          gcamoco2airlosep, gcamoco2airlooct, gcamoco2airlonov,               &
+          gcamoco2airlodec, gcamoco2airhijan, gcamoco2airhifeb,               &
+          gcamoco2airhimar, gcamoco2airhiapr, gcamoco2airhimay,               &
+          gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
+          gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
+          gcamoco2airhidec)
+    call gcam2glm_final_mod()
   end subroutine iac_final_mct
 
 !================================================================================
@@ -439,11 +586,14 @@ contains
     integer :: lsize,gsize                   ! size of iac data and number of grid cells
     integer :: begg, endg                   ! beg, end iac indices
     integer :: ier                           ! error code
-    character(len=32), parameter :: sub = 'iac_SetgsMap_mct'
+    character(len=32), parameter :: sub = '(iac_SetgsMap_mct)'
     !-----------------------------------------------------
 
     begg  = iac_ctl%begg
     endg  = iac_ctl%endg
+
+    gcam_nlon = iac_ctl%nlon
+    gcam_nlat = iac_ctl%nlat
 
     lsize = iac_ctl%endg - iac_ctl%begg + 1
     gsize = gcam_nlon*gcam_nlat
@@ -464,6 +614,7 @@ contains
 
     ! Determine gsmap_iac
     allocate(gindex(lsize),stat=ier)
+    if(ier/=0) call mct_die(sub,'allocate gindex',ier)
     ni = 0
     do n = begg,endg
        ni = ni + 1
@@ -497,21 +648,23 @@ contains
     type(mct_ggrid), intent(out)   :: dom_z       ! Domain information from the iac model
     !
     ! LOCAL VARIABLES
-    integer :: n, ni              ! index
+    integer :: n, ni, i, j, ier   ! index
     integer , pointer :: idata(:) ! temporary
     real(r8), pointer :: data(:)  ! temporary
     real(r8) :: re = SHR_CONST_REARTH*0.001_r8 ! radius of earth (km)
-    character(len=32), parameter :: sub = 'iac_domain_mct'
+    character(len=32), parameter :: sub = '(iac_domain_mct)'
     !-----------------------------------------------------
 
-    ! lat/lon in degrees,  area in radians^2, mask is 1 (land), 0 (non-land)
-    ! Note that in addition land carries around landfrac for the purposes of domain checking
+    ! the domain info is for iac-atm only
+    ! lat/lon in degrees,  area in radians^2, mask is 1 (atm everywhere) 
+    ! the iac frac need to be 1 everywhere, as the data are for grid cell 
     ! TRS - this is something I need to review
     call mct_gGrid_init( GGrid=dom_z, CoordChars=trim(seq_flds_dom_coord), &
       OtherChars=trim(seq_flds_dom_other), lsize=lsize )
 
     ! Allocate memory
-    allocate(data(lsize))
+    allocate(data(lsize), stat=ier)
+    if(ier/=0) call mct_die(sub,'allocate data',ier)
 
     ! Determine global gridpoint number attribute, GlobGridNum, which is set automatically by MCT
     call mct_gsMap_orderedPoints(gsMap_z, iam, idata)
@@ -519,13 +672,13 @@ contains
 
     ! Determine domain (numbering scheme is: West to East and South to North to South pole)
     ! Initialize attribute vector with special value
-    data(:) = -9999.0_R8 
+    data(:) = -9999.0_r8 
     call mct_gGrid_importRAttr(dom_z,"lat"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"lon"  ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"area" ,data,lsize) 
     call mct_gGrid_importRAttr(dom_z,"aream",data,lsize) 
-    data(:) = 0.0_R8     
-    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize) 
+    data(:) = 0.0_r8
+    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     ! Determine bounds numbering consistency
     ni = 0
@@ -559,36 +712,24 @@ contains
     end do
     call mct_gGrid_importRattr(dom_z,"lat",data,lsize) 
 
-    ! Area - pulled from lnd2iac_var array
+    ! cell Area - pulled from iac_ctl array in km^2
     ni = 0
     do n = iac_ctl%begg,iac_ctl%endg
        ni = ni + 1
        i = iac_ctl%ilon(n)
        j = iac_ctl%jlat(n)
-       !If area is in radians, then we need to scale
-       !data(ni) = lnd2iac_var%area(i,j)*1.0e-6_r8/(re*re*)
-       !But I believe it's in km^2 already (at least from clm.h1 file)
-       data(ni) = lnd2iac_var%area(i,j) 
+       ! scale area to radians
+       data(ni) = iac_ctl%area(i,j)/(re*re)
     end do
     call mct_gGrid_importRattr(dom_z,"area",data,lsize) 
 
-    ! frac - same as lndfrac, from lnd2iac_var
-    ni = 0
-    do n = iac_ctl%begg,iac_ctl%endg
-       ni = ni + 1
-       i = iac_ctl%ilon(n)
-       j = iac_ctl%jlat(n)
-       data(ni) = lnd2iac_var%landfrac(i,j)
-    end do
+    ! frac - this is one because atm covers whole grid cell
+    data(:) = 1.0_r8
     call mct_gGrid_importRattr(dom_z,"frac",data,lsize) 
 
-    ! iacmask = lndmask - this is globally indexed
-    ni = 0
-    do n = iac_ctl%begg,iac_ctl%endg
-       ni = ni + 1
-       idata(ni) = iac_ctl%iacmask(n)
-    end do
-    call mct_gGrid_importRattr(dom_z,"mask",idata,lsize) 
+    ! iacmask = this is one because global coverage
+    data(:) = 1.0_r8
+    call mct_gGrid_importRAttr(dom_z,"mask" ,data,lsize)
 
     deallocate(data)
     deallocate(idata)
@@ -597,6 +738,67 @@ contains
 
 !====================================================================================
 
+  subroutine gcam2iac_copy()
+    !-----------------------------------------------------
+    !
+    ! !DESCRIPTION:
+    ! Copy the gcamoco2* variables into iac2atm_vars, which is what the
+    ! coupler code needs.
+
+    ! !ARGUMENTS:
+    implicit none
+    ! LOCAL VARIABLES
+    !-----------------------------------------------------
+
+    ! This is tedious, but seems to be the only way to convert these
+    ! text based variables to index based, which is what we'll need
+    ! inside the export function.  The alternative is to simply declare
+    ! all 36 of these expclitly as iac2atm_var elements, but then we
+    ! couldn't loop in iac export and clm import, so we'd be paying the
+    ! tedium forward.  So we do it just once, in this subroutine.
+
+    ! Surface co2 flux
+    iac2atm_vars%co2sfc(1,:,:) = gcamoco2sfcjan(:,:)
+    iac2atm_vars%co2sfc(2,:,:) = gcamoco2sfcfeb(:,:)
+    iac2atm_vars%co2sfc(3,:,:) = gcamoco2sfcmar(:,:)
+    iac2atm_vars%co2sfc(4,:,:) = gcamoco2sfcapr(:,:)
+    iac2atm_vars%co2sfc(5,:,:) = gcamoco2sfcmay(:,:)
+    iac2atm_vars%co2sfc(6,:,:) = gcamoco2sfcjun(:,:)
+    iac2atm_vars%co2sfc(7,:,:) = gcamoco2sfcjul(:,:)
+    iac2atm_vars%co2sfc(8,:,:) = gcamoco2sfcaug(:,:)
+    iac2atm_vars%co2sfc(9,:,:) = gcamoco2sfcsep(:,:)
+    iac2atm_vars%co2sfc(10,:,:) = gcamoco2sfcoct(:,:)
+    iac2atm_vars%co2sfc(11,:,:) = gcamoco2sfcnov(:,:)
+    iac2atm_vars%co2sfc(12,:,:) = gcamoco2sfcdec(:,:)
+
+    ! Low alt air co2
+    iac2atm_vars%co2airlo(1,:,:) = gcamoco2airlojan(:,:)
+    iac2atm_vars%co2airlo(2,:,:) = gcamoco2airlofeb(:,:)
+    iac2atm_vars%co2airlo(3,:,:) = gcamoco2airlomar(:,:)
+    iac2atm_vars%co2airlo(4,:,:) = gcamoco2airloapr(:,:)
+    iac2atm_vars%co2airlo(5,:,:) = gcamoco2airlomay(:,:)
+    iac2atm_vars%co2airlo(6,:,:) = gcamoco2airlojun(:,:)
+    iac2atm_vars%co2airlo(7,:,:) = gcamoco2airlojul(:,:)
+    iac2atm_vars%co2airlo(8,:,:) = gcamoco2airloaug(:,:)
+    iac2atm_vars%co2airlo(9,:,:) = gcamoco2airlosep(:,:)
+    iac2atm_vars%co2airlo(10,:,:) = gcamoco2airlooct(:,:)
+    iac2atm_vars%co2airlo(11,:,:) = gcamoco2airlonov(:,:)
+    iac2atm_vars%co2airlo(12,:,:) = gcamoco2airlodec(:,:)
+
+    ! High alt air co2
+    iac2atm_vars%co2airhi(1,:,:) = gcamoco2airhijan(:,:)
+    iac2atm_vars%co2airhi(2,:,:) = gcamoco2airhifeb(:,:)
+    iac2atm_vars%co2airhi(3,:,:) = gcamoco2airhimar(:,:)
+    iac2atm_vars%co2airhi(4,:,:) = gcamoco2airhiapr(:,:)
+    iac2atm_vars%co2airhi(5,:,:) = gcamoco2airhimay(:,:)
+    iac2atm_vars%co2airhi(6,:,:) = gcamoco2airhijun(:,:)
+    iac2atm_vars%co2airhi(7,:,:) = gcamoco2airhijul(:,:)
+    iac2atm_vars%co2airhi(8,:,:) = gcamoco2airhiaug(:,:)
+    iac2atm_vars%co2airhi(9,:,:) = gcamoco2airhisep(:,:)
+    iac2atm_vars%co2airhi(10,:,:) = gcamoco2airhioct(:,:)
+    iac2atm_vars%co2airhi(11,:,:) = gcamoco2airhinov(:,:)
+    iac2atm_vars%co2airhi(12,:,:) = gcamoco2airhidec(:,:)
+end subroutine 
 
 !===============================================================================
 

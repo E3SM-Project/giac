@@ -13,6 +13,8 @@ Module glm_comp_mod
 ! !USES:
 
   use iac_data_mod, only : cdata => gdata, EClock => GClock
+  use iac_data_mod
+  use gcam_var_mod
 
   implicit none
   SAVE
@@ -26,7 +28,9 @@ Module glm_comp_mod
 
 ! !PUBLIC DATA MEMBERS: None
 
-  integer, parameter :: glm_data_size   = iac_glm_nx*iac_glm_ny  ! should be set by glm
+  integer, parameter :: glm_data_size   = iac_glm_nx*iac_glm_ny ! should be set by glm
+  character(len=*),parameter :: glm_restfile = 'output.glm.restart.state.'
+  character(len=*),parameter :: glm_rpointer = 'rpointer.glm'
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -51,6 +55,8 @@ contains
 ! Initialize interface for glm
 
 ! !USES:
+    use iac_data_mod
+    use mct_mod
     implicit none
 
 ! !ARGUMENTS:
@@ -59,7 +65,7 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    integer :: iu,numreg,numaez
+    integer :: numreg,numglu,ier,restart
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -68,9 +74,9 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    iu  = cdata%i(iac_cdatai_logunit)
-    numreg = cdata%i(iac_cdatai_gcam_nreg)
-    numaez = cdata%i(iac_cdatai_gcam_naez)
+    numreg = num_gcam_energy_regions
+    numglu = num_gcam_land_regions
+
 
     cdata%l(iac_cdatal_glm_present) = .true.
     cdata%l(iac_cdatal_glm_prognostic) = .true.
@@ -78,15 +84,26 @@ contains
     cdata%i(iac_cdatai_glm_ny) = iac_glm_ny
     cdata%i(iac_cdatai_glm_size) = iac_glm_nx * iac_glm_ny
 
-    ! Already allocated by gcam_init_mod
-    !allocate(glmi(iac_glmi_nflds,glm_data_size))
-    allocate(glmi_wh(numreg*numaez))
-    allocate(glmo(iac_glmo_nflds,glm_data_size))
+    ! Already allocated by gcam_init_mod - I think.
+    allocate(glmi(iac_glmi_nflds,glm_data_size), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmi',ier)
+    allocate(glmi_wh(numglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmi_wh',ier)
+    allocate(glmo(iac_glmo_nflds,glm_data_size), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate glmo',ier)
 
     glmi = iac_spval
     glmo = iac_spval
 
-    call initGLM()
+    write(6,*) subname, ' gcam_var_mod nsrest is', nsrest
+
+    if(nsrest == nsrContinue .or. nsrest == nsrBranch) then
+       restart = 1
+    else
+       restart = 0
+    end if
+
+    call initGLM(restart)
   end subroutine glm_init_mod
 
 !---------------------------------------------------------------------------
@@ -109,11 +126,9 @@ contains
     real*8, pointer :: glmo(:,:)
 
 ! !LOCAL VARIABLES:
-    logical :: restart_now
     integer :: ymd, tod, dt
     integer :: i,j,ij,n,ni
-    integer :: iu
-    integer :: glmyear
+    integer :: glmyear,e3smyear
     character(len=*),parameter :: subname='(glm_run_mod)'
 
 
@@ -123,37 +138,21 @@ contains
 !EOP
 !-----------------------------------------------------------------------
 
-    restart_now = cdata%l(iac_cdatal_rest)
-    iu  = cdata%i(iac_cdatai_logunit)
-
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
 
-    write(iu,*) trim(subname),' date= ',ymd,tod
+    write(iulog,*) trim(subname),' date= ',ymd,tod
 
-!-- import ---
-!    do n = 1,iac_glmi_nflds
-!    do ij = 1,glm_data_size
-!       xxx = glmi(n,ij)
-!    enddo
-!    enddo
+    e3smyear=ymd/10000
+    glmyear=e3smyear+1
+    write(6,*) subname, ' stepping glm. GLM is one year ahead of E3SM. E3SM year',e3smyear,'GLM year',glmyear,ymd
 
-!-- advance ---
-!!$    do n = 1,iac_glmo_nflds
-!!$    do ij = 1,glm_data_size
-!!$       ni = mod(n-1,iac_glmi_nflds) + 1
-!!$       glmo(n,ij) = glmi(ni,ij) + 1000.0
-!!$    enddo
-!!$    enddo
-    glmyear=ymd/10000
-    write(6,*)'stepping glm',glmyear,ymd
-!    call stepGLM(glmyear,glmi,size(glmi,dim=1),size(glmi,dim=2),glmo,size(glmo,dim=1),size(glmo,dim=2));
     call stepGLM(glmyear,            &
                  glmi,size(glmi,dim=1),size(glmi,dim=2),  &
                  glmi_wh,size(glmi_wh,dim=1),  &
                  glmo,size(glmo,dim=1),size(glmo,dim=2));
-    write(6,*)'done stepping glm'
+    write(6,*) subname, 'done stepping glm'
 
   end subroutine glm_run_mod
 
@@ -177,7 +176,6 @@ contains
 ! !ARGUMENTS:
 
 ! !LOCAL VARIABLES:
-    integer :: iu
     character(len=*),parameter :: subname='(glm_init_mod)'
 
 ! !REVISION HISTORY:
@@ -186,8 +184,6 @@ contains
 !EOP
 !---------------------------------------------------------------------------
 
-!    iu  = cdata%i(iac_cdatai_logunit)
-!    write(iu,*) 'trim(subname)
      call finalizeGLM()
   end subroutine glm_final_mod
 

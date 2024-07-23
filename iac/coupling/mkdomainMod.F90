@@ -2,24 +2,24 @@ module mkdomainMod
 !-----------------------------------------------------------------------
 !BOP
 !
-! !MODULE: mkdomainMod
+! !MODULE: domain1Mod
 !
 ! !DESCRIPTION:
 ! Module containing 2-d global surface boundary data information
 !
 ! !USES:
   use shr_kind_mod, only : r8 => shr_kind_r8
-  use mkfileutils , only : getfil
   use mkvarpar    , only : re
-  use mknanMod
+  use nanMod      , only : nan, bigint
+  use gcam_var_mod        , only : iulog
 !
 ! !PUBLIC TYPES:
   implicit none
   private
 !
-  public :: domain1_type
+  public :: domain_type
 
-  type domain1_type
+  type domain_type
      character*16     :: set        ! flag to check if domain is set
      integer          :: ns         ! global size of domain
      integer          :: ni,nj      ! for 2d domains only
@@ -36,16 +36,21 @@ module mkdomainMod
      real(r8),pointer :: lonw(:)    ! grid cell longitude, W edge (deg)
      real(r8),pointer :: lone(:)    ! grid cell longitude, E edge (deg)
      real(r8),pointer :: area(:)    ! grid cell area (km**2) (only used for output grid)
-  end type domain1_type
+     logical          :: is_2d      ! if this is a 2-d domain
+     logical          :: fracset    ! if frac is set
+     logical          :: maskset    ! if mask is set
+  end type domain_type
 
 !
 ! !PUBLIC MEMBER FUNCTIONS:
-  public domain1_init          
-  public domain1_clean         
-  public domain1_check         
-  public domain1_read 
-  public domain1_read_map
-  public domain1_write         
+  public domain_clean         
+  public domain_check         
+  public domain_read 
+  public domain_read_dims  ! get dimensions from a domain file (only public for unit testing)
+  public domain_read_map
+  public domain_write         
+  public domain_checksame
+  public domain_set        ! See if the domain is set or not
 !
 !
 ! !REVISION HISTORY:
@@ -57,6 +62,9 @@ module mkdomainMod
 
   real(r8) :: flandmin = 0.001            !minimum land frac for land cell
 !
+! !PRIVATE MEMBER FUNCTIONS:
+  private domain_init          
+!
 !EOP
 !------------------------------------------------------------------------------
 
@@ -65,19 +73,17 @@ contains
 !------------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_init
+! !IROUTINE: domain_init
 !
 ! !INTERFACE:
-  subroutine domain1_init(domain,ns)
+  subroutine domain_init(domain,ns)
 !
 ! !DESCRIPTION:
 ! This subroutine allocates and nans the domain type
 !
-! !USES:
-!
 ! !ARGUMENTS:
     implicit none
-    type(domain1_type) :: domain        ! domain datatype
+    type(domain_type) :: domain        ! domain datatype
     integer            :: ns            ! grid size, 2d
 !
 ! !REVISION HISTORY:
@@ -95,48 +101,56 @@ contains
     ne = ns
     
     if (domain%set == set) then
-       call domain1_clean(domain)
+       call domain_clean(domain)
     endif
 
-    allocate(domain%mask(ns), &
-             domain%frac(ns), &
-             domain%latc(ns), &
-             domain%lonc(ns), &
-             domain%lats(ns), &
-             domain%latn(ns), &
-             domain%lonw(ns), &
-             domain%lone(ns), &
-             domain%area(ns), stat=ier)
+    ! So the clean will overwrite ns if the call was
+    ! domain_init(domain, domain%ns).  This is why we saved ns to ne in
+    ! the first place, but then we use ns to allocate - so we are
+    ! allocating an arbitrary number of elements, which we do not want.
+    ! So, use ne to allocate
+    ! 
+
+    allocate(domain%mask(ne), &
+             domain%frac(ne), &
+             domain%latc(ne), &
+             domain%lonc(ne), &
+             domain%lats(ne), &
+             domain%latn(ne), &
+             domain%lonw(ne), &
+             domain%lone(ne), &
+             domain%area(ne), stat=ier)
     if (ier /= 0) then
-       write(6,*) 'domain1_init ERROR: allocate mask, frac, lat, lon, area '
+       write(6,*) 'domain_init ERROR: allocate mask, frac, lat, lon, area '
     endif
-    
-    domain%ns       = ns
+
+    ! Of course, reassign ns back ot ne
+    domain%ns       = ne
     domain%mask     = -9999
     domain%frac     = -1.0e36
     domain%latc     = nan
     domain%lonc     = nan
     domain%area     = nan
     domain%set      = set
+    domain%fracset  = .false.
+    domain%maskset  = .false.
     
-  end subroutine domain1_init
+  end subroutine domain_init
 
 !------------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_clean
+! !IROUTINE: domain_clean
 !
 ! !INTERFACE:
-  subroutine domain1_clean(domain)
+  subroutine domain_clean(domain)
 !
 ! !DESCRIPTION:
 ! This subroutine deallocates the domain type
 !
-! !USES:
-!
 ! !ARGUMENTS:
     implicit none
-    type(domain1_type) :: domain        ! domain datatype
+    type(domain_type) :: domain        ! domain datatype
 !
 ! !REVISION HISTORY:
 !   Created by T Craig
@@ -149,7 +163,7 @@ contains
 !------------------------------------------------------------------------------
 
     if (domain%set == set) then
-       write(6,*) 'domain1_clean: cleaning ',domain%ns
+       write(6,*) 'domain_clean: cleaning ',domain%ns
        deallocate(domain%mask, &
                   domain%frac, &
                   domain%latc, &
@@ -160,34 +174,34 @@ contains
                   domain%lone, &
                   domain%area, stat=ier)
        if (ier /= 0) then
-          write(6,*) 'domain1_clean ERROR: deallocate mask, frac, lat, lon, area '
+          write(6,*) 'domain_clean ERROR: deallocate mask, frac, lat, lon, area '
           call abort()
        endif
     else
-       write(6,*) 'domain1_clean WARN: clean domain unecessary '
+       write(6,*) 'domain_clean WARN: clean domain unecessary '
     endif
 
-    domain%ns         = bigint
-    domain%set        = unset
+    domain%ns       = bigint
+    domain%set      = unset
+    domain%fracset  = .false.
+    domain%maskset  = .false.
 
-end subroutine domain1_clean
+end subroutine domain_clean
 
 !------------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_check
+! !IROUTINE: domain_check
 !
 ! !INTERFACE:
-  subroutine domain1_check(domain)
+  subroutine domain_check(domain)
 !
 ! !DESCRIPTION:
 ! This subroutine write domain info
 !
-! !USES:
-!
 ! !ARGUMENTS:
     implicit none
-    type(domain1_type),intent(in)  :: domain        ! domain datatype
+    type(domain_type),intent(in)  :: domain        ! domain datatype
 !
 ! !REVISION HISTORY:
 !   Created by T Craig
@@ -198,32 +212,65 @@ end subroutine domain1_clean
 !EOP
 !------------------------------------------------------------------------------
 
-    write(6,*) '  domain1_check set       = ',trim(domain%set)
-    write(6,*) '  domain1_check ns        = ',domain%ns
-    write(6,*) '  domain1_check lonc      = ',minval(domain%lonc),maxval(domain%lonc)
-    write(6,*) '  domain1_check latc      = ',minval(domain%latc),maxval(domain%latc)
-    write(6,*) '  domain1_check mask      = ',minval(domain%mask),maxval(domain%mask)
-    write(6,*) '  domain1_check frac      = ',minval(domain%frac),maxval(domain%frac)
+    write(6,*) '  domain_check set       = ',trim(domain%set)
+    write(6,*) '  domain_check ns        = ',domain%ns
+    write(6,*) '  domain_check lonc      = ',minval(domain%lonc),maxval(domain%lonc)
+    write(6,*) '  domain_check latc      = ',minval(domain%latc),maxval(domain%latc)
+    write(6,*) '  domain_check mask      = ',minval(domain%mask),maxval(domain%mask)
+    write(6,*) '  domain_check frac      = ',minval(domain%frac),maxval(domain%frac)
     write(6,*) ' '
 
-end subroutine domain1_check
+end subroutine domain_check
+
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_set
+!
+! !INTERFACE:
+  logical function domain_set(domain)
+!
+! !DESCRIPTION:
+! This function returns whether the domain has been set or not
+!
+! !ARGUMENTS:
+    implicit none
+    type(domain_type),intent(in)  :: domain        ! domain datatype
+!
+! !REVISION HISTORY:
+!   Created by T Craig
+!
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!------------------------------------------------------------------------------
+
+    if (domain%set == set) then
+       domain_set = .true.
+    else
+       domain_set = .false.
+    endif
+    return
+end function domain_set
 
 !----------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_read_map
+! !IROUTINE: domain_read_map
 !
 ! !INTERFACE:
-  subroutine domain1_read_map(domain, fname)
+  logical function domain_read_map(domain, fname)
 !
 ! !DESCRIPTION:
 ! Read a grid file
 !
 ! !USES:
+    use mkutilsMod, only : convert_latlon
 !
 ! !ARGUMENTS:
     implicit none
-    type(domain1_type),intent(inout) :: domain
+    type(domain_type),intent(inout) :: domain
     character(len=*) ,intent(in)     :: fname    ! this assumes a SCRIP mapping file - look at destination grid
 !
 ! !REVISION HISTORY:
@@ -244,88 +291,111 @@ end subroutine domain1_check
     real(r8), allocatable :: xv(:,:)           ! local array for corner lons
     real(r8), allocatable :: yv(:,:)           ! local array for corner lats
     integer :: grid_dims(2)
-    character(len=256) :: locfn                ! local file name
-    character(len= 32) :: subname = 'domain1_read'
+    character(len= 32) :: subname = 'domain_read'
 !-----------------------------------------------------------------
+
+    domain_read_map = .true.
 
     ! Read domain file and compute stuff as needed
 
-    call getfil (fname, locfn, 0)
-    call check_ret(nf_open(locfn, 0, ncid), subname)
+    call check_ret(nf_open(fname, 0, ncid), subname)
 
     ! Assume unstructured grid
 
     domain%ni = -9999
     domain%nj = -9999
+    domain%is_2d = .false.
 
-    call check_ret(nf_inq_dimid  (ncid, 'n_b', dimid), subname)
-    call check_ret(nf_inq_dimlen (ncid, dimid, domain%ns), subname)
+    ier = nf_inq_dimid  (ncid, 'n_b', dimid)
+    if ( ier /= NF_NOERR )then
+       domain_read_map = .false.
+    else
+      call check_ret(nf_inq_dimlen (ncid, dimid, domain%ns), subname)
     
-    call check_ret(nf_inq_dimid  (ncid, 'dst_grid_rank', dimid), subname)
-    call check_ret(nf_inq_dimlen (ncid, dimid, grid_rank), subname)
+      call check_ret(nf_inq_dimid  (ncid, 'dst_grid_rank', dimid), subname)
+      call check_ret(nf_inq_dimlen (ncid, dimid, grid_rank), subname)
 
-    if (grid_rank == 2) then
-       call check_ret(nf_inq_varid  (ncid, 'dst_grid_dims', varid), subname)
-       call check_ret(nf_get_var_int (ncid, varid, grid_dims), subname)
-       domain%ni = grid_dims(1)
-       domain%nj = grid_dims(2)
-    end if
+      if (grid_rank == 2) then
+         call check_ret(nf_inq_varid  (ncid, 'dst_grid_dims', varid), subname)
+         call check_ret(nf_get_var_int (ncid, varid, grid_dims), subname)
+         domain%ni = grid_dims(1)
+         domain%nj = grid_dims(2)
+         domain%is_2d = .true.
+      end if
 
-    ns = domain%ns
-    call domain1_init(domain, ns)
+      call domain_init(domain, domain%ns)
 
-    call check_ret(nf_inq_varid (ncid, 'xc_b', varid), subname)
-    call check_ret(nf_get_var_double (ncid, varid, domain%lonc), subname)
-    call check_ret(nf_inq_varid (ncid, 'yc_b', varid), subname)
-    call check_ret(nf_get_var_double (ncid, varid, domain%latc), subname)
+      ns = domain%ns
 
-    if (grid_rank == 2 ) then
-       allocate(yv(4,ns), xv(4,ns))
-       call check_ret(nf_inq_varid (ncid, 'yv_b', varid), subname)
-       call check_ret(nf_get_var_double (ncid, varid, yv), subname)
-       call check_ret(nf_inq_varid (ncid, 'xv_b', varid), subname)
-       call check_ret(nf_get_var_double (ncid, varid, xv), subname)
-       domain%lats(:) = yv(1,:)  
-       domain%latn(:) = yv(3,:)  
-       domain%lonw(:) = xv(1,:)
-       domain%lone(:) = xv(2,:)
-       domain%edgen = maxval(domain%latn)
-       domain%edgee = maxval(domain%lone)
-       domain%edges = minval(domain%lats)
-       domain%edgew = minval(domain%lonw)
-       deallocate(yv,xv)
-    end if
+      call check_ret(nf_inq_varid (ncid, 'xc_b', varid), subname)
+      call check_ret(nf_get_var_double (ncid, varid, domain%lonc), subname)
+      call convert_latlon(ncid, 'xc_b', domain%lonc)
+
+      call check_ret(nf_inq_varid (ncid, 'yc_b', varid), subname)
+      call check_ret(nf_get_var_double (ncid, varid, domain%latc), subname)
+      call convert_latlon(ncid, 'yc_b', domain%latc)
+
+      if (grid_rank == 2 ) then
+         allocate(yv(4,ns), xv(4,ns))
+         call check_ret(nf_inq_varid (ncid, 'yv_b', varid), subname)
+         call check_ret(nf_get_var_double (ncid, varid, yv), subname)
+         call check_ret(nf_inq_varid (ncid, 'xv_b', varid), subname)
+         call check_ret(nf_get_var_double (ncid, varid, xv), subname)
+
+         domain%lats(:) = yv(1,:)  
+         call convert_latlon(ncid, 'yv_b', domain%lats(:))
+
+         domain%latn(:) = yv(3,:)  
+         call convert_latlon(ncid, 'yv_b', domain%latn(:))
+
+         domain%lonw(:) = xv(1,:)
+         call convert_latlon(ncid, 'xv_b', domain%lonw(:))
+
+         domain%lone(:) = xv(2,:)
+         call convert_latlon(ncid, 'xv_b', domain%lone(:))
+
+         domain%edgen = maxval(domain%latn)
+         domain%edgee = maxval(domain%lone)
+         domain%edges = minval(domain%lats)
+         domain%edgew = minval(domain%lonw)
+         deallocate(yv,xv)
+      end if
        
-    call check_ret(nf_inq_varid (ncid, 'frac_b', varid), subname)
-    call check_ret(nf_get_var_double (ncid, varid, domain%frac), subname)
+      call check_ret(nf_inq_varid (ncid, 'frac_b', varid), subname)
+      call check_ret(nf_get_var_double (ncid, varid, domain%frac), subname)
 
-    call check_ret(nf_inq_varid (ncid, 'mask_b', varid), subname)
-    call check_ret(nf_get_var_int (ncid, varid, domain%mask), subname)
+      call check_ret(nf_inq_varid (ncid, 'mask_b', varid), subname)
+      call check_ret(nf_get_var_int (ncid, varid, domain%mask), subname)
 
-    call check_ret(nf_inq_varid (ncid, 'area_b', varid), subname)
-    call check_ret(nf_get_var_double (ncid, varid, domain%area), subname)
-    domain%area = domain%area * re**2
+      call check_ret(nf_inq_varid (ncid, 'area_b', varid), subname)
+      call check_ret(nf_get_var_double (ncid, varid, domain%area), subname)
+
+      domain%area = domain%area * re**2
+    end if
+    domain%maskset = .true.
+    domain%fracset = .true.
 
     call check_ret(nf_close(ncid), subname)
 
-  end subroutine domain1_read_map
+  end function domain_read_map
 
 !----------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_read
+! !IROUTINE: domain_read
 !
 ! !INTERFACE:
-  subroutine domain1_read(domain, fname, readmask)
+  subroutine domain_read(domain, fname, readmask)
 !
 ! !DESCRIPTION:
 ! Read a grid file
 !
 ! !USES:
+    use mkutilsMod, only : convert_latlon
 !
 ! !ARGUMENTS:
     implicit none
-    type(domain1_type),intent(inout) :: domain
+    type(domain_type),intent(inout) :: domain
     character(len=*) ,intent(in)     :: fname
     logical,optional, intent(in)     :: readmask ! true => read mask instead of landmask for urban parameters
 !
@@ -337,17 +407,12 @@ end subroutine domain1_check
 !EOP
     include 'netcdf.inc'
     integer :: i,j,n
-    integer :: nlon,nlat                       ! size
-    integer :: ns                              ! size of domain
     real(r8), allocatable :: lon1d(:)          ! local array for 1d lon
     real(r8), allocatable :: lat1d(:)          ! local array for 1d lat
     real(r8), allocatable :: xv(:,:)           ! local array for corner lons
     real(r8), allocatable :: yv(:,:)           ! local array for corner lats
-    character(len=256) :: locfn                ! local file name
     integer :: ncid                            ! netCDF file id
-    integer :: dimid                           ! netCDF dimension id
     integer :: varid                           ! netCDF variable id
-    logical :: dimset                          ! local ni,nj
     logical :: edgeNESWset                     ! local EDGE[NESW]
     logical :: lonlatset                       ! local lon(:,:), lat(:,:)
     logical :: llneswset                       ! local lat[ns],lon[we]
@@ -356,10 +421,11 @@ end subroutine domain1_check
     integer :: ndims                           ! number of dims for variable
     integer :: ier                             ! error status
     logical :: lreadmask                       ! local readmask
-    character(len= 32) :: subname = 'domain1_read'
+    character(len= 32) :: lonvar               ! name of 2-d longitude variable
+    character(len= 32) :: latvar               ! name of 2-d latitude variable
+    character(len= 32) :: subname = 'domain_read'
 !-----------------------------------------------------------------
 
-    dimset      = .false. 
     lonlatset   = .false. 
     edgeNESWset = .false. 
     llneswset   = .false. 
@@ -371,71 +437,58 @@ end subroutine domain1_check
        lreadmask = readmask
     end if
 
-    ! Read domain file and compute stuff as needed
+    call check_ret(nf_open(fname, 0, ncid), subname)
 
-    call getfil (fname, locfn, 0)
-    call check_ret(nf_open(locfn, 0, ncid), subname)
-
-    ! Assume unstructured grid
-    domain%ni = -9999
-    domain%nj = -9999
-
-    ! ----- Set lat/lon dimension ------
-
-    ier = nf_inq_dimid (ncid, 'lon', dimid)
-    if (ier == NF_NOERR) then
-       if (dimset) write(6,*) trim(subname),' WARNING, overwriting dims'
-       dimset = .true.
-       write(6,*) trim(subname),' read lon and lat dims'
-       call check_ret(nf_inq_dimid  (ncid, 'lon', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlon), subname)
-       call check_ret(nf_inq_dimid  (ncid, 'lat', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlat), subname)
-       domain%ni = nlon
-       domain%nj = nlat
-    endif
-
-    ier = nf_inq_dimid (ncid, 'ni', dimid)
-    if (ier == NF_NOERR) then
-       if (dimset) write(6,*) trim(subname),' WARNING, overwriting dims'
-       dimset = .true.
-       write(6,*) trim(subname),' read ni and nj dims'
-       call check_ret(nf_inq_dimid  (ncid, 'ni', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlon), subname)
-       call check_ret(nf_inq_dimid  (ncid, 'nj', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlat), subname)
-       domain%ni = nlon
-       domain%nj = nlat
-    endif
-
-    ier = nf_inq_dimid (ncid, 'lsmlon', dimid)
-    if (ier == NF_NOERR) then
-       if (dimset) write(6,*) trim(subname),' WARNING, overwriting dims'
-       dimset = .true.
-       write(6,*) trim(subname),' read lsmlon and lsmlat dims'
-       call check_ret(nf_inq_dimid  (ncid, 'lsmlon', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlon), subname)
-       call check_ret(nf_inq_dimid  (ncid, 'lsmlat', dimid), subname)
-       call check_ret(nf_inq_dimlen (ncid, dimid, nlat), subname)
-       domain%ni = nlon
-       domain%nj = nlat
-    endif
-
-    if (dimset) then
-       write(6,*) trim(subname),' initialized domain'
-       call domain1_init(domain,nlon*nlat)
-    else
-       write(6,*) trim(subname),' ERROR: dims not set for domain1_init'
-       stop
-    endif
-    ns = domain%ns
+    call domain_read_dims(domain, ncid)
+    call domain_init(domain, domain%ns)
+    write(6,*) trim(subname),' initialized domain'
 
     ! ----- Set lat/lon variable ------
 
-    call check_ret(nf_inq_varid (ncid, 'LONGXY', varid), subname)
+    lonvar = ' '
+    latvar = ' '
+
+    if (.not. lonlatset) then
+       ier = nf_inq_varid (ncid, 'LONGXY', varid)
+       if (ier == NF_NOERR) then
+          lonvar = 'LONGXY'
+          latvar = 'LATIXY'
+          lonlatset = .true.
+       end if
+    end if
+
+    if (.not. lonlatset) then
+       ier = nf_inq_varid (ncid, 'lon', varid)
+       if (ier == NF_NOERR) then
+          lonvar = 'lon'
+          latvar = 'lat'
+          lonlatset = .true.
+       end if
+    end if
+
+    if (.not. lonlatset) then
+       ier = nf_inq_varid (ncid, 'LONGITUDE', varid)
+       if (ier == NF_NOERR) then
+          lonvar = 'LONGITUDE'
+          latvar = 'LATITUDE'
+          lonlatset = .true.
+       end if
+    end if
+
+    if (.not. lonlatset) then
+       write(6,*)'lon/lat values not set' 
+       write(6,*)'currently assume either that lon/lat or LONGXY/LATIXY', &
+            ' or LONGITUDE/LATITUDE variables are on input dataset'
+       call abort()
+    end if
+
+    call check_ret(nf_inq_varid (ncid, lonvar, varid), subname)
     call check_ret(nf_get_var_double (ncid, varid, domain%lonc), subname)
-    call check_ret(nf_inq_varid (ncid, 'LATIXY', varid), subname)
+    call convert_latlon(ncid, lonvar, domain%lonc)
+
+    call check_ret(nf_inq_varid (ncid, latvar, varid), subname)
     call check_ret(nf_get_var_double (ncid, varid, domain%latc), subname)
+    call convert_latlon(ncid, latvar, domain%latc)
 
     ! ----- Set landmask/landfrac  ------
 
@@ -500,7 +553,7 @@ end subroutine domain1_check
 
     if (.not.landfracset.and.maskset) then
        landfracset = .true.
-       do n = 1,ns
+       do n = 1,domain%ns
           if ( domain%mask(n) == 0 )then
              domain%frac(n) = 0._r8     !ocean
           else
@@ -508,18 +561,201 @@ end subroutine domain1_check
           end if
        end do
     endif
+    domain%maskset = maskset
+    domain%fracset = landfracset
 
-  end subroutine domain1_read
+  end subroutine domain_read
 
 !----------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: domain1_write
+! !IROUTINE: domain_read_dims
 !
 ! !INTERFACE:
-  subroutine domain1_write(domain,fname)
+  subroutine domain_read_dims(domain, ncid)
 !
-! !USES:
+! !DESCRIPTION:
+! get dimension size(s) from a domain file
+! sets domain%ns, domain%is_2d; and (if 2-d) domain%ni and domain%nj
+!
+! !ARGUMENTS:
+    implicit none
+    type(domain_type),intent(inout) :: domain
+    integer          ,intent(in)    :: ncid    ! ID of an open netcdf file
+!
+! !REVISION HISTORY:
+! Author: Bill Sacks
+!
+!
+! !LOCAL VARIABLES:
+!EOP
+    logical :: dimset                          ! has dimension information been set?
+    character(len= 32) :: subname = 'domain_read_dims'
+!-----------------------------------------------------------------
+
+    ! Assume unstructured grid
+    domain%ni = -9999
+    domain%nj = -9999
+    domain%is_2d = .false.
+
+    dimset = .false.
+
+    ! Note: We use the first dimension that is found in the following list
+
+    ! ----- First try to find 2-d info ------
+
+    call domain_read_dims_2d(domain, dimset, ncid, 'lsmlon', 'lsmlat')
+    call domain_read_dims_2d(domain, dimset, ncid, 'ni', 'nj')
+    call domain_read_dims_2d(domain, dimset, ncid, 'lon', 'lat')
+
+    ! ----- If we haven't found 2-d info, try to find 1-d info -----
+
+    call domain_read_dims_1d(domain, dimset, ncid, 'num_pixels')
+
+    ! ----- If we haven't found any info, abort -----
+
+    if (.not. dimset) then
+       write(6,*) trim(subname),' ERROR: dims not set'
+       call abort()
+    endif    
+
+  contains
+
+!----------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_read_dims_2d
+!
+! !INTERFACE:
+    subroutine domain_read_dims_2d(domain, dimset, ncid, lon_name, lat_name)
+!
+! !DESCRIPTION:
+! Try to read 2-d dimension size information
+!
+! Checks whether the given lon_name is found in the netcdf file. If it is:
+! (a) If dimset is already true, then it issues a warning and returns
+! (b) If dimset is false, then this sets:
+! - domain%ni
+! - domain%nj
+! - domain%ns
+! - domain%is_2d
+! - dimset = true
+!
+! If the given lon_name is not found, the above variables are left unchanged
+!
+! !ARGUMENTS:
+      implicit none
+      type(domain_type),intent(inout) :: domain
+      logical          ,intent(inout) :: dimset    ! has dimension information been set?
+      integer          ,intent(in)    :: ncid      ! ID of an open netCDF file
+      character(len=*) ,intent(in)    :: lon_name
+      character(len=*) ,intent(in)    :: lat_name
+!
+! !REVISION HISTORY:
+! Author: Bill Sacks
+!
+!
+! !LOCAL VARIABLES:
+!EOP
+      include 'netcdf.inc'
+      integer :: dimid                             ! netCDF dimension id
+      integer :: nlon,nlat                         ! size
+      integer :: ier                               ! error status
+      
+      character(len= 32) :: subname = 'domain_read_dims_2d'
+
+!-----------------------------------------------------------------
+
+      ier = nf_inq_dimid (ncid, lon_name, dimid)
+      if (ier == NF_NOERR) then
+         if (dimset) then
+            write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', &
+                 lon_name, '/', lat_name
+         else
+            write(6,*) trim(subname),' read lon and lat dims from ', lon_name, '/', lat_name
+            call check_ret(nf_inq_dimid  (ncid, lon_name, dimid), subname)
+            call check_ret(nf_inq_dimlen (ncid, dimid, nlon), subname)
+            call check_ret(nf_inq_dimid  (ncid, lat_name, dimid), subname)
+            call check_ret(nf_inq_dimlen (ncid, dimid, nlat), subname)
+            domain%ni = nlon
+            domain%nj = nlat
+            domain%ns = nlon * nlat
+            domain%is_2d = .true.
+            dimset = .true.
+         end if
+      endif
+      
+    end subroutine domain_read_dims_2d
+
+
+!----------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_read_dims_1d
+!
+! !INTERFACE:
+    subroutine domain_read_dims_1d(domain, dimset, ncid, dim_name)
+!
+! !DESCRIPTION:
+! Try to read 1-d dimension size information
+!
+! Checks whether the given dim_name is found in the netcdf file. If it is:
+! (a) If dimset is already true, then it issues a warning and returns
+! (b) If dimset is false, then this sets:
+! - domain%ns
+! - domain%is_2d
+! - dimset = true
+!
+! If the given dim_name is not found, the above variables are left unchanged
+!
+! !ARGUMENTS:
+      implicit none
+      type(domain_type),intent(inout) :: domain
+      logical          ,intent(inout) :: dimset    ! has dimension information been set?
+      integer          ,intent(in)    :: ncid      ! ID of an open netCDF file
+      character(len=*) ,intent(in)    :: dim_name
+!
+! !REVISION HISTORY:
+! Author: Bill Sacks
+!
+!
+! !LOCAL VARIABLES:
+!EOP
+      include 'netcdf.inc'
+      integer :: dimid                             ! netCDF dimension id
+      integer :: npts                              ! size
+      integer :: ier                               ! error status
+      
+      character(len= 32) :: subname = 'domain_read_dims_1d'
+
+!-----------------------------------------------------------------
+
+      ier = nf_inq_dimid (ncid, dim_name, dimid)
+      if (ier == NF_NOERR) then
+         if (dimset) then
+            write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', dim_name
+         else
+            write(6,*) trim(subname),' read 1-d length from ', dim_name
+            call check_ret(nf_inq_dimid  (ncid, dim_name, dimid), subname)
+            call check_ret(nf_inq_dimlen (ncid, dimid, npts), subname)
+            domain%ns = npts
+            domain%is_2d = .false.
+            dimset = .true.
+         end if
+      endif
+      
+    end subroutine domain_read_dims_1d
+
+  end subroutine domain_read_dims
+
+
+!----------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_write
+!
+! !INTERFACE:
+  subroutine domain_write(domain,fname)
 !
 ! !DESCRIPTION:
 ! Write a domain to netcdf
@@ -527,7 +763,7 @@ end subroutine domain1_check
 ! !ARGUMENTS:
     implicit none
     include 'netcdf.inc'
-    type(domain1_type),intent(inout) :: domain
+    type(domain_type),intent(inout) :: domain
     character(len=*)  ,intent(in)    :: fname
 !
 ! !REVISION HISTORY:
@@ -539,7 +775,7 @@ end subroutine domain1_check
     integer  :: varid                          !netCDF variable id
     integer  :: ncid                           !netCDF file id
     integer  :: omode                          !netCDF output mode
-    character(len= 32) :: subname = 'domain1_write'
+    character(len= 32) :: subname = 'domain_write'
 !-----------------------------------------------------------------
 
     call check_ret(nf_open(trim(fname), nf_write, ncid), subname)
@@ -551,18 +787,6 @@ end subroutine domain1_check
 
     call check_ret(nf_inq_varid(ncid, 'AREA', varid), subname)
     call check_ret(nf_put_var_double(ncid, varid, domain%area), subname)
-
-    call check_ret(nf_inq_varid(ncid, 'LATN', varid), subname)
-    call check_ret(nf_put_var_double(ncid, varid, domain%latn), subname)
-
-    call check_ret(nf_inq_varid(ncid, 'LONE', varid), subname)
-    call check_ret(nf_put_var_double(ncid, varid, domain%lone), subname)
-
-    call check_ret(nf_inq_varid(ncid, 'LATS', varid), subname)
-    call check_ret(nf_put_var_double(ncid, varid, domain%lats), subname)
-
-    call check_ret(nf_inq_varid(ncid, 'LONW', varid), subname)
-    call check_ret(nf_put_var_double(ncid, varid, domain%lonw), subname)
 
     call check_ret(nf_inq_varid(ncid, 'LONGXY', varid), subname)
     call check_ret(nf_put_var_double(ncid, varid, domain%lonc), subname)
@@ -578,7 +802,7 @@ end subroutine domain1_check
 
     call check_ret(nf_close(ncid), subname)
 
-  end subroutine domain1_write
+  end subroutine domain_write
 
 !-----------------------------------------------------------------------
 !BOP
@@ -609,5 +833,134 @@ end subroutine domain1_check
     end if
 
   end subroutine check_ret
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: domain_checksame
+!
+! !INTERFACE:
+  subroutine domain_checksame( srcdomain, dstdomain, tgridmap )
+!
+! !DESCRIPTION:
+! Check that the input domains agree with the input map
+!
+! USES:
+    use mkgridmapMod, only : gridmap_type, gridmap_setptrs
+! !ARGUMENTS:
+    implicit none
+    type(domain_type), intent(in) :: srcdomain ! input domain
+    type(domain_type), intent(in) :: dstdomain ! output domain
+    type(gridmap_type),intent(in) :: tgridmap  ! grid map
+!
+! !REVISION HISTORY:
+!
+!EOP
+!-----------------------------------------------------------------------
+     integer :: na, nb, ns             ! gridmap sizes
+     integer :: n, ni                  ! indices
+     real(r8), pointer :: xc_src(:)    ! Source longitude
+     real(r8), pointer :: yc_src(:)    ! Source latitude
+     real(r8), pointer :: frac_src(:)  ! Source fraction
+     integer,  pointer :: mask_src(:)  ! Source mask
+     integer,  pointer :: src_indx(:)  ! Source index
+     real(r8), pointer :: xc_dst(:)    ! Destination longitude
+     real(r8), pointer :: yc_dst(:)    ! Destination latitude
+     real(r8), pointer :: frac_dst(:)  ! Destination fraction
+     integer,  pointer :: mask_dst(:)  ! Destination mask
+     integer,  pointer :: dst_indx(:)  ! Destination index
+     character(len= 32) :: subname = 'domain_checksame'
+
+     ! tolerance for checking equality of lat & lon
+     ! We allow for single-precision rounding-level differences (approx. 1.2e-7 relative
+     ! error) For a value of 360 (max value for lat / lon), this means we can allow
+     ! absolute errors of about 5e-5.
+     real(r8), parameter :: eps = 5.e-5_r8
+
+
+     if (srcdomain%set == unset) then
+        write(6,*) trim(subname)//'ERROR: source domain is unset!'
+        call abort()
+     end if
+     if (srcdomain%set == unset) then
+        write(6,*) trim(subname)//'ERROR: destination domain is unset!'
+        call abort()
+     end if
+
+     call gridmap_setptrs( tgridmap, nsrc=na, ndst=nb, ns=ns,    &
+                           xc_src=xc_src, yc_src=yc_src,         &
+                           xc_dst=xc_dst, yc_dst=yc_dst,         &
+                           mask_src=mask_src, mask_dst=mask_dst, &
+                           src_indx=src_indx, dst_indx=dst_indx  &
+                         )
+       
+     if (srcdomain%ns /= na) then
+        write(6,*) trim(subname)// &
+              ' ERROR: input domain size and gridmap source size are not the same size'
+        write(6,*)' domain size = ',srcdomain%ns
+        write(6,*)' map src size= ',na
+        call abort()
+     end if
+     if (dstdomain%ns /= nb) then
+        write(6,*) trim(subname)// &              
+           ' ERROR: output domain size and gridmap destination size are not the same size'
+        write(6,*)' domain size = ',dstdomain%ns
+        write(6,*)' map dst size= ',nb
+        call abort()
+     end if
+     do n = 1,ns
+        ni = src_indx(n)
+        if ( srcdomain%maskset )then
+           if (srcdomain%mask(ni) /= mask_src(ni)) then
+              write(6,*) trim(subname)// &              
+                 ' ERROR: input domain mask and gridmap mask are not the same at ni = ',ni
+              write(6,*)' domain  mask= ',srcdomain%mask(ni)
+              write(6,*)' gridmap mask= ',mask_src(ni)
+              call abort()
+           end if
+        end if
+        if (abs(srcdomain%lonc(ni) - xc_src(ni)) > eps) then
+           write(6,*) trim(subname)// &
+               ' ERROR: input domain lon and gridmap lon not the same at ni = ',ni
+           write(6,*)' domain  lon= ',srcdomain%lonc(ni)
+           write(6,*)' gridmap lon= ',xc_src(ni)
+           call abort()
+        end if
+        if (abs(srcdomain%latc(ni) - yc_src(ni)) > eps) then
+           write(6,*) trim(subname)// &               
+               ' ERROR: input domain lat and gridmap lat not the same at ni = ',ni
+           write(6,*)' domain  lat= ',srcdomain%latc(ni)
+           write(6,*)' gridmap lat= ',yc_src(ni)
+           call abort()
+        end if
+     end do
+     do n = 1,ns
+        ni = dst_indx(n)
+        if ( dstdomain%maskset )then
+           if (dstdomain%mask(ni) /= mask_dst(ni)) then
+              write(6,*) trim(subname)// &                              
+                  ' ERROR: output domain mask and gridmap mask are not the same at ni = ',ni
+              write(6,*)' domain  mask= ',dstdomain%mask(ni)
+              write(6,*)' gridmap mask= ',mask_dst(ni)
+              call abort()
+           end if
+        end if
+        if (abs(dstdomain%lonc(ni) - xc_dst(ni)) > eps) then
+           write(6,*) trim(subname)// &
+               ' ERROR: output domain lon and gridmap lon not the same at ni = ',ni
+           write(6,*)' domain  lon= ',dstdomain%lonc(ni)
+           write(6,*)' gridmap lon= ',xc_dst(ni)
+           call abort()
+        end if
+        if (abs(dstdomain%latc(ni) - yc_dst(ni)) > eps) then
+           write(6,*) trim(subname)// &
+                ' ERROR: output domain lat and gridmap lat not the same at ni = ',ni
+           write(6,*)' domain  lat= ',dstdomain%latc(ni)
+           write(6,*)' gridmap lat= ',yc_dst(ni)
+           call abort()
+        end if
+     end do
+
+  end subroutine domain_checksame
 
 end module mkdomainMod

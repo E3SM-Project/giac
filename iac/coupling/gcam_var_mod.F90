@@ -1,4 +1,4 @@
-module gcam_var
+module gcam_var_mod
   !-----------------------------------------------------------------------
   ! !DESCRIPTION:
   ! Module containing run control variables
@@ -92,9 +92,86 @@ module gcam_var
   !----------------------------------------------------------
   logical, public :: gcam_active = .false.  ! true to turn on gcam coupling
 
+  logical, public :: gcam_alarm =.false.    ! true in model years when gcam runs, based on the EClock iac run alarm
+
   ! Some sizes
   integer, public :: gcam_nlon, gcam_nlat
 
+  ! Namelist variables for use in the iac and gcam
+  ! do not initialize here anymore - defaults are set in
+  !     namelist_defaults_gcam.xml
+  ! Namelist variables
+
+  ! gcam case name
+  character(len=256), public ::  case_name
+
+  ! Grid and region size parameters
+  integer, public ::  num_pft             ! number of pfts in elm
+  integer, public ::  num_harvest         ! number of elm harvest fields
+  integer, public ::  num_lat             ! number of horizontal grid cells
+  integer, public ::  num_lon             ! number of vertical grid cells
+  integer, public ::  num_gcam_energy_regions   ! gcam region number
+  integer, public ::  num_gcam_land_regions     ! gcam land units: regionXglu
+  integer, public ::  num_iac2elm_landtypes     ! number of gcamo land fields
+  integer, public ::  num_emiss_sectors         ! for emis downscaling
+  integer, public ::  num_emiss_ctys            ! for emis downscaling
+  integer, public ::  num_periods               ! for emis downscaling
+
+  ! gcam config and init files
+  character(len=256), public ::  gcam_config
+  character(len=256), public ::  base_gcam_co2_file  ! baseline gcam out
+  character(len=256), public ::  base_gcam_lu_wh_file  ! baseline gcam out
+  character(len=256), public ::  base_co2_surface_file ! gridded basline
+  character(len=256), public ::  base_co2_shipment_file ! gridded basline
+  character(len=256), public ::  base_co2_aircraft_file ! gridded baseline
+  character(len=256), public ::  base_npp_file   ! by pft, lat, lon, for land scalars
+  character(len=256), public ::  base_hr_file    ! by pft, lat, lon, for land scalars
+  character(len=256), public ::  base_pft_file   ! by pft, lat, lon, for land scalars
+  character(len=256), public ::  gcam2elm_co2_mapping_file ! define gcam co2 out
+  character(len=256), public ::  gcam2elm_luc_mapping_file ! def gcam lu out
+  character(len=256), public ::  gcam2elm_woodharvest_mapping_file ! def gcam wh out
+  character(len=256), public ::  gcam2elm_cdensity_mapping_file ! def gcam cdensity in
+
+  ! Grid and mapping and initialization files
+  character(len=256), public ::  gcam_gridfile ! definition of iac grid
+  character(len=256), public ::  elm2gcam_mapping_file ! def gcam units to grid
+  character(len=256), public :: gcam2glm_glumap
+  character(len=256), public :: gcam2glm_baselu
+  character(len=256), public :: gcam2glm_basebiomass
+
+  ! Config and input files for emiss downscaling
+  character(len=256), public :: country2grid_map
+  character(len=256), public :: country2region_map
+  character(len=256), public :: pop_iiasa_file
+  character(len=256), public :: gdp_iiasa_file
+  character(len=256), public :: pop_gcam_file
+  character(len=256), public :: gdp_gcam_file
+  character(len=256), public :: co2_gcam_file
+  character(len=256), public :: surface_co2_downscaling_method
+ 
+
+  ! Name only of the dynamic landuse timeseries file
+  character(len=256), public ::  fdyndat_ehc
+
+  ! runtime options
+  logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr
+  logical, public :: write_scalars ! scalars will be written to a file.
+  ! hr, area, pft weight) are passed from e3sm.
+  logical, public :: write_co2 ! gridded co2 emissions will be
+  ! written to a file (in addition to passed in code).
+  
+  ! define coupling control variables
+  ! these booleans define what is passed between gcam & e3sm.
+  logical, public :: elm_ehc_agyield_scaling ! if .TRUE., changes in
+  ! land productivity from elm scale ag yield in gcam.
+  logical, public :: elm_ehc_carbon_scaling ! if .TRUE., changes in
+  ! land productivity from elm scale carbon density in gcam.
+  logical, public :: ehc_eam_co2_emissions ! if .TRUE., energy system
+  ! co2 is passed from gcam to eam.
+
+  logical, public :: gcam_spinup  ! if true do gcam spinup
+  logical, public :: run_gcam     ! if true run the gcam model
+    
 contains
 
   subroutine gcam_var_set(caseid_in, ctitle_in,brnch_retain_casename_in, &
@@ -135,4 +212,4 @@ contains
     !if ( present(gcam_active     ) ) gcam_active   = gcam_active
 
   end subroutine gcam_var_set
-end module
+end module gcam_var_mod

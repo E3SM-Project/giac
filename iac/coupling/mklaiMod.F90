@@ -14,6 +14,8 @@ module mklaiMod
 !-----------------------------------------------------------------------
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
+  use mkdomainMod , only : domain_checksame
+  use mkvarctl    
 
   implicit none
 
@@ -30,7 +32,7 @@ contains
 ! !IROUTINE: mklai
 !
 ! !INTERFACE:
-subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
+subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
 !
 ! !DESCRIPTION:
 ! Make LAI/SAI/height data
@@ -38,22 +40,20 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 ! for improved efficiency
 !
 ! !USES:
-  use mkfileutils , only : getfil
-  use mkdomainMod, only : domain1_type, domain1_clean, domain1_read
+  use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar    , only : re
   use mkvarctl    
   use mkncdio
+  use mkpftMod    , only : c3cropindex, c3irrcropindex
 !
 ! !ARGUMENTS:
   implicit none
-  type(domain1_type), intent(in) :: ldomain
+  type(domain_type), intent(in) :: ldomain
   character(len=*)  , intent(in) :: mapfname     ! input mapping file name
   character(len=*)  , intent(in) :: datfname     ! input data file name
-  character(len=*)  , intent(in) :: firrig       ! %irrigated area filename
   integer           , intent(in) :: ndiag        ! unit number for diag out
   integer           , intent(in) :: ncido        ! output netcdf file id
-  real(r8)          , pointer    :: pctpft_i(:,:)! % plant function types on input grid
 !
 ! !CALLED FROM:
 ! subroutine mksrfdat in module mksrfdatMod
@@ -65,7 +65,7 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 ! !LOCAL VARIABLES:
 !EOP
   type(gridmap_type)    :: tgridmap
-  type(domain1_type)    :: tdomain          ! local domain
+  type(domain_type)    :: tdomain          ! local domain
   integer  :: numpft_i                      ! number of plant types on input
   real(r8) :: glai_o(0:numpft)              ! output grid: global area pfts
   real(r8) :: gsai_o(0:numpft)              ! output grid: global area pfts
@@ -105,7 +105,6 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
   real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
   character(len=256) :: name                ! name of attribute
   character(len=256) :: unit                ! units of attribute
-  character(len=256) :: locfn               ! local dataset file name
   character(len= 32) :: subname = 'mklai'
 !-----------------------------------------------------------------------
 
@@ -120,11 +119,11 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 
   ns_o = ldomain%ns
 
-  call getfil (datfname, locfn, 0)
-  call domain1_read(tdomain,locfn)
+  call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
 
-  call check_ret(nf_open(locfn, 0, ncidi), subname)
+  write (6,*) 'Open LAI file: ', trim(datfname)
+  call check_ret(nf_open(datfname, 0, ncidi), subname)
   call check_ret(nf_inq_dimid(ncidi, 'pft', dimid), subname)
   call check_ret(nf_inq_dimlen(ncidi, dimid, numpft_i), subname)
   call check_ret(nf_inq_dimid(ncidi, 'time', dimid), subname)
@@ -164,33 +163,7 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 
   ! Error checks for domain and map consistencies
 
-  if (tdomain%ns /= tgridmap%na) then
-     write(6,*)'input domain size and gridmap source size are not the same size'
-     write(6,*)' domain size = ',tdomain%ns
-     write(6,*)' map src size= ',tgridmap%na
-     stop
-  end if
-  do n = 1,tgridmap%ns
-     ni = tgridmap%src_indx(n)
-     if (tdomain%mask(ni) /= tgridmap%mask_src(ni)) then
-        write(6,*)'input domain mask and gridmap mask are not the same at ni = ',ni
-        write(6,*)' domain  mask= ',tdomain%mask(ni)
-        write(6,*)' gridmap mask= ',tgridmap%mask_src(ni)
-        stop
-     end if
-     if (tdomain%lonc(ni) /= tgridmap%xc_src(ni)) then
-        write(6,*)'input domain lon and gridmap lon not the same at ni = ',ni
-        write(6,*)' domain  lon= ',tdomain%lonc(ni)
-        write(6,*)' gridmap lon= ',tgridmap%xc_src(ni)
-        stop
-     end if
-     if (tdomain%latc(ni) /= tgridmap%yc_src(ni)) then
-        write(6,*)'input domain lat and gridmap lat not the same at ni = ',ni
-        write(6,*)' domain  lat= ',tdomain%latc(ni)
-        write(6,*)' gridmap lat= ',tgridmap%yc_src(ni)
-        stop
-     end if
-  end do
+  call domain_checksame( tdomain, ldomain, tgridmap )
 
   ! Determine number of dimensions in input by querying MONTHLY_LAI
 
@@ -247,7 +220,7 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 
      call check_ret(nf_inq_varid (ncidi, 'MONTHLY_SAI', varid), subname)
      call check_ret(nf_get_vara_double (ncidi, varid, begi(1:ndimsi), leni(1:ndimsi), &
-          msai_i), subname)
+          msai_i(:,0:numpft)), subname)
 
      call check_ret(nf_inq_varid (ncidi, 'MONTHLY_HEIGHT_TOP', varid), subname)
      call check_ret(nf_get_vara_double (ncidi, varid, begi(1:ndimsi), leni(1:ndimsi), &
@@ -266,26 +239,22 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
 
      do l = 0,numpft
         mask_src(:) = 1._r8 
-        call gridmap_areaave(tgridmap, mlai_i(:,l) , mlai_o(:,l) , mask_src)
-        call gridmap_areaave(tgridmap, msai_i(:,l) , msai_o(:,l) , mask_src)
-        call gridmap_areaave(tgridmap, mhgtt_i(:,l), mhgtt_o(:,l), mask_src)
-        call gridmap_areaave(tgridmap, mhgtb_i(:,l), mhgtb_o(:,l), mask_src)
+        call gridmap_areaave(tgridmap, mlai_i(:,l) , mlai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+        call gridmap_areaave(tgridmap, msai_i(:,l) , msai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+        call gridmap_areaave(tgridmap, mhgtt_i(:,l), mhgtt_o(:,l), nodata=0._r8, mask_src=mask_src)
+        call gridmap_areaave(tgridmap, mhgtb_i(:,l), mhgtb_o(:,l), nodata=0._r8, mask_src=mask_src)
      enddo
 
      ! Determine laimask
      
      laimask(:,:) = 0
      
-     ! if irrigation dataset present, copy LAI,SAI,Heights from PFT=15 (non-irrigated) 
-     ! into PFT=16 (irrigated)
-     if (firrig /= ' ') then      
-        write(6,*) 'Irrigation dataset present; Copying crop (PFT=15) ', &
-             ' LAI, SAI, and heights into irrigated crop (PFT=16) '
-        mlai_o(:,16)  = mlai_o(:,15)
-        msai_o(:,16)  = msai_o(:,15)
-        mhgtt_o(:,16) = mhgtt_o(:,15)
-        mhgtb_o(:,16) = mhgtb_o(:,15)
-     endif
+     ! copy LAI, SAI, & heights from the C3 crop (pft15)
+     ! to the irrigated (pft16) whether crop is on or off
+     mlai_o(:,c3irrcropindex)  = mlai_o(:,c3cropindex)
+     msai_o(:,c3irrcropindex)  = msai_o(:,c3cropindex)
+     mhgtt_o(:,c3irrcropindex) = mhgtt_o(:,c3cropindex)
+     mhgtb_o(:,c3irrcropindex) = mhgtb_o(:,c3cropindex)
 
      ! -----------------------------------------------------------------
      ! Output model resolution LAI/SAI/HEIGHT data
@@ -403,8 +372,7 @@ subroutine mklai(ldomain, mapfname, datfname, firrig, ndiag, ncido, pctpft_i)
   deallocate(mlai_i,msai_i,mhgtt_i,mhgtb_i,&
              mask_src,mlai_o,msai_o,mhgtt_o,mhgtb_o,laimask)
   call gridmap_clean(tgridmap)
-  call domain1_clean(tdomain) 
-
+  call domain_clean(tdomain) 
 
 end subroutine mklai
 
@@ -415,7 +383,6 @@ end subroutine mklai
 subroutine pft_laicheck( ni_s, pctpft_i, laimask )
 
 ! !USES:
-  use mkvarpar	  , only : numpft
 !
 ! !DESCRIPTION:
 !
@@ -454,6 +421,7 @@ subroutine pft_laicheck( ni_s, pctpft_i, laimask )
   end do
 
 end subroutine pft_laicheck
-  
 
+!-----------------------------------------------------------------------
+  
 end module mklaiMod

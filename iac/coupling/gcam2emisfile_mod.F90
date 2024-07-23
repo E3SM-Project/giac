@@ -16,7 +16,8 @@ Module gcam2emisfile_mod
   !
   ! !USES:
 
-  use iac_fields_mod
+  use iac_data_mod
+  use gcam_var_mod
   use shr_file_mod, only: shr_file_getunit, shr_file_freeunit
   use shr_cal_mod
   use shr_sys_mod
@@ -270,7 +271,7 @@ contains
     ! !LOCAL VARIABLES:
     logical :: restart_run,lexist
     logical :: initial_run
-    integer :: iu,iun,tmpyears(2),tmp(1),ii,n,nn,maxlonlat(2)
+    integer :: iun,tmpyears(2),tmp(1),ii,n,nn,maxlonlat(2)
     integer       ::i,j,idx2000,idx2005,idx2080,idx2090,idx2100,mth
     integer, dimension(2) :: start2,count2
     integer, dimension(3) :: start3,count3
@@ -303,9 +304,8 @@ contains
          'Korea          ', &
          'India          '/)
 
-    iu  = cdata%i(iac_cdatai_logunit)
 #ifdef DEBUG
-    write(iu,*) subname,' starting subroutine '
+    write(iulog,*) subname,' starting subroutine '
 #endif
 
     restart_run  = cdata%l(iac_cdatal_rest)
@@ -886,7 +886,7 @@ contains
     ! !LOCAL VARIABLES:
 
     integer       ::i,k,allstepyridx,ii,iii,allstep2100idx,allstep2090idx,allstep2080idx,newdate(1)
-    integer :: iu,tmp(1),n
+    integer :: tmp(1),n
     integer :: ymd, tod, dt,mth
     integer :: startyr,endyr,yr,ind,yeararr(12),montharr(12),start3(3),count3(3),datearr(12),ierr,curryr,exp_rate,start(1),count(1),year
     integer, allocatable, dimension(:) :: alldates
@@ -905,7 +905,6 @@ contains
 
     !EOP
     !-----------------------------------------------------------------------
-    iu  = cdata%i(iac_cdatai_logunit)
     ymd = EClock(iac_EClock_ymd)
     tod = EClock(iac_EClock_tod)
     dt  = EClock(iac_EClock_dt)
@@ -913,7 +912,7 @@ contains
     exp_rate=curryr-2000
 
 #ifdef DEBUG
-    write(iu,*) trim(subname),' date (same as gcam) = ',ymd,tod
+    write(iulog,*) trim(subname),' date (same as gcam) = ',ymd,tod
 #endif
 
     ! Use CO2 input from GCAM and downscale data from init to convert from region to country
@@ -1409,7 +1408,6 @@ contains
     ! !ARGUMENTS:
 
     ! !LOCAL VARIABLES:
-    integer :: iu
     character(len=*),parameter :: subname='(gcam2emisfile_final_mod)'
 
     ! !REVISION HISTORY:
@@ -1418,9 +1416,6 @@ contains
     !EOP
 
     !---------------------------------------------------------------------------
-
-    !    iu  = nint(cdata(iac_cdata_logunit))
-    !    write(iu,*) trim(subname)
 
     deallocate (Area_sumGrid)
     deallocate (Country05id)
