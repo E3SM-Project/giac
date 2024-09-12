@@ -3796,9 +3796,13 @@ sethurttcurrent(int outgrid) {
 	bare ground is removed (if not enough veg pft available) or added (if not enough pot veg available) as needed to accommodate crop amount
 	the removal and addition of pfts is controlled by the land conversion assumption variables
 		which are set to proportional for historical and future (to better replicate ssp5rcp85 forest changes and reduce undesired behavior in other scenarios)
+
+        the future land conversion assumptions are now passed to this function
+
 	-adv
 ------*/
-void sethurttcrop(int outgrid, int modyear, int calcyear) {
+void sethurttcrop(int outgrid, int modyear, int calcyear,
+                  int crop_addtreeonly_fut, double crop_setherbfracrem_fut, double crop_setavailtreefracrem_fut) {
     
     int maxpftid, outpft, temppftid;
     double newcropval, vegpftsum, treepftsum;
@@ -3836,9 +3840,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear) {
 	if (modyear >= 2015) {
 		//	proportional addition of available potential pfts upon crop removal
 		//	proportional removal of pfts upon crop addition
-		ADDTREEONLY = 0;	// For crop removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
-		setherbfracrem = 0.2;	// crop addition
-		setavailtreefracrem = 0.0;	// crop removal
+		ADDTREEONLY = crop_addtreeonly_fut;	// For crop removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+		setherbfracrem = crop_setherbfracrem_fut;	// crop addition
+		setavailtreefracrem = crop_setavailtreefracrem_fut;	// crop removal
     } else {
 		// Historically, crop addition and removal cause pft changes proportional to respective pft distributions
 		// this is the original assumption, but available potential vegetation has been used in place of potential vegetation for crop removal
@@ -4660,9 +4664,13 @@ void sethurttcrop(int outgrid, int modyear, int calcyear) {
             then grass is added (grass types are proportional to current model year grasses in nearest graass cell)
 	the removal and addition of pfts is controlled by the land conversion assumption variables
 		which are set to proportional for historical and future (to better replicate ssp5rcp85 forest changes and reduce undesired behavior in other scenarios)
-	-adv
+	
+       the future land conversion assumptions are now passed to this function
+
+       -adv
 ------*/
-void sethurttpasture(int outgrid, int modyear, int calcyear) {
+void sethurttpasture(int outgrid, int modyear, int calcyear,
+                     int pasture_addtreeonly_fut, double pasture_setherbfracrem_fut, double pature_setavailtreefracrem_fut) {
     
    int maxpftid, outpft, pasturegrid, temppftid;
     double maxpftval, treepftsum, potvegpftsum, potvegtreepftsum;
@@ -4693,19 +4701,21 @@ void sethurttpasture(int outgrid, int modyear, int calcyear) {
 	
 	int ADDTREEONLY;			// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
 	int HERBPASTURE;			// 1=ensure enough herbaceous pfts to cover glmo pasture; 0=let there be some tree pft pasture if necessary
-	double setherbfracrem;		// pasture addition; this includes bare soil when INCLUDEBARE=1=ADDTREEONLY
+	double setherbfracrem;		// pasture addition
 	double setavailtreefracrem;	// pasture removal
 	
 
 	// proprtional assumptions appply before 2015
+	// IMPORTANT NOTE:
    // keep HERBPASTURE == 0 so that forest area is not lost at the beginning of 1850, and to avoid some funky behavior
+        //
 	if (modyear >= 2015) {
 		//	proportional addition of available potential pfts upon pasture removals
 		//	proportional removal of pfts upon pasture addition
-		ADDTREEONLY = 1;	// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+		ADDTREEONLY = pasture_addtreeonly_fut;	// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
 		HERBPASTURE = 0;	// 1=ensure enough herbaceous pfts to cover glmo pasture; 0=let there be some tree pft pasture if necessary
-		setherbfracrem = 1.0;	// pasture addition
-		setavailtreefracrem = 0.0;	// pasture removal
+		setherbfracrem = pasture_setherbfracrem_fut;	// pasture addition
+		setavailtreefracrem = pature_setavailtreefracrem_fut;	// pasture removal
     } else {
 		// This is now set for default proportional removal of pfts when pasture is added, since pasture is now tracked
       //    this means that the conversions can be constrained better than just cutting trees, which was the original assumptions
@@ -4715,7 +4725,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear) {
 		setherbfracrem = 1.0;	// pasture addition
 		setavailtreefracrem = 1.0;	// pasture removal
 	}
-    
+   
 	// calculate pft states
 	
     herbaceouspftsum = 0.0;
@@ -5826,11 +5836,15 @@ if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
 /*-----
 	calchurtt()
 	modyear - the model year, which is prior to the output year (unless calcyear<=2015)
-	calcyear - the output year for pft values 
+	calcyear - the output year for pft values
+        these future land coversion assumption variables are new being passed through as namelist variables in e3sm
+        so the values are now set in the updateannuallanduse routine
 	-adv
 -----*/
 void
-calchurtt(int modyear, int calcyear) {
+calchurtt(int modyear, int calcyear,
+          int crop_addtreeonly_fut, double crop_setherbfracrem_fut, double crop_setavailtreefracrem_fut,
+                int pasture_addtreeonly_fut, double pasture_setherbfracrem_fut, double pasture_setavailtreefracrem_fut) {
     
     int outgrid;
     
@@ -5854,8 +5868,12 @@ calchurtt(int modyear, int calcyear) {
     	/* put the base year pfts into the output pft array -adv */
         sethurttcurrent(outgrid);
         if (invegbare[outgrid] > 0.0) {	/* calc new pfts only if the grid cell has a non-zero vegetated land unit -adv */
-            sethurttcrop(outgrid,modyear,calcyear);	/* add or remove crops from the output pft array -adv */
-            sethurttpasture(outgrid,modyear,calcyear);	/* add or remove pasture from the output pft array -adv */
+            /* add or remove crops from the output pft array -adv */
+            sethurttcrop(outgrid,modyear,calcyear,
+                     crop_addtreeonly_fut, crop_setherbfracrem_fut, crop_setavailtreefracrem_fut);
+            /* add or remove pasture from the output pft array -adv */
+            sethurttpasture(outgrid,modyear,calcyear,
+                     pasture_addtreeonly_fut, pasture_setherbfracrem_fut, pasture_setavailtreefracrem_fut);
             sethurttlanduse(outgrid);	/* calculate the normalized harvest and grazing fractions -adv */
         } 
     }
@@ -5897,16 +5915,21 @@ sethurttpotveg() {
  	ISFUTURE - a flag to tell how many values (constants are defined at top) to read from the LUH files; 1=future, 0=historical
       calulate the output year pfts from changes in the base year pfts, based on base year (pasture only) and output year glmo data
    sfname - the land use state file name for the desired scenario, or 1850
+
+        the future land conversion assumption variables are now namelist items in e3sm, so they have to be set in this routine to be passed through
+
 	-adv
 -----*/
 
-	// standalone does not need the array arguments, but needs other arguments:
+	// standalone does not need the array or conversion arguments, but needs other arguments:
 #ifdef STANDALONE
 void
 updateannuallanduse(int *inyear, int ISFUTURE, char *sfname, char *in_dir, char *out_dir) {
 #else
 void
-updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], int *inyear) {
+updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], int *inyear,
+			int *crop_addtreeonly, double *crop_setherbfracrem, double *crop_setavailtreefracrem,
+                int *pasture_addtreeonly, double *pasture_setherbfracrem, double *pasture_setavailtreefracrem) {
 #endif
 	fprintf(stderr, "\ninyear %i started in updateannuallanduse\n", *inyear);
 	char filenamestr[1000];
@@ -5948,6 +5971,27 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		exit(0);
 	}
 	
+        // land conversion assumption variables for future runs
+        // these are distinct for crop and pasture
+        // they are now set here because they need to be passed through the functions
+        // either default valus or the e3sm namelist values
+        // the e3sm namelist values are set in the first #else condition below
+        /* !!! these are the new variables that control the preferential pft removal/addition -adv
+           the values range from:
+           2 = maximize herbaceous pfts (i.e. minimize forest pfts)
+           1 = proportional based on relevant pft distribution
+           0 = minimize herbaceous pfts (i.e. maximize forest pfts)
+        */
+
+        int crop_addtreeonly_fut = 0;                // For crop removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+        double crop_setherbfracrem_fut = 1.0;          // crop addition
+        double crop_setavailtreefracrem_fut = 0.0;     // crop removal
+
+        int pasture_addtreeonly_fut = 0;                // For psture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+        double pasture_setherbfracrem_fut = 1.0;          // pasture addition
+        double pasture_setavailtreefracrem_fut = 0.0;     // pasture removal
+
+
 	// the following is for standalone mode only
 #ifdef STANDALONE
 	
@@ -6247,6 +6291,14 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	copyglmo(inhurttsh1,6,glmo);
 	copyglmo(inhurttsh2,7,glmo);
 	copyglmo(inhurttsh3,8,glmo);
+
+        // the land conversion assumption namelist values for the future
+        crop_addtreeonly_fut = *crop_addtreeonly;           // For crop removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+        crop_setherbfracrem_fut = *crop_setherbfracrem;     // crop addition
+        crop_setavailtreefracrem_fut = *crop_setavailtreefracrem; // crop removal
+        pasture_addtreeonly_fut = *pasture_addtreeonly;        // For pature removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
+        pasture_setherbfracrem_fut = *pasture_setherbfracrem;     // pasture addition
+        pasture_setavailtreefracrem_fut = *pasture_setavailtreefracrem; // pature removal
 	
 #endif
 
@@ -6428,8 +6480,15 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 	 these adjustments are done in order so that the pasture adjustments depend somewhat on the crop adjustments
 	 the harvest/grazing fractions are separate calculations
 	 now this takes the actual model year and out year info as arguments
+
+         this now takes the future land conversion assumptions as arguments 
+         the values are set above, based on the e3sm namelist or the default, depending on e3sm vs standalone
+
 	 -adv */
-	calchurtt((int) modyear, (int) outyear);
+
+	calchurtt((int) modyear, (int) outyear,
+                  crop_addtreeonly_fut, crop_setherbfracrem_fut, crop_setavailtreefracrem_fut,
+                  pasture_addtreeonly_fut, pasture_setherbfracrem_fut, pasture_setavailtreefracrem_fut);
 	
     // here to the 'also add' comment is for standalone only
 #ifdef STANDALONE

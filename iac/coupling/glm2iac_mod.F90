@@ -336,7 +336,9 @@ contains
     write(iulog,*) trim(subname),' running LUT  '
 
     ! now using the double precision code
-    call updateannuallanduse(glmo,plodata,myear)
+    call updateannuallanduse(glmo,plodata,myear,&
+                crop_addtreeonly,crop_setherbfracrem,crop_setavailtreefracrem,&
+                pasture_addtreeonly,pasture_setherbfracrem,pasture_setavailtreefracrem)
 
 #ifdef DEBUG
     do j = 1,size(plodata,dim=1)

@@ -85,6 +85,8 @@ contains
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
          pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
          surface_co2_downscaling_method, &
+         crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
+         pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions,&
