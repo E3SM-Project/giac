@@ -172,7 +172,7 @@ subroutine mksurfdat_run(year,plodata)
     logical :: exists
     character(len=32) :: subname = 'mksrfdat_run'  ! name
 
-    namelist /clmexp/              &
+    namelist /mksrf/              &
 	 mksrf_fgrid,              &	
 	 mksrf_gridtype,           &	
          mksrf_fvegtyp,            &
@@ -329,6 +329,14 @@ subroutine mksurfdat_run(year,plodata)
     !    numpft            (if different than default of 16)
     ! ======================================================================
 
+    ! outnc_large_files and numpft are not in this namelist
+    ! additional namelist items here:
+    !outnc_double - enables double precision output
+    !outnc_dims - two dimensions for output grid
+    !fsurdat - generated surface file name
+    !fdyndat - generated landuse timeseries file name
+    !fsurlog - log file for output generation
+
     write(6,*) 'Attempting to initialize control settings .....'
 
     mksrf_gridtype    = 'global'
@@ -338,8 +346,8 @@ subroutine mksurfdat_run(year,plodata)
     no_inlandwet      = .true.
 
     nunit = getavu()
-    call opnfil ('iac_in', nunit, 'f')
-    read(nunit, clmexp, iostat=ier)
+    call opnfil ('gcam_in', nunit, 'f')
+    read(nunit, mksrf, iostat=ier)
     if (ier /= 0) then
        write(6,*)'error: namelist input resulted in error code ',ier
        call abort()
