@@ -863,7 +863,7 @@ contains
           enddo
        enddo
        if (count_gcells /= totrglus) then
-          write(iulog,*), subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
+          write(iulog,*) subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
        endif
 
        ! note that a cell is potentially forest or non-forest; it is never mixed
@@ -2202,7 +2202,7 @@ contains
                    enddo
                 enddo
                 if (count_gcells /= totrglus) then
-                   write(iulog,*), subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
+                   write(iulog,*) subname, 'Error: count_gcells ', count_gcells, ' != totrglus ', totrglus
                 endif
  
                 cellarea_forest(:,:)=0.
