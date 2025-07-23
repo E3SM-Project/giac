@@ -399,7 +399,7 @@ subroutine mksurfdat_run(year,plodata)
     ! ----------------------------------------------------------------------
     
     ! Only read domain map once
-    if (domain_set(ldomain) == .false.) then 
+    if (domain_set(ldomain) .eqv. .false.) then
        write(6,*)'calling domain_read'
        if ( .not. domain_read_map(ldomain, fgrddat) )then
           call domain_read(ldomain, fgrddat)

@@ -107,17 +107,17 @@ contains
        write(iulog,*) '('//trim(subname)//')', 'Namelist for IAC/GCAM run:'
        write(iulog,*) 'GCAM case name:', trim(case_name)
        write(iulog,*) 'grid and region size parameters:'
-       write(iulog, '(A,I)') "num_pft = ",num_pft
-       write(iulog, '(A,I)') "num_harvest = ",num_harvest
-       write(iulog, '(A,I)') "num_lat = ",num_lat
-       write(iulog, '(A,I)') "num_lon = ",num_lon
-       write(iulog, '(A,I)') "num_gcam_energy_regions = ", &
+       write(iulog, '(A,I20)') "num_pft = ",num_pft
+       write(iulog, '(A,I20)') "num_harvest = ",num_harvest
+       write(iulog, '(A,I20)') "num_lat = ",num_lat
+       write(iulog, '(A,I20)') "num_lon = ",num_lon
+       write(iulog, '(A,I20)') "num_gcam_energy_regions = ", &
                              num_gcam_energy_regions
-       write(iulog, '(A,I)') "num_gcam_land_regions = ",num_gcam_land_regions
-       write(iulog, '(A,I)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
-       write(iulog, '(A,I)') "num_emiss_sectors = ",num_emiss_sectors
-       write(iulog, '(A,I)') "num_emiss_ctys = ", num_emiss_ctys
-       write(iulog, '(A,I)') "num_periods = ", num_periods
+       write(iulog, '(A,I20)') "num_gcam_land_regions = ",num_gcam_land_regions
+       write(iulog, '(A,I20)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
+       write(iulog, '(A,I20)') "num_emiss_sectors = ",num_emiss_sectors
+       write(iulog, '(A,I20)') "num_emiss_ctys = ", num_emiss_ctys
+       write(iulog, '(A,I20)') "num_periods = ", num_periods
 
        write(iulog,*) 'GCAM config and init files:'
        write(iulog, '(A,A)') "gcam_config = ", trim(gcam_config)

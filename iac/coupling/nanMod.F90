@@ -15,6 +15,7 @@ module nanMod
 !
 ! !USES:
   use shr_kind_mod, only: r8 => shr_kind_r8
+  use shr_kind_mod, only: i8 => shr_kind_i8
 !
 ! !PUBLIC TYPES:
   implicit none
@@ -26,9 +27,9 @@ module nanMod
   integer,  parameter :: bigint = O'17777777777'
 #else
 ! signaling nan otherwise
-  real(r8), parameter :: inf = O'0777600000000000000000'
-  real(r8), parameter :: nan = O'0777610000000000000000'
-  integer,  parameter :: bigint = O'17777777777'
+  real(r8), parameter :: inf = real(O'0777600000000000000000',r8)
+  real(r8), parameter :: nan = real(O'0777610000000000000000',r8)
+  integer(i8), parameter :: bigint = int(O'17777777777',i8)
 #endif
 !
 ! !REVISION HISTORY:
