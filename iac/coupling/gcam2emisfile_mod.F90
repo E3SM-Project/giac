@@ -22,7 +22,7 @@ Module gcam2emisfile_mod
   use shr_cal_mod
   use shr_sys_mod
   use netcdf
-  use shr_kind_mod, only : r8 => shr_kind_r8,r4 => shr_kind_r4
+  use shr_kind_mod, only : r8 => shr_kind_r8,r4 => shr_kind_r4, i8 => shr_kind_i8
   use shr_const_mod, only: pi=>shr_const_pi,re=>shr_const_rearth
 
   implicit none
@@ -63,7 +63,7 @@ Module gcam2emisfile_mod
        regionname(14)
 
   character*3         :: &
-       source(10)
+       source_sec(10)
 
   integer             :: &
        cid,              &
@@ -325,9 +325,9 @@ contains
     !
     ! setup 
     !
-    source(:)= (/"agr","awb","dom","ene","ind","lcf","sav","slv","tra","wst"/)
+    source_sec(:)= (/"agr","awb","dom","ene","ind","lcf","sav","slv","tra","wst"/)
 
-    !coming from gcam plus air and ship source(:)= (/"agr","air","awb","dom","ene","ind","lcf","sav","ship","slv","tra","wst"/)
+    !coming from gcam plus air and ship source_sec(:)= (/"agr","air","awb","dom","ene","ind","lcf","sav","ship","slv","tra","wst"/)
     !jt    numsource=10 for now jut using co2 aggregated.
 
     numsource=1
@@ -653,7 +653,7 @@ contains
 
           countryEmission(:,ns)=0.
 
-          !jt          emisname=source(ns)
+          !jt          emisname=source_sec(ns)
 
           emisname='CO2_flux'
 
@@ -992,7 +992,7 @@ contains
 
 	  !!!fix - should just read allsteps once in init not everytime its run
 
-          !jt             emisname='emiss_'//source(ns)
+          !jt             emisname='emiss_'//source_sec(ns)
           emisname='CO2_flux'
           call handle_ncerr(nf90_inq_varid(ncidallsteps, emisname,varid),subname,__LINE__)
           call handle_ncerr(nf90_get_var(ncidallsteps,varid,tmp_GHG_R_GCAM_allsteps),subname,__LINE__)
@@ -1067,7 +1067,7 @@ contains
              GHG_R_Pre(rid) = GHG_R_Pre(rid) +  GHG_C_Preliminary(cid)*GDP_C_Final(cid,allstepyridx) !emissions                                                                                           
              !regional GDP increase between interval                                                                                                                                           
              GHG_share_R(rid) =GHG_share_R(rid) +  GDP_C_Final(cid,allstepyridx)*GHG_C_Preliminary(cid)
-             if(.not.(GHG_R_Pre(rid).gt.0 .and. GHG_R_Pre(rid).lt.9999999999999)) write(6,*)'stop cid,ghg_r_pre,rid=',cid,GHG_R_Pre(rid),rid
+             if(.not.(GHG_R_Pre(rid).gt.0 .and. GHG_R_Pre(rid).lt.9999999999999_i8)) write(6,*)'stop cid,ghg_r_pre,rid=',cid,GHG_R_Pre(rid),rid
           end do
 
 
@@ -1113,7 +1113,7 @@ contains
              share(lonind,latind,country05id(i))=share(lonind,latind,country05id(i)) +(co2base2000(lonind,latind,ns)*areaGrid(i)*1000*1000*365*86400*areaIntersect(i)/Area_sumGrid(i))/countryEmission2(country05id(i),ns)
           end do
 
-          emisname='emiss_'//source(ns)
+          emisname='emiss_'//source_sec(ns)
 
           do i=1,numcountry
              cid=countryid(i)
@@ -2324,7 +2324,8 @@ function nearest_index (value, array)
       IF (N .EQ. 1) GO TO 1001
 !
       DO 100 I = 2, N
-  100 E(I-1) = E(I)
+      E(I-1) = E(I)
+  100 CONTINUE
 !
       E(N) = 0.0D0
 !
