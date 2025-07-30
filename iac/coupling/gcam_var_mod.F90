@@ -149,7 +149,14 @@ module gcam_var_mod
   character(len=256), public :: co2_gcam_file
   character(len=256), public :: surface_co2_downscaling_method
  
-
+  ! future (>= 2015) land conversion assumptions 
+  integer, public :: crop_addtreeonly = 0
+  real(r8), public :: crop_setherbfracrem = 1.0
+  real(r8), public :: crop_setavailtreefracrem = 0.0
+  integer, public :: pasture_addtreeonly = 0
+  real(r8), public :: pasture_setherbfracrem = 1.0
+  real(r8), public :: pasture_setavailtreefracrem = 0.0
+  
   ! Name only of the dynamic landuse timeseries file
   character(len=256), public ::  fdyndat_ehc
 
