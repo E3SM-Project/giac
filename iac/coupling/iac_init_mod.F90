@@ -66,6 +66,8 @@ contains
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
          pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
          surface_co2_downscaling_method, &
+         crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
+         pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
          read_scalars, write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
@@ -154,6 +156,14 @@ contains
        write(iulog, '(A,A)') "gdp_gcam_file = ", trim(gdp_gcam_file) 
        write(iulog, '(A,A)') "co2_gcam_file = ", trim(co2_gcam_file)
        write(iulog, '(A,A)') "surface_co2_downscaling_method = ", trim(surface_co2_downscaling_method)
+
+       write(iulog,*) 'future land conversion assumptions:'
+       write(iulog, '(A,I)') "crop_addtreeonly = ",crop_addtreeonly
+       write(iulog, '(A,F)') "crop_setherbfracrem = ",crop_setherbfracrem
+       write(iulog, '(A,F)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
+       write(iulog, '(A,I)') "pasture_addtreeonly = ",pasture_addtreeonly
+       write(iulog, '(A,F)') "pasture_setherbfracrem = ",pasture_setherbfracrem
+       write(iulog, '(A,F)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
 
        write(iulog,*) 'name of dynamic landuse timeseries file:'
        write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
