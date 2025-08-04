@@ -67,12 +67,21 @@ contains
 ! !LOCAL VARIABLES:
     integer :: numreg,numglu,ier,restart
     character(len=*),parameter :: subname='(glm_init_mod)'
+    integer :: ymd, year
 
 ! !REVISION HISTORY:
 ! Author: T Craig
 
 !EOP
 !-----------------------------------------------------------------------
+
+    ! get the year from the ehc clock
+    ! this is e3sm model year only during the ehc run timestep
+    ! otherwise it is advanced one year because of the ehc clock advance
+    ! this year is used for restart to get correct data
+    !    for the next run call
+    ymd = EClock(iac_EClock_ymd)
+    year = ymd/10000
 
     numreg = num_gcam_energy_regions
     numglu = num_gcam_land_regions
@@ -103,7 +112,7 @@ contains
        restart = 0
     end if
 
-    call initGLM(restart)
+    call initGLM(restart, year)
   end subroutine glm_init_mod
 
 !---------------------------------------------------------------------------

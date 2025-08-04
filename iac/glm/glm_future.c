@@ -270,7 +270,7 @@ void force_harvest3(int it, int i, int curryear);
 void global_timeseries_checker(int regional_code, char regional_name[50],int curryear);
 void global_timeseries_checker_aez(int regional_code, char regional_name[50],int curryear);
 void harvest_gridded_data(int it);
-void initialize(int *restart);
+void initialize(int *restart, int *year);
 void initialize_checker(int regional_code);
 void initialize_woodharvest_country_ratios(int baseyear);
 void loop_call_for_country_final_stats(int curryear);
@@ -298,7 +298,6 @@ void read_country_names();
 void read_data_water_ice_nc(int curryear);
 void read_future_contructed_states_nc(int curryear);
 void read_other_data();
-void read_restart_pointer(void);
 void read_regional_codes();
 void read_regional_names();
 /* void read_woodharvest_data(int curryear); */
@@ -335,6 +334,7 @@ int main(int argc, char *argv[]){
 #include "iniparser.h"
 
   int restart = 0;
+  int year = 2015;
 
   setbuf(stdout, NULL);
 
@@ -346,7 +346,7 @@ int main(int argc, char *argv[]){
       return;
     }
 
-  initialize(&restart);
+  initialize(&restart, &year);
 
   run_model();
 
@@ -390,13 +390,14 @@ void option_settings(int smart_flow_option,
 
 }
 /***********************************************************************/
-void initialize(int *restart){
+void initialize(int *restart, int *year){
 
   dictionary* ini ;
   int status;
   int i, iz, k, m, it, j;
   char runtypebuf[50];
   char new_path[256];
+  char curryearc[8];
   int varidrst_past,
     varidrst_othr,
     varidrst_urbn,
@@ -695,9 +696,14 @@ void initialize(int *restart){
     initialize_woodharvest_country_ratios(2005);
 
   if(!initialrun) {
-    read_restart_pointer(); 
-    printf("read in restart data... %s\n",restart_filename);
-    strcpy(new_path,restart_filename); 
+    // the restart file year is the current ehc clock year
+    // this ensures correct data for the next ehc call
+    strcpy(restart_filename, casename);
+    strcat(restart_filename,".glm.restart.state.");
+    sprintf(curryearc, "%d", *year);
+    strcat(restart_filename, strcat(curryearc,".nc")); 
+    printf("read in restart data... %s\n", restart_filename);
+    strcpy(new_path, restart_filename); 
   }else{
     strcpy(new_path,updated_initial_state);
     printf("read in initial data... %s\n",new_path);
@@ -949,7 +955,6 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
     }
 	  
 	// write restart for outyear each year 
-	// but let the land model write the rpointer file
         // this is distinct from reading a restart, which is done in initialize
 	output_updated_states_nc(curryear,TRUE);
 	  
@@ -1253,7 +1258,6 @@ void step(int *year){
 /***********************************************************************/
 void finalize(void){
   // if (output_netcdf) output_updated_states_nc(stop_year);
-  //  create_restart_inifile(curryear);
   return;
 }
 /***********************************************************************/
@@ -12860,36 +12864,6 @@ void create_restart_inifile(int curryear)
 	fclose(ini);
 }
 /********************************************************************/
-void read_restart_pointer(void)
-{
-	dictionary*	ini_rest;
-	int status;
-        FILE *in;
-        char line[5];
-
-        if ((in=fopen("rpointer.glm", "r"))==NULL) {
-           fprintf(stderr, "iniparser: cannot open rpointer.glm\n");
-           exit(1);
-        }
-
-        // the restart file name is in the first line of rpointer.glm
-        //    and is this: output_glm_restart.state.yyyy.nc,
-        //    where yyyy is the four digit restart year
-        fscanf(in,"%s",restart_filename);
-        strncpy(line,&restart_filename[25],4);
-        start_year = (int)strtol(line, NULL, 0);
-
-/*
-        ini_rest = iniparser_load("rpointer.glm");
-        restart_filename = iniparser_getstring(ini_rest, "restart:restart_file", NULL);
-        start_year       = iniparser_getint(ini_rest, "restart:restart_year", 1500);
-*/
-
-        if (start_year >= stop_year) {
-	  fprintf(stderr, "glm:read_restart: start_year of restart run >= stop_year\n");
-	  exit(1);
-	}
-}
 /*-------------------------------------------------------------------------*/
 /**
    @file    iniparser.c

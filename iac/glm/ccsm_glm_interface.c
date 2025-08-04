@@ -1,5 +1,5 @@
-void initglm_(int *restart) {
-    initialize(restart);
+void initglm_(int *restart, int *curryear) {
+    initialize(restart, curryear);
 }
 void runglm_() {
     run_model();

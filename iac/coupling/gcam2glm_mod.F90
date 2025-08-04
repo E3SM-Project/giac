@@ -97,7 +97,6 @@ Module gcam2glm_mod
     integer, PUBLIC :: numLats, numLons
     integer, dimension(nf90_max_var_dims) :: dimIDs
     character(len=*),parameter :: gcam2glm_restfile = 'gcam2glm_restart.'
-    character(len=*),parameter :: gcam2glm_rpointer = 'rpointer.gcam2glm'
     character(256) :: filename
 
 ! !REVISION HISTORY:
@@ -140,6 +139,7 @@ contains
 ! !LOCAL VARIABLES:
     logical :: lexist, restart_run
     integer :: iun,tmpyears(2),ier,t,yy,g
+    integer :: ymd, year, mon, day
     real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
 
@@ -166,6 +166,12 @@ contains
     nglu=num_gcam_land_regions
 
     gcamsize=nglu
+
+! get current ehc clock time and extract year
+! this is a year ahead of the e3sm model year
+!    except during the ehc run timestep
+ymd = EClock(iac_EClock_ymd)
+call shr_cal_date2ymd(ymd,year,mon,day)
 
 ! initialize two level time indexes 
 
@@ -447,29 +453,20 @@ contains
        cdata%i(iac_cdatai_gcam_yr2)=iac_start_year+iac_gcam_timestep
     else
        ! read restart and set crop and past
-      
-       inquire(file=trim(gcam2glm_rpointer),exist=lexist)
+     
+       ! the correct restart file is associated with the current ehc year
+       !    which matches e3sm model year only during the ehc run timestep
+       !    otherwise it is a year ahead because of the ehc clock advance
+       ! this is because the ehc clock is advanced at the end of its run call 
+       ! this ensures the correct data are loaded for the next ehc run call
+       ! note that init is called no matter the start/restart timestep
+
+       write(filename,'(a,i4.4,a,i2.2,a)') trim(gcam2glm_restfile)//'r.',year,'.nc'
+
+       inquire(file=trim(filename),exist=lexist)
        if (lexist) then
-          
-#ifdef DEBUG
-           write(iulog,*) subname,' read_restart rpointer ',trim(gcam2glm_rpointer)
-#endif
-          
-          iun = shr_file_getunit()
-          open(iun,file=trim(gcam2glm_rpointer),form='formatted')
-          read(iun,'(a)') filename
-          close(iun)
-          call shr_file_freeunit(iun)
-          
-#ifdef DEBUG
-           write(iulog,*) subname,' read_restart file ',trim(filename)
-#endif
-          
-          inquire(file=trim(filename),exist=lexist)
-          if (.not.lexist) then
-             write(iulog,*) subname,' ERROR: missing file ',trim(filename)
-             call shr_sys_abort(subname//' ERROR: missing file')
-          endif
+
+           write(iulog,*) subname,' read restart file ',trim(filename)          
           
           status= nf90_open(filename,nf90_nowrite,ncid)
           if(status /= nf90_NoErr) call handle_err(status)
@@ -510,10 +507,12 @@ contains
           if(status /= nf90_NoErr) call handle_err(status)
           status = nf90_get_var(ncid,varid,glm_past)
           if(status /= nf90_NoErr) call handle_err(status)
+
+          status = nf90_close(ncid)
        else
-          write(iulog,*) subname,' read_restart rpointer NOT found ',trim(gcam2glm_rpointer)
+          write(iulog,*) subname,' ERROR: restart file NOT found ',trim(filename)
           call shr_sys_abort(subname//' ERROR: missing file')
-       end if ! rpointer exist
+       end if ! restart file exist
     end if ! restart run
   end subroutine gcam2glm_init_mod
 
@@ -2610,7 +2609,6 @@ contains
     end if
 
     ! write a restart file each year,
-    !    but let the land model determine which rpointer is needed
 
     call shr_cal_date2ymd(ymd,year,mon,day)
     write(filename,'(a,i4.4,a,i2.2,a)') trim(gcam2glm_restfile)//'r.',year+1,'.nc'
