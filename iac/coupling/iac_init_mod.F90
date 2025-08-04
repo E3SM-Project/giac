@@ -44,7 +44,7 @@ contains
     integer, pointer :: itempr(:,:)
     character(len=32) :: subname = 'iac_init'
     ! these are for reading the dynamic land file
-    integer :: curr_yr, ncid_int                               ! current model year
+    integer :: curr_yr, ncid_int              ! current ehc clock  year
     integer :: nlon, nlat, ntime, npft, indprev, varid, ierr
     integer, dimension(4) :: start4, count4
     integer, allocatable :: lsf_years(:)
@@ -94,7 +94,9 @@ contains
        call shr_file_freeUnit( unitn )
     end if
 
-    ! get the current model year for readin in the start-of-year pft and harvest data
+    ! get the current ehc clock year for reading the start-of-year pft and harvest data
+    ! this works for initial start and restart to get correct data for next ehc run call
+    ! because the ehc clock is advanced at the end of its run timestep
     call seq_timemgr_EClockGetData(EClock, curr_yr=curr_yr)
     write(iulog,*) "(", subname, ") Current model year is ", curr_yr
 
