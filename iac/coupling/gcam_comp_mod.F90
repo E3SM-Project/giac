@@ -597,43 +597,33 @@ contains
   call get_environment_variable("SLURM_JOB_ID", jobid)
   jobid = trim(adjustl(jobid))
 
-  !write(filename,'(a,a,a)') 'main_log_', jobid, '.txt'
-  !write(scall,'(a,a)') 'mv main_log.txt ', filename 
   scall = 'mv main_log.txt '//'main_log_'//jobid//'.txt'
   call system(scall)
 
-  !write(filename,'(a,a,a)') 'coupling_log_', jobid, '.txt'
-  !write(scall,'(a,a)') 'mv coupling_log ', filename
   scall = 'mv coupling_log '//'coupling_log_'//jobid//'.txt'
   call system(scall)
 
   ! rename the gcam solver logs to include the
   !    slurm job id
-  !write(filename,'(a,a,a)') 'solver-data-key_', jobid, '.txt'
-  !write(scall,'(a,a)') 'mv solver-data-key.txt ', filename
   scall = 'mv solver-data-key.txt '//'solver-data-key_'//jobid//'.txt'
   call system(scall)
 
-  !write(filename,'(a,a,a)') 'solver-data-log_', jobid, '.txt'
-  !write(scall,'(a,a)') 'mv solver-data-log.txt ', filename
   scall = 'mv solver-data-log.txt '//'solver-data-log_'//jobid//'.txt'
   call system(scall)
 
-  !write(filename,'(a,a,a)') 'solver_log_', jobid, '.csv'
-  !write(scall,'(a,a)') 'mv solver_log.csv ', filename
   scall = 'mv solver_log.csv '//'solver_log_'//jobid//'.csv'
   call system(scall)
 
   ! rename the debug xml and output xml also
   ! case_name in gcam_in is added, so it must match!
-  !write(filename,'(a,a,a,a,a)') 'debug', trim(case_name), '_', jobid, '.xml'
-  !write(scall,'(a,a,a,a)') 'mv debug', trim(case_name), '.xml ', filename
   scall = 'mv debug'//trim(adjustl(case_name))//'.xml '//'debug'//trim(adjustl(case_name))//'_'//jobid//'.xml'
   call system(scall)
 
-  !write(filename,'(a,a,a,a,a)') 'GCAMDBOutput_', trim(case_name), '_', jobid, '.xml'
-  !write(scall,'(a,a,a,a)') 'mv GCAMDBOutput_', trim(case_name), '.xml ', filename
   scall = 'mv GCAMDBOutput_'//trim(adjustl(case_name))//'.xml'//'GCAMDBOutput_'//trim(adjustl(case_name))//'_'//jobid//'.xml'
+  call system(scall)
+
+  ! also rename the restart debug file
+  scall = 'mv debug'//trim(adjustl(case_name))//'_restart.xml '//'debug'//trim(adjustl(case_name))//'_restart_'//jobid//'.xml'
   call system(scall)
 
   end subroutine gcam_final_mod
