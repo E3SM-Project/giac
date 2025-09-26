@@ -161,7 +161,8 @@ module gcam_var_mod
   character(len=256), public ::  fdyndat_ehc
 
   ! runtime options
-  logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr
+  logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr; If .TRUE., scalars are calculated from scalar_source_dir/scalar_
+  character(len=256), public :: scalar_source_dir
   logical, public :: write_scalars ! scalars will be written to a file.
   ! hr, area, pft weight) are passed from e3sm.
   logical, public :: write_co2 ! gridded co2 emissions will be

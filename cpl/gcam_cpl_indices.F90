@@ -88,7 +88,8 @@ contains
          crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
-         read_scalars, write_scalars, write_co2, &
+         read_scalars, scalar_source_dir, &
+         write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions,&
          gcam_spinup, run_gcam
  

@@ -69,7 +69,8 @@ contains
          crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
-         read_scalars, write_scalars, write_co2, &
+         read_scalars, scalar_source_dir, &
+         write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
@@ -170,6 +171,7 @@ contains
 
        write(iulog,*) 'rumtime options:'
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
+       write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
        write(iulog, '(A,L)') "write_scalars = ",write_scalars
        write(iulog, '(A,L)') "write_co2 = ",write_co2
        write(iulog, '(A,L)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
