@@ -153,7 +153,7 @@ module mksurfdat
     real(r8), allocatable  :: ero_c1(:)          ! ELM-Erosion c1 parameter (unitless)
     real(r8), allocatable  :: ero_c2(:)          ! ELM-Erosion c2 parameter (unitless)
     real(r8), allocatable  :: ero_c3(:)          ! ELM-Erosion c3 parameter (unitless) 
-
+    integer , allocatable  :: dynpft_years(:)    ! years already in the dynamic pft timeseries file
 
     type(domain_type) :: ldomain
 
@@ -1315,17 +1315,30 @@ subroutine mksurfdat_run(year,plodata)
           call check_ret(nf_inq_varid(ncid, 'PCT_NAT_PFT', varid), subname)
           call check_ret(nf_inq_varndims(ncid, varid, ndims), subname)
           call check_ret(nf_inq_vardimid(ncid, varid, dimids), subname)
+          ! time is the last dimension
           beg(1:ndims-1) = 1
-          ! need to find the last time record and add 1 to write the next time record
           do n = 1,ndims
              call check_ret(nf_inq_dimlen(ncid, dimids(n), len(n)), subname)
           end do
+
+          ! need to find the last time record and add 1 to write the next time record
+          ! unless if this year already exists, then overwrite the record
+          allocate(dynpft_years(len(ndims)))
+          call check_ret(nf_inq_varid(ncid, 'YEAR', varid), subname)
+          call check_ret(nf_get_vara_int(ncid, varid, 1, len(ndims), dynpft_years), subname)
           ntim = len(ndims) + 1
-          
+          do n = 1,len(ndims)
+             if (dynpft_years(n) == year) then
+                ntim = n
+                exit
+             end if
+          end do
+
           write(6,*) subname,'ntim is ', ntim
 
           len(ndims) = 1
           beg(ndims) = ntim
+          call check_ret(nf_inq_varid(ncid, 'PCT_NAT_PFT', varid), subname)
           call check_ret(nf_put_vara_double(ncid, varid, beg, len, pctnatpft), subname)
 
           do k = 1, mkharvest_numtypes()
@@ -1397,7 +1410,8 @@ subroutine mksurfdat_run(year,plodata)
                pcturb             , &
                urban_region       , &
                urbn_classes       , &
-               urbn_classes_g     )
+               urbn_classes_g     , &
+               dynpft_years         )
     
 
     ! ----------------------------------------------------------------------

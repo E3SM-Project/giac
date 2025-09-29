@@ -538,6 +538,7 @@ contains
     character(len=10) :: jobid
     character(len=256) :: filename
     character(len=1024) :: scall
+    integer :: null_pos
 
 ! !REVISION HISTORY:
 ! Author: T Craig
@@ -597,33 +598,40 @@ contains
   call get_environment_variable("SLURM_JOB_ID", jobid)
   jobid = trim(adjustl(jobid))
 
-  scall = 'mv main_log.txt '//'main_log_'//jobid//'.txt'
+  scall = 'mv main_log.txt '//'main_log_'//trim(jobid)//'.txt'
   call system(scall)
 
-  scall = 'mv coupling_log '//'coupling_log_'//jobid//'.txt'
+  scall = 'mv coupling_log '//'coupling_log_'//trim(jobid)//'.txt'
   call system(scall)
 
   ! rename the gcam solver logs to include the
   !    slurm job id
-  scall = 'mv solver-data-key.txt '//'solver-data-key_'//jobid//'.txt'
+  scall = 'mv solver-data-key.txt '//'solver-data-key_'//trim(jobid)//'.txt'
   call system(scall)
 
-  scall = 'mv solver-data-log.txt '//'solver-data-log_'//jobid//'.txt'
+  scall = 'mv solver-data-log.txt '//'solver-data-log_'//trim(jobid)//'.txt'
   call system(scall)
 
-  scall = 'mv solver_log.csv '//'solver_log_'//jobid//'.csv'
+  scall = 'mv solver_log.csv '//'solver_log_'//trim(jobid)//'.csv'
   call system(scall)
+
+  ! Find the position of the first null character in the case name
+  null_pos = index(case_name, achar(0))
+  if (null_pos > 0) THEN
+    ! If a null character is found, take the substring before it
+    case_name = case_name(1 : null_pos-1)
+  end if
 
   ! rename the debug xml and output xml also
   ! case_name in gcam_in is added, so it must match!
-  scall = 'mv debug'//trim(adjustl(case_name))//'.xml '//'debug'//trim(adjustl(case_name))//'_'//jobid//'.xml'
+  scall = 'mv debug'//trim(adjustl(case_name))//'.xml '//'debug'//trim(adjustl(case_name))//'_'//trim(jobid)//'.xml'
   call system(scall)
 
-  scall = 'mv GCAMDBOutput_'//trim(adjustl(case_name))//'.xml'//'GCAMDBOutput_'//trim(adjustl(case_name))//'_'//jobid//'.xml'
+  scall = 'mv GCAMDBOutput_'//trim(adjustl(case_name))//'.xml '//'GCAMDBOutput_'//trim(adjustl(case_name))//'_'//trim(jobid)//'.xml'
   call system(scall)
 
   ! also rename the restart debug file
-  scall = 'mv debug'//trim(adjustl(case_name))//'_restart.xml '//'debug'//trim(adjustl(case_name))//'_restart_'//jobid//'.xml'
+  scall = 'mv debug'//trim(adjustl(case_name))//'_restart.xml '//'debug'//trim(adjustl(case_name))//'_restart_'//trim(jobid)//'.xml'
   call system(scall)
 
   end subroutine gcam_final_mod

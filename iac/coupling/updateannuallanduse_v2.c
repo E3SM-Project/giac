@@ -2494,8 +2494,8 @@ void
 writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
 #endif
 	
-	double *values;
-    long outgrid;
+	double *values, *years;
+        long outgrid, year_ind;
 	int crop_index = 0;
 	int past_index = 1;
 	int prim_index = 2;
@@ -2507,19 +2507,32 @@ writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
 	
 	writeyear = (double) outyear;
     
-    nc_inq(innetcdfid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp);
+        nc_inq(innetcdfid, &ndimsp, &nvarsp, &nattsp, &unlimdimidp);
 	
 	/* get the number of current records - only need this once */
 	/* this works here because there is only one call to this function per year */
 	nc_inq_dimlen(innetcdfid, unlimdimidp, &numrecs);
 	//printf("\n\n\n %%%%%%%\n\n\n\n%%%% writehurttdynfile %d\n", numrecs);
-	/* write the year info */
+
 	nc_inq_varid(innetcdfid, "TIME", &year_varid);
-	nc_put_vara_double(innetcdfid, year_varid, &numrecs, &countone, &writeyear);
+
+        /* if this year exists in the file, overwrite it by using the matching year index */
+        years = malloc(sizeof(double) * numrecs);
+	nc_get_var_double(innetcdfid, year_varid, years);
+	for(year_ind = 0; year_ind < ((long) numrecs); year_ind++) {
+		if (((long) years[year_ind]) == outyear) {
+			break;
+		}
+	}
+	if(year_ind == ((long) numrecs)) {
+        	/* this means that this is a new year record */
+        	/* write the year info if new record*/
+		nc_put_vara_double(innetcdfid, year_varid, &numrecs, &countone, &writeyear);
+        }
 	
 	start = calloc(ndimsp, sizeof(size_t));
 	count = calloc(ndimsp, sizeof(size_t));
-	start[0] = numrecs;
+	start[0] = (size_t) year_ind;
 	start[1] = 0;
 	start[2] = 0;
 	count[0] = 1;
@@ -2582,6 +2595,7 @@ writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
 	free(start);
 	free(count);
 	free(values);
+        free(years);
 }
 
 void
@@ -3359,10 +3373,11 @@ readcurrentpft() {
 void
 writepftdynfile(long outyear) {
     
-	double *values;
-    int outgrid;
+	double *values, *years;
+        int outgrid;
 	double writeyear;
-    int offsetgrid, inpft;
+        int offsetgrid, inpft;
+        long year_ind;
 	
 	int year_varid;
 	size_t numrecs, *start, *count;
@@ -3388,14 +3403,26 @@ writepftdynfile(long outyear) {
 	/* get the number of current records */
 	/* this works here because there is only one call to this function per year */
 	nc_inq_dimlen(innetcdfid, unlimdimidp, &numrecs);
-	
-	/* write the year info */
-	nc_inq_varid(innetcdfid, "TIME", &year_varid);
-	nc_put_vara_double(innetcdfid, year_varid, &numrecs, &countone, &writeyear);
-	
-	start = calloc(ndimsp, sizeof(size_t));
-	count = calloc(ndimsp, sizeof(size_t));
-	start[0] = numrecs;
+
+        nc_inq_varid(innetcdfid, "TIME", &year_varid);
+
+        /* if this year exists in the file, overwrite it by using the matching year index */
+        years = malloc(sizeof(double) * numrecs);
+        nc_get_var_double(innetcdfid, year_varid, years);
+        for(year_ind = 0; year_ind < ((long) numrecs); year_ind++) {
+                if (((long) years[year_ind]) == outyear) {
+                        break;
+                }
+        }
+        if(year_ind == ((long) numrecs)) {
+                /* this means that this is a new year record */
+                /* write the year info if new record*/
+                nc_put_vara_double(innetcdfid, year_varid, &numrecs, &countone, &writeyear);
+        }
+
+        start = calloc(ndimsp, sizeof(size_t));
+        count = calloc(ndimsp, sizeof(size_t));
+        start[0] = (size_t) year_ind;
 	start[1] = 0;
 	start[2] = 0;
 	start[3] = 0;
@@ -3423,7 +3450,7 @@ writepftdynfile(long outyear) {
     free(values);
 	free(start);
 	free(count);
-    
+    free(years);
 }
 
 /* NOTE: readcurrentpftlai not currently being used by the code - lpc */
