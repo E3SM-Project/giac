@@ -1279,8 +1279,7 @@ contains
           end if
           start(1) = 1
           start(2) = nt
-          status = pio_put_var(ncid, varid, start=start, count=count, &
-               ival=tmpString(1:count(1)) )
+          status = pio_put_var(ncid, varid, start, count, tmpString(1:count(1)) )
        else
           status = pio_put_var(ncid, varid, data )
        end if
