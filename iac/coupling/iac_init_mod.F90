@@ -71,7 +71,7 @@ contains
          fdyndat_ehc, &
          read_scalars, scalar_source_dir, &
          write_scalars, write_co2, &
-         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, elm_ehc_deg_days, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
     nlfilename_iac = "gcam_in"
@@ -176,6 +176,7 @@ contains
        write(iulog, '(A,L10)') "write_co2 = ",write_co2
        write(iulog, '(A,L10)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
        write(iulog, '(A,L10)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
+       write(iulog, '(A,L10)') "elm_ehc_deg_days = ", elm_ehc_deg_days
        write(iulog, '(A,L10)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
        write(iulog, '(A,L10)') "gcam_spinup = ",gcam_spinup
        write(iulog, '(A,L10)') "run_gcam = ",run_gcam
@@ -238,6 +239,8 @@ contains
     allocate(lnd2iac_vars%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%t_ref2m(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%degree_days(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))

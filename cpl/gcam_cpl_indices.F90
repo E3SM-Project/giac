@@ -43,6 +43,7 @@ module gcam_cpl_indices
   integer, pointer, public ::index_x2z_Sl_hr(:)        ! total heterotrophic respiration
   integer, pointer, public ::index_x2z_Sl_npp(:)       ! net primary production
   integer, pointer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
+  integer, pointer, public ::index_x2z_Sl_t_ref2m(:)   ! 2m reference temperature
   integer, public ::nflds_x2z = 0
 
   !-----------------------------------------------------------------------
@@ -90,7 +91,7 @@ contains
          fdyndat_ehc, &
          read_scalars, scalar_source_dir, &
          write_scalars, write_co2, &
-         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions,&
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, elm_ehc_deg_days, ehc_eam_co2_emissions,&
          gcam_spinup, run_gcam
  
     nlfilename_iac = "gcam_in"
@@ -145,6 +146,8 @@ contains
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_npp',ier)
     allocate(index_x2z_Sl_pftwgt(iac_ctl%npft))
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_pftwgt',ier)
+    allocate(index_x2z_Sl_t_ref2m(iac_ctl%npft))
+    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_t_ref2m',ier)
   end subroutine gcam_cpl_indices_init
 
   !-----------------------------------------------------------------------
@@ -210,6 +213,7 @@ contains
        index_x2z_Sl_hr(p) = mct_avect_indexra(x2z,trim('Sl_hr_pft' // pftstr))
        index_x2z_Sl_npp(p) = mct_avect_indexra(x2z,trim('Sl_npp_pft' // pftstr))
        index_x2z_Sl_pftwgt(p) = mct_avect_indexra(x2z,trim('Sl_pftwgt_pft' // pftstr))
+       index_x2z_Sl_t_ref2m(p) = mct_avect_indexra(x2z,trim('Sl_t_ref2m_topo' // pftstr))
 
     end do
 
@@ -244,6 +248,7 @@ contains
     deallocate(index_x2z_Sl_hr)
     deallocate(index_x2z_Sl_npp)
     deallocate(index_x2z_Sl_pftwgt)
+    deallocate(index_x2z_Sl_t_ref2m)
   end subroutine gcam_cpl_indices_finish
 
 end module gcam_cpl_indices

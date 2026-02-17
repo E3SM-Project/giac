@@ -174,6 +174,8 @@ module gcam_var_mod
   ! land productivity from elm scale ag yield in gcam.
   logical, public :: elm_ehc_carbon_scaling ! if .TRUE., changes in
   ! land productivity from elm scale carbon density in gcam.
+  logical, public :: elm_ehc_deg_days ! if .TRUE., degree days
+  ! passed from elm to gcam.
   logical, public :: ehc_eam_co2_emissions ! if .TRUE., energy system
   ! co2 is passed from gcam to eam.
 

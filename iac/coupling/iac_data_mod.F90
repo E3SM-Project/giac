@@ -61,6 +61,8 @@ module iac_data_mod
      real(r8), allocatable :: npp(:,:,:)
      real(r8), allocatable :: hr(:,:,:)
      real(r8), allocatable :: pftwgt(:,:,:)
+     real(r8), allocatable :: t_ref2m(:,:,:)
+     real(r8), allocatable :: degree_days(:,:)    ! degree days per gridcell (lon,lat)
   end type lnd2iac_type
 
   type, public :: iac2lnd_type
