@@ -42,7 +42,7 @@ contains
     begg = iac_ctl%begg
     endg = iac_ctl%endg
 
-    ! So, the idea here is to take the 17 (npft) fields for each of
+    ! So, the idea here is to take the 51 (npft) fields for each of
     ! hr, npp, and pftwgtg and map them into a single 1D array of
     ! nlat*nlon*npft for each of those.  So we first loop over npft,
     ! then extract the global-indexed data, then pack them into the
@@ -124,7 +124,7 @@ write(iulog,*) trim(sub),' export pft and harvest data'
        ! these iac values are percent/fraction of veg land unit, but for proper
        !   coupling they need to be converted to fraction of actual grid cell
 
-       ! Now the 17 iac->lnd pfts
+       ! Now the 51 iac->lnd pfts
        ! need the new pfts and the previous pfts
        do p=1,iac_ctl%npft
           z2x(index_z2x_Sz_pct_pft(p),g) = iac2lnd_vars%pct_pft(i,j,p) / 100.0_R8 * &

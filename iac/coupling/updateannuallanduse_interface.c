@@ -12,3 +12,7 @@ void updateannuallanduse_(double *glmo[][GLMONFLDS], double *plodata[][PLONFLDS]
     updateannuallanduse_main(glmo, plodata, myear, crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem,
 			pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem);
 }
+
+void set_crop_cft_fractions_(double *frac_data, int *ngridcells) {
+    set_crop_cft_fractions(frac_data, ngridcells);
+}

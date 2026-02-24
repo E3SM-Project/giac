@@ -228,7 +228,7 @@
 	
 	Output (plodata, which is filled from the outhurtt### arrays):
 	
-	Percent of vegetated land unit for each of the 16 PFTS listed below
+	Percent of vegetated land unit for each of the 15 PFTS listed below
 	Fraction of total primary and secondary land that is harvested from each of vh1, vh2, sh1, sh2, sh3
 	Fraction of output year herbaceous (shrub/grass) land that is GLM pasture
 	
@@ -261,11 +261,13 @@
 // for standalone, these statements print to the terminal, so can be captured to a file via a pipe
 //#define DEBUG 1
 
-#define MAXPFT 16
+#define MAXPFT 15
+#define NUM_CFT 36
 #define MAXMONTH 12
 #define MAXSOILCOLOR 20
 #define MAXSOILLAYERS 10
 
+/* Natural PFT indices (0-14) */
 #define BPFT 0
 #define NEMPFT 1
 #define NEBPFT 2
@@ -281,7 +283,43 @@
 #define GA3PFT 12
 #define GC3PFT 13
 #define GC4PFT 14
-#define CPFT 15
+/* Crop CFT indices (matching ELM PFT numbering 15-50)*/
+#define C3CROPCFT 15
+#define C3IRRCFT 16
+#define CORNCFT 17
+#define IRRCORNCFT 18
+#define SCEREALCFT 19
+#define IRRSCEREALCFT 20
+#define WCEREALCFT 21
+#define IRRWCEREALCFT 22
+#define SOYBEANCFT 23
+#define IRRSOYBEANCFT 24
+#define CASSAVACFT 25
+#define IRRCASSAVACFT 26
+#define COTTONCFT 27
+#define IRRCOTTONCFT 28
+#define FODDERGRASSCFT 29
+#define IRRFODDERGRASSCFT 30
+#define OILPALMCFT 31
+#define IRROILPALMCFT 32
+#define OGRAINSCFT 33
+#define IRROGRAINSCFT 34
+#define RAPESEEDCFT 35
+#define IRRRAPESEEDCFT 36
+#define RICECFT 37
+#define IRRRICECFT 38
+#define RTUBERSCFT 39
+#define IRRRTUBERSCFT 40
+#define SUGARCANECFT 41
+#define IRRSUGARCANECFT 42
+#define MISCANTHUSCFT 43
+#define IRRMISCANTHUSCFT 44
+#define SWITCHGRASSCFT 45
+#define IRRSWITCHGRASSCFT 46
+#define POPLARCFT 47
+#define IRRPOPLARCFT 48
+#define WILLOWCFT 49
+#define IRRWILLOWCFT 50
 
 #define PFTVALUES 30
 #define PFTIDINDEX 0
@@ -296,7 +334,7 @@
 #define CLMLAIVAR 23
 
 #define GLMONFLDS 9
-#define PLONFLDS 23
+#define PLONFLDS 57
 #define MAXOUTPIX 720
 #define MAXOUTLIN 360
 #define OUTPIXWIDTH 0.5
@@ -379,10 +417,10 @@ double inhurttsh1[MAXOUTPIX * MAXOUTLIN];
 double inhurttsh2[MAXOUTPIX * MAXOUTLIN];
 double inhurttsh3[MAXOUTPIX * MAXOUTLIN];
 
-double outhurttpftid[MAXPFT][MAXOUTPIX * MAXOUTLIN];
-double outhurttpftval[MAXPFT][MAXOUTPIX * MAXOUTLIN];
-double outhurttlaival[MAXMONTH][MAXPFT][MAXOUTPIX * MAXOUTLIN];
-double outhurttsaival[MAXMONTH][MAXPFT][MAXOUTPIX * MAXOUTLIN];
+double outhurttpftid[MAXPFT + 1][MAXOUTPIX * MAXOUTLIN];
+double outhurttpftval[MAXPFT + 1][MAXOUTPIX * MAXOUTLIN];
+double outhurttlaival[MAXMONTH][MAXPFT + 1][MAXOUTPIX * MAXOUTLIN];
+double outhurttsaival[MAXMONTH][MAXPFT + 1][MAXOUTPIX * MAXOUTLIN];
 double outhurttsoilcolor[MAXOUTPIX * MAXOUTLIN];
 
 double outhurttvh1[MAXOUTPIX * MAXOUTLIN];
@@ -401,6 +439,15 @@ FILE *tempfile;
 // for iESM do not include the date because then it won't be found upon restart
 char dyn_luh_file[500];
 char dyn_pft_file[500];
+
+/* Per-grid-cell crop CFT fractions: how the aggregate C3CROPCFT crop area is distributed
+   across the 36 individual crop functional types (ELM PFTs 15-50).
+   crop_cft_fraction[cft][outgrid] gives the fraction of total crop area assigned to
+   CFT index 'cft' (0-based, where cft=0 is c3_crop/PFT15, cft=35 is willow_irrigated/PFT50).
+   The fractions for each grid cell should sum to 1.0 (or 0.0 if no crop).
+   Currently initialized with all crop as c3_crop (C3CROPCFT).
+   In the future, this array will be populated from GCAM per-crop-type output. */
+double crop_cft_fraction[NUM_CFT][MAXOUTPIX * MAXOUTLIN];
 
 char *monthname[MAXMONTH] = {"jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"};
 double monthday[12] = {15,46,74,105,135,166,196,227,258,288,319,349};
@@ -2668,29 +2715,96 @@ normglmo(double array[MAXOUTPIX * MAXOUTLIN]) {
     }
 }
 
+/*------
+    init_crop_cft_fractions()
+    Initialize the crop CFT fraction array.
+    Default: all crop area is assigned to c3_crop (C3CROPCFT = ELM PFT 15).
+------*/
+void
+init_crop_cft_fractions(void) {
+    int outgrid, icft;
+    for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
+        for (icft = 0; icft < NUM_CFT; icft++) {
+            crop_cft_fraction[icft][outgrid] = 0.0;
+        }
+        /* Default: 100% of crop goes to c3_crop (rainfed generic crop) */
+        crop_cft_fraction[0][outgrid] = 1.0;
+    }
+    printf("init_crop_cft_fractions: initialized %d CFTs, default = all c3_crop\n", NUM_CFT);
+}
+
+/*------
+    set_crop_cft_fractions()
+    Set the crop CFT fraction array from GCAM per-crop-type output.
+    Called from Fortran (via updateannuallanduse_interface.c) after
+    gcam2glm_mod computes per-grid-cell CFT fractions.
+
+    frac_data: flat array of size NUM_CFT * ngridcells, column-major
+               (Fortran order: frac_data[icft + NUM_CFT*outgrid])
+    ngridcells: number of 0.5-degree grid cells (should be MAXOUTPIX*MAXOUTLIN)
+------*/
+void
+set_crop_cft_fractions(double *frac_data, int *ngridcells_ptr) {
+    int outgrid, icft;
+    int ngrid = *ngridcells_ptr;
+    double total;
+
+    if (ngrid != MAXOUTPIX * MAXOUTLIN) {
+        printf("WARNING set_crop_cft_fractions: ngridcells=%d != expected %d\n",
+               ngrid, MAXOUTPIX * MAXOUTLIN);
+    }
+
+    for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN && outgrid < ngrid; outgrid++) {
+        total = 0.0;
+        for (icft = 0; icft < NUM_CFT; icft++) {
+            crop_cft_fraction[icft][outgrid] = frac_data[icft + NUM_CFT * outgrid];
+            total += crop_cft_fraction[icft][outgrid];
+        }
+        /* Normalize if needed */
+        if (total > 0.0 && (total < 0.999 || total > 1.001)) {
+            for (icft = 0; icft < NUM_CFT; icft++) {
+                crop_cft_fraction[icft][outgrid] /= total;
+            }
+        } else if (total <= 0.0) {
+            /* No crop: default to c3_crop */
+            crop_cft_fraction[0][outgrid] = 1.0;
+        }
+    }
+    printf("set_crop_cft_fractions: set %d CFTs for %d grid cells\n", NUM_CFT, ngrid);
+}
+
 void
 copy2plodata(double plodata[][PLONFLDS]) {
     
     int outgrid;
     int inpft;
+    int icft;
+    double cropval;
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
-        for (inpft = 0; inpft < MAXPFT; inpft++) {
+        /* Copy natural PFTs (0-14) directly from outhurttpftval */
+        for (inpft = 0; inpft < C3CROPCFT; inpft++) {
             plodata[outgrid][inpft] = outhurttpftval[inpft][outgrid];
         }
-        inpft = MAXPFT;
-        plodata[outgrid][inpft] = 0.0;
-        inpft = MAXPFT+1;
+        /* Distribute aggregate crop (C3CROPCFT=15) across 36 individual CFTs (PFTs 15-50)
+           using the crop_cft_fraction array.
+           plodata indices 15-50 correspond to ELM PFTs 15-50. */
+        cropval = outhurttpftval[MAXPFT][outgrid];
+        for (icft = 0; icft < NUM_CFT; icft++) {
+            plodata[outgrid][C3CROPCFT + icft] = cropval * crop_cft_fraction[icft][outgrid];
+        }
+        /* Fields after the 51 PFTs: extra(0), vh1, vh2, sh1, sh2, sh3, grazing */
+        inpft = MAXPFT + NUM_CFT;
         plodata[outgrid][inpft] = outhurttvh1[outgrid];
-        inpft = MAXPFT+2;
+        inpft = MAXPFT + NUM_CFT + 1;
         plodata[outgrid][inpft] = outhurttvh2[outgrid];
-        inpft = MAXPFT+3;
+        inpft = MAXPFT + NUM_CFT + 2;
         plodata[outgrid][inpft] = outhurttsh1[outgrid];
-        inpft = MAXPFT+4;
+        inpft = MAXPFT + NUM_CFT + 3;
         plodata[outgrid][inpft] = outhurttsh2[outgrid];
-        inpft = MAXPFT+5;
+        inpft = MAXPFT + NUM_CFT + 4;
         plodata[outgrid][inpft] = outhurttsh3[outgrid];
-        inpft = MAXPFT+6;
+        inpft = MAXPFT + NUM_CFT + 5;
         plodata[outgrid][inpft] = outhurttgrazing[outgrid];
     }
 }
@@ -2762,182 +2876,40 @@ writeplodata(double plodata[][PLONFLDS]) {
     
     char tstring[32];
     double array[MAXOUTPIX * MAXOUTLIN];
+    int ipft;
     
-    copyarray(array,0,outhurttpftval);
-    strcpy(tstring,"outhurttpftval0\0");
-    writearray(array,tstring);
+    /* Write diagnostic output for internal outhurttpftval (15 PFTs) and corresponding plodata fields */
+    for (ipft = 0; ipft < MAXPFT; ipft++) {
+        copyarray(array, ipft, outhurttpftval);
+        sprintf(tstring, "outhurttpftval%d\0", ipft);
+        writearray(array, tstring);
+    }
     
-    copyplo(array,0,plodata);
-    strcpy(tstring,"plodata0\0");
-    writearray(array,tstring);
+    /* Write all PLONFLDS plodata fields: PFTs 0-50, extra, harvest, grazing */
+    for (ipft = 0; ipft < PLONFLDS; ipft++) {
+        copyplo(array, ipft, plodata);
+        sprintf(tstring, "plodata%d\0", ipft);
+        writearray(array, tstring);
+    }
     
-    copyarray(array,1,outhurttpftval);
-    strcpy(tstring,"outhurttpftval1\0");
-    writearray(array,tstring);
+    /* Also write the harvest/grazing source arrays for comparison */
+    strcpy(tstring, "outhurttvh1\0");
+    writearray(outhurttvh1, tstring);
     
-    copyplo(array,1,plodata);
-    strcpy(tstring,"plodata1\0");
-    writearray(array,tstring);
+    strcpy(tstring, "outhurttvh2\0");
+    writearray(outhurttvh2, tstring);
     
-    copyarray(array,2,outhurttpftval);
-    strcpy(tstring,"outhurttpftval2\0");
-    writearray(array,tstring);
+    strcpy(tstring, "outhurttsh1\0");
+    writearray(outhurttsh1, tstring);
     
-    copyplo(array,2,plodata);
-    strcpy(tstring,"plodata2\0");
-    writearray(array,tstring);
+    strcpy(tstring, "outhurttsh2\0");
+    writearray(outhurttsh2, tstring);
     
-    copyarray(array,3,outhurttpftval);
-    strcpy(tstring,"outhurttpftval3\0");
-    writearray(array,tstring);
+    strcpy(tstring, "outhurttsh3\0");
+    writearray(outhurttsh3, tstring);
     
-    copyplo(array,3,plodata);
-    strcpy(tstring,"plodata3\0");
-    writearray(array,tstring);
-    
-    copyarray(array,4,outhurttpftval);
-    strcpy(tstring,"outhurttpftval4\0");
-    writearray(array,tstring);
-    
-    copyplo(array,4,plodata);
-    strcpy(tstring,"plodata4\0");
-    writearray(array,tstring);
-    
-    copyarray(array,5,outhurttpftval);
-    strcpy(tstring,"outhurttpftval5\0");
-    writearray(array,tstring);
-    
-    copyplo(array,5,plodata);
-    strcpy(tstring,"plodata5\0");
-    writearray(array,tstring);
-    
-    copyarray(array,6,outhurttpftval);
-    strcpy(tstring,"outhurttpftval6\0");
-    writearray(array,tstring);
-    
-    copyplo(array,6,plodata);
-    strcpy(tstring,"plodata6\0");
-    writearray(array,tstring);
-    
-    copyarray(array,7,outhurttpftval);
-    strcpy(tstring,"outhurttpftval7\0");
-    writearray(array,tstring);
-    
-    copyplo(array,7,plodata);
-    strcpy(tstring,"plodata7\0");
-    writearray(array,tstring);
-    
-    copyarray(array,8,outhurttpftval);
-    strcpy(tstring,"outhurttpftval8\0");
-    writearray(array,tstring);
-    
-    copyplo(array,8,plodata);
-    strcpy(tstring,"plodata8\0");
-    writearray(array,tstring);
-    
-    copyarray(array,9,outhurttpftval);
-    strcpy(tstring,"outhurttpftval9\0");
-    writearray(array,tstring);
-    
-    copyplo(array,9,plodata);
-    strcpy(tstring,"plodata9\0");
-    writearray(array,tstring);
-    
-    copyarray(array,10,outhurttpftval);
-    strcpy(tstring,"outhurttpftval10\0");
-    writearray(array,tstring);
-    
-    copyplo(array,10,plodata);
-    strcpy(tstring,"plodata10\0");
-    writearray(array,tstring);
-    
-    copyarray(array,11,outhurttpftval);
-    strcpy(tstring,"outhurttpftval11\0");
-    writearray(array,tstring);
-    
-    copyplo(array,11,plodata);
-    strcpy(tstring,"plodata11\0");
-    writearray(array,tstring);
-    
-    copyarray(array,12,outhurttpftval);
-    strcpy(tstring,"outhurttpftval12\0");
-    writearray(array,tstring);
-    
-    copyplo(array,12,plodata);
-    strcpy(tstring,"plodata12\0");
-    writearray(array,tstring);
-    
-    copyarray(array,13,outhurttpftval);
-    strcpy(tstring,"outhurttpftval13\0");
-    writearray(array,tstring);
-    
-    copyplo(array,13,plodata);
-    strcpy(tstring,"plodata13\0");
-    writearray(array,tstring);
-    
-    copyarray(array,14,outhurttpftval);
-    strcpy(tstring,"outhurttpftval14\0");
-    writearray(array,tstring);
-    
-    copyplo(array,14,plodata);
-    strcpy(tstring,"plodata14\0");
-    writearray(array,tstring);
-    
-    copyarray(array,15,outhurttpftval);
-    strcpy(tstring,"outhurttpftval15\0");
-    writearray(array,tstring);
-    
-    copyplo(array,15,plodata);
-    strcpy(tstring,"plodata15\0");
-    writearray(array,tstring);
-    
-	/* NOTE: the 17th pft is a placeholder that is not currently used by CLM unless irrigation is enabled; its pct value is 0 -adv */
-    
-    copyplo(array,16,plodata);
-    strcpy(tstring,"plodata16\0");
-    writearray(array,tstring);
-
-    strcpy(tstring,"outhurttvh1\0");
-    writearray(outhurttvh1,tstring);
-
-    copyplo(array,17,plodata);
-    strcpy(tstring,"plodata17\0");
-    writearray(array,tstring);
-    
-    strcpy(tstring,"outhurttvh2\0");
-    writearray(outhurttvh2,tstring);
-    
-    copyplo(array,18,plodata);
-    strcpy(tstring,"plodata18\0");
-    writearray(array,tstring);
-    
-    strcpy(tstring,"outhurttsh1\0");
-    writearray(outhurttsh1,tstring);
-    
-    copyplo(array,19,plodata);
-    strcpy(tstring,"plodata19\0");
-    writearray(array,tstring);
-    
-    strcpy(tstring,"outhurttsh2\0");
-    writearray(outhurttsh2,tstring);
-    
-    copyplo(array,20,plodata);
-    strcpy(tstring,"plodata20\0");
-    writearray(array,tstring);
-    
-    strcpy(tstring,"outhurttsh3\0");
-    writearray(outhurttsh3,tstring);
-    
-    copyplo(array,21,plodata);
-    strcpy(tstring,"plodata21\0");
-    writearray(array,tstring);
-    
-    strcpy(tstring,"outhurttgrazing\0");
-    writearray(outhurttgrazing,tstring);
-    
-    copyplo(array,22,plodata);
-    strcpy(tstring,"plodata22\0");
-    writearray(array,tstring);
+    strcpy(tstring, "outhurttgrazing\0");
+    writearray(outhurttgrazing, tstring);
     
 }
 
@@ -3889,9 +3861,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
 	
 	/* this commented out block sets the relative change in crop area from the base year glm data to the glmo data, rather than the the glmo crop are directly -adv
 	// don't do this because we want to preserve the spatial crop distribution passed from GCAM through GLM -adv
-	if(inhurttbasecrop[outgrid] > 0.0 && incurrentpftval[CPFT][outgrid] > 0.0) {
-		//newcropval = round(incurrentpftval[CPFT][outgrid] * inhurttcrop[outgrid] / inhurttbasecrop[outgrid]);
-      newcropval = incurrentpftval[CPFT][outgrid] * inhurttcrop[outgrid] / inhurttbasecrop[outgrid];
+	if(inhurttbasecrop[outgrid] > 0.0 && incurrentpftval[C3CROPCFT][outgrid] > 0.0) {
+		//newcropval = round(incurrentpftval[C3CROPCFT][outgrid] * inhurttcrop[outgrid] / inhurttbasecrop[outgrid]);
+      newcropval = incurrentpftval[C3CROPCFT][outgrid] * inhurttcrop[outgrid] / inhurttbasecrop[outgrid];
 	}
 	else {
 		newcropval = inhurttcrop[outgrid];
@@ -3901,13 +3873,13 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
 	/* set the clm crop pft equal to the GLM output year crop -adv */
 	/* remember that newcropval is the actual percent for output, not the change in percent -adv */
     newcropval = inhurttcrop[outgrid];
-    if (outhurttpftval[CPFT][outgrid] > newcropval) {
-        addpftsum = outhurttpftval[CPFT][outgrid] - newcropval;
+    if (outhurttpftval[MAXPFT][outgrid] > newcropval) {
+        addpftsum = outhurttpftval[MAXPFT][outgrid] - newcropval;
         removepftsum = 0.0;
     }
     else {
         addpftsum = 0.0;
-        removepftsum = newcropval - outhurttpftval[CPFT][outgrid];
+        removepftsum = newcropval - outhurttpftval[MAXPFT][outgrid];
     }
     
     vegpftsum = 0.0;	/* does not include bare soil pft -adv */
@@ -4609,7 +4581,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
           for (temppftid = 0; temppftid < MAXPFT-1; temppftid++) {
              printf("pft %i val=%f, ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
           }
-          /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[CPFT] -adv */
+          /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[MAXPFT] -adv */
           printf("crop: %f ",newcropval / ROUND_PREC);
           printf("\n");
 #endif            
@@ -4626,7 +4598,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
           for (temppftid = 0; temppftid < MAXPFT-1; temppftid++) {
              printf("pft %i val=%f ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
           }
-          /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[CPFT] -adv */
+          /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[MAXPFT] -adv */
           printf("crop: %f ",newcropval / ROUND_PREC);
           printf("\n");
 #endif            
@@ -4669,7 +4641,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
     /* NOTE: the crop fraction is finally set to be the same value like that of GLM. All the above algorithms in sethurttcrop() are actually not be used. -jfm */
 	/* this is still set to match glmo (capped by the vegetated land unit), so actually the above algorithms are still needed to adjust the pfts;
 	 the beginning lines can be changed to set newcropval as input crop fraction + the relative change in crop fraction, which would change this last line -adv */
-    outhurttpftval[CPFT][outgrid] = newcropval / ROUND_PREC;
+    outhurttpftval[MAXPFT][outgrid] = newcropval / ROUND_PREC;
     
 }
 
@@ -5607,13 +5579,13 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
    maxpftval = 0.0;
    updatedpftsum = 0.0;
    
-   for (outpft = BPFT; outpft <= CPFT;outpft++) {
+   for (outpft = BPFT; outpft <= C3CROPCFT;outpft++) {
       outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] * ROUND_PREC);
       if (outhurttpftval[outpft][outgrid] < 0.0) {
          outhurttpftval[outpft][outgrid] = 0.0;
       }
       // do not include crops for adjustment because they are previously set to input value
-      if (outpft >= BPFT && outpft < CPFT && maxpftval < outhurttpftval[outpft][outgrid]) {
+      if (outpft >= BPFT && outpft < C3CROPCFT && maxpftval < outhurttpftval[outpft][outgrid]) {
          maxpftid = outpft;
          maxpftval = outhurttpftval[outpft][outgrid];
       }
@@ -5677,7 +5649,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
    }
    
    // return to percent units
-   for (outpft = BPFT; outpft <= CPFT;outpft++) {
+   for (outpft = BPFT; outpft <= C3CROPCFT;outpft++) {
       outhurttpftval[outpft][outgrid] = outhurttpftval[outpft][outgrid] / ROUND_PREC;
    }
    
@@ -6018,6 +5990,10 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
         double pasture_setherbfracrem_fut = 1.0;          // pasture addition
         double pasture_setavailtreefracrem_fut = 0.0;     // pasture removal
 
+	/* Initialize crop CFT fractions (default: all crop = c3_crop).
+	   TODO: In the future, populate from GCAM per-crop-type output passed
+	   via glmo or a side array from gcam2glm_mod.F90. */
+	init_crop_cft_fractions();
 
 	// the following is for standalone mode only
 #ifdef STANDALONE

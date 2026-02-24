@@ -17,7 +17,8 @@ iac_ctl
   use gcam_var_mod
   use shr_cal_mod
   use netcdf
-  use gcam2glm_mod, only : lon, lat, numLats, handle_err
+  use gcam2glm_mod, only : lon, lat, numLats, numLons, handle_err, &
+       gcam_cft_frac, num_elm_cfts
   use mksurfdat, only : fdyndat
   use shr_log_mod, only : errMsg => shr_log_errMsg
 
@@ -118,7 +119,7 @@ contains
     real*8, pointer :: array3d(:,:,:)
     integer, dimension(166) :: array1d
     character(len=128) :: fname,casename,hfile
-    integer :: myear, mon, day, e3smyear
+    integer :: myear, mon, day, e3smyear, ngrid_lut
     character(len=*),parameter :: subname='(glm2iac_run_mod)'
     integer, dimension(3) :: start3, count3
 
@@ -336,6 +337,11 @@ contains
     write(iulog,*) trim(subname),' running LUT  '
 
     ! now using the double precision code
+    ! Pass GCAM-derived per-grid-cell crop CFT fractions to the LUT
+    ! This sets the crop_cft_fraction array in updateannuallanduse_v2.c
+    ! so that copy2plodata distributes crop across individual ELM CFTs
+    ngrid_lut = numLons * numLats
+    call set_crop_cft_fractions(gcam_cft_frac, ngrid_lut)
     call updateannuallanduse(glmo,plodata,myear,&
                 crop_addtreeonly,crop_setherbfracrem,crop_setavailtreefracrem,&
                 pasture_addtreeonly,pasture_setherbfracrem,pasture_setavailtreefracrem)

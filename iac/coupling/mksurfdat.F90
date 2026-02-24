@@ -326,7 +326,7 @@ subroutine mksurfdat_run(year,plodata)
     !    pft_idx ----------- If you want to change to 100% veg covered with given PFT indices
     !    pft_frc ----------- Fractions that correspond to the pft_idx above
     ! ==================
-    !    numpft            (if different than default of 16)
+    !    numpft            (if different than default of 50)
     ! ======================================================================
 
     ! outnc_large_files and numpft are not written to the namelist created here
@@ -1383,7 +1383,7 @@ subroutine mksurfdat_run(year,plodata)
           ! loop over the pft and harvest data and copy them to iac2lnd_vars
           ! note that pctnatpft and harvest are 2d arrays (assume lon varying
           !    faster), and iac2lnd_vars variables are 3d arrays (lon,lat,type)
-          ! note that pctnatpft is indexed from 0 to 16
+          ! note that pctnatpft is indexed from 0 to numpft (0 to 50 with 51 PFTs)
           do k=1,iac_ctl%npft
              do n=1,ns_o
                 nj=(n-1)/iac_ctl%nlon+1
