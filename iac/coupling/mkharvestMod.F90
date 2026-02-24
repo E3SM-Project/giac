@@ -303,12 +303,12 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o, plodata)
         endif
 
         do i = 1,ns_i
-           harv_i(i,1) = plodata(18,i)  ! VH1
-           harv_i(i,2) = plodata(19,i)  ! VH2
-           harv_i(i,3) = plodata(20,i)  ! SH1
-           harv_i(i,4) = plodata(21,i)  ! SH2
-           harv_i(i,5) = plodata(22,i)  ! SH3
-           harv_i(i,6) = plodata(23,i)  ! GRAZING
+           harv_i(i,1) = plodata(numpft+2,i)  ! VH1
+           harv_i(i,2) = plodata(numpft+3,i)  ! VH2
+           harv_i(i,3) = plodata(numpft+4,i)  ! SH1
+           harv_i(i,4) = plodata(numpft+5,i)  ! SH2
+           harv_i(i,5) = plodata(numpft+6,i)  ! SH3
+           harv_i(i,6) = plodata(numpft+7,i)  ! GRAZING
         enddo
      else
         write (6,*) 'Open harvest file: ', trim(datfname)

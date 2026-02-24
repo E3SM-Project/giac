@@ -122,7 +122,7 @@ module iac_data_mod
   integer, parameter, public :: iac_gcam_timestep =  5
   integer, parameter, public :: iac_glm_nx  = 720
   integer, parameter, public :: iac_glm_ny  = 360
-  integer, parameter, public :: iac_iac_npfts  = 16
+  integer, parameter, public :: iac_iac_npfts  = 50
 
   !--- integers ---
 ! KVC: need to fix gcam2emiss and then can remove this
@@ -140,12 +140,51 @@ module iac_data_mod
   integer, parameter, public :: iac_cdatal_glm_present     =  4
   integer, parameter, public :: iac_cdatal_glm_prognostic  =  5
   integer, parameter, public :: iac_cdatal_initrun         =  10
-
   ! indices used to unpack gcamo
-  integer           , public :: iac_gcamo_crop = 6
-  integer           , public :: iac_gcamo_pasture = 5
-  integer           , public :: iac_gcamo_woodharv = 9
+  ! Non-crop land type indices (matching luc.xml output-data order)
+  integer           , public :: iac_gcamo_shrubland = 1
+  integer           , public :: iac_gcamo_grassland = 2
+  integer           , public :: iac_gcamo_urban = 3
   integer           , public :: iac_gcamo_forest = 4
+  integer           , public :: iac_gcamo_pasture = 5
+  integer           , public :: iac_gcamo_barren = 6
+  integer           , public :: iac_gcamo_tundra = 7
+  ! Individual GCAM crop type indices (matching luc.xml output-data order)
+  integer           , public :: iac_gcamo_cornc4 = 8
+  integer           , public :: iac_gcamo_fibercrop = 9
+  integer           , public :: iac_gcamo_foddergrass = 10
+  integer           , public :: iac_gcamo_fodderherb = 11
+  integer           , public :: iac_gcamo_fodderherbc4 = 12
+  integer           , public :: iac_gcamo_fruits = 13
+  integer           , public :: iac_gcamo_fruitstree = 14
+  integer           , public :: iac_gcamo_legumes = 15
+  integer           , public :: iac_gcamo_misccrop = 16
+  integer           , public :: iac_gcamo_misccropc4 = 17
+  integer           , public :: iac_gcamo_misccroptree = 18
+  integer           , public :: iac_gcamo_nutsseeds = 19
+  integer           , public :: iac_gcamo_nutsseedstree = 20
+  integer           , public :: iac_gcamo_oilcrop = 21
+  integer           , public :: iac_gcamo_oilcroptree = 22
+  integer           , public :: iac_gcamo_oilpalmtree = 23
+  integer           , public :: iac_gcamo_otherarableland = 24
+  integer           , public :: iac_gcamo_othergrain = 25
+  integer           , public :: iac_gcamo_othergrainc4 = 26
+  integer           , public :: iac_gcamo_rice = 27
+  integer           , public :: iac_gcamo_roottuber = 28
+  integer           , public :: iac_gcamo_soybean = 29
+  integer           , public :: iac_gcamo_sugarcrop = 30
+  integer           , public :: iac_gcamo_sugarcropc4 = 31
+  integer           , public :: iac_gcamo_vegetables = 32
+  integer           , public :: iac_gcamo_wheat = 33
+  integer           , public :: iac_gcamo_biomassgrass = 34
+  integer           , public :: iac_gcamo_biomasstree = 35
+  ! Wood harvest is appended after all land types
+  integer           , public :: iac_gcamo_woodharv = 36
+  ! First and last crop indices for computing total crop area
+  integer           , public :: iac_gcamo_crop_first = 8
+  integer           , public :: iac_gcamo_crop_last = 35
+  ! Number of GCAM crop types
+  integer, parameter, public :: iac_num_gcam_crops = 28
 
   ! maximum glus per GCAM region
   integer           , public :: iac_max_nglu = 37

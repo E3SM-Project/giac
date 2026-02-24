@@ -111,6 +111,54 @@ Module gcam2glm_mod
 !   this is because the fix requires serious structural changes
 
 ! !PRIVATE DATA MEMBERS:
+! gcam_crop_area_byglu(icrop, glu) = area of GCAM crop type icrop in GLU (28 GCAM crops x nglu)
+    real(r8), allocatable, save, public :: gcam_crop_area_byglu(:,:)
+
+! gcam_cft_frac(icft, ij) = fraction of total crop assigned to ELM CFT icft at grid cell ij (36 ELM CFTs x numLons*numLats)
+    real(r8), allocatable, save, public :: gcam_cft_frac(:,:)
+
+! Mapping from GCAM crop index (1-28) to ELM CFT index (0-based, 0-35)
+! where ELM CFT index = ELM_PFT - 15.
+! All mapped to rainfed variants; irrigated split handled separately.
+! GCAM crop order matches luc.xml: CornC4(1), FiberCrop(2), FodderGrass(3),
+!   FodderHerb(4), FodderHerbC4(5), Fruits(6), FruitsTree(7), Legumes(8),
+!   MiscCrop(9), MiscCropC4(10), MiscCropTree(11), NutsSeeds(12),
+!   NutsSeedsTree(13), OilCrop(14), OilCropTree(15), OilPalmTree(16),
+!   OtherArableLand(17), OtherGrain(18), OtherGrainC4(19), Rice(20),
+!   RootTuber(21), Soybean(22), SugarCrop(23), SugarCropC4(24),
+!   Vegetables(25), Wheat(26), biomassGrass(27), biomassTree(28)
+    integer, parameter, public :: num_elm_cfts = 36
+    integer, parameter :: gcam_crop_to_cft(iac_num_gcam_crops) = (/ &
+       2,  &  !  1: CornC4       -> corn (PFT 17, CFT idx 2)
+      12,  &  !  2: FiberCrop    -> cotton (PFT 27, CFT idx 12)
+      14,  &  !  3: FodderGrass  -> foddergrass (PFT 29, CFT idx 14)
+      14,  &  !  4: FodderHerb   -> foddergrass (PFT 29, CFT idx 14)
+      14,  &  !  5: FodderHerbC4 -> foddergrass (PFT 29, CFT idx 14)
+       0,  &  !  6: Fruits       -> c3_crop (PFT 15, CFT idx 0)
+       0,  &  !  7: FruitsTree   -> c3_crop (PFT 15, CFT idx 0)
+       8,  &  !  8: Legumes      -> soybean (PFT 23, CFT idx 8)
+       0,  &  !  9: MiscCrop     -> c3_crop (PFT 15, CFT idx 0)
+       0,  &  ! 10: MiscCropC4   -> c3_crop (PFT 15, CFT idx 0)
+       0,  &  ! 11: MiscCropTree -> c3_crop (PFT 15, CFT idx 0)
+       0,  &  ! 12: NutsSeeds    -> c3_crop (PFT 15, CFT idx 0)
+       0,  &  ! 13: NutsSeedsTree-> c3_crop (PFT 15, CFT idx 0)
+      20,  &  ! 14: OilCrop      -> rapeseed (PFT 35, CFT idx 20)
+      20,  &  ! 15: OilCropTree  -> rapeseed (PFT 35, CFT idx 20)
+      16,  &  ! 16: OilPalmTree  -> oilpalm (PFT 31, CFT idx 16)
+       0,  &  ! 17: OtherArableLand -> c3_crop (PFT 15, CFT idx 0)
+      18,  &  ! 18: OtherGrain   -> other_grains (PFT 33, CFT idx 18)
+      18,  &  ! 19: OtherGrainC4 -> other_grains (PFT 33, CFT idx 18)
+      22,  &  ! 20: Rice         -> rice (PFT 37, CFT idx 22)
+      24,  &  ! 21: RootTuber    -> root_tubers (PFT 39, CFT idx 24)
+       8,  &  ! 22: Soybean      -> soybean (PFT 23, CFT idx 8)
+      26,  &  ! 23: SugarCrop    -> sugarcane (PFT 41, CFT idx 26)
+      26,  &  ! 24: SugarCropC4  -> sugarcane (PFT 41, CFT idx 26)
+       0,  &  ! 25: Vegetables   -> c3_crop (PFT 15, CFT idx 0)
+       4,  &  ! 26: Wheat        -> spring_temperate_cereal (PFT 19, CFT idx 4)
+      28,  &  ! 27: biomassGrass -> miscanthus (PFT 43, CFT idx 28)
+      32  /)  ! 28: biomassTree  -> poplar (PFT 47, CFT idx 32)
+
+
     real(r8), allocatable :: gcamo_base(:,:)
 
 !EOP
@@ -138,7 +186,7 @@ contains
 
 ! !LOCAL VARIABLES:
     logical :: lexist, restart_run
-    integer :: iun,tmpyears(2),ier,t,yy,g
+    integer :: iun,tmpyears(2),ier,t,yy,g,ic
     integer :: ymd, year, mon, day
     real(r8) :: v
     character(len=*),parameter :: subname='(gcam2glm_init_mod)'
@@ -289,6 +337,13 @@ call shr_cal_date2ymd(ymd,year,mon,day)
 
     allocate(gcamo_base(num_iac2elm_landtypes,nglu), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamo_base',ier)
+    allocate(gcam_crop_area_byglu(iac_num_gcam_crops, nglu), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_crop_area_byglu',ier)
+    allocate(gcam_cft_frac(num_elm_cfts, numLons*numLats), stat=ier)
+    if(ier/=0) call mct_die(subName,'allocate gcam_cft_frac',ier)
+    gcam_crop_area_byglu = 0.
+    gcam_cft_frac = 0.
+    gcam_cft_frac(1,:) = 1.0  ! Default: all crop -> c3_crop (CFT 0)
 
     glm_crop=iac_spval
     glm_past=iac_spval
@@ -442,10 +497,20 @@ call shr_cal_date2ymd(ymd,year,mon,day)
        !      conv fact is 0.250 tonnes C per m^3 (MgC per m^3); same as in gcam
        ! but do it only if not gcam spinup
        if (.not. gcam_spinup) then
-          gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
+          ! Sum individual crop types into total crop area
+          gcam_crop(:,n) = 0.
+          do ic = iac_gcamo_crop_first, iac_gcamo_crop_last
+             gcam_crop(:,n) = gcam_crop(:,n) + gcamo_base(ic,:)
+          end do
+          ! Store per-crop areas for CFT fraction computation
+          do ic = 1, iac_num_gcam_crops
+             gcam_crop_area_byglu(ic,:) = gcamo_base(iac_gcamo_crop_first + ic - 1, :)
+          end do
           gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
           gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
           gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
+          ! Compute per-grid-cell CFT fractions from base data
+          call compute_gcam_cft_fractions(gcam_crop_area_byglu, gcam_crop(:,n))
        end if
 
        ! Set years 
@@ -549,7 +614,7 @@ call shr_cal_date2ymd(ymd,year,mon,day)
     character(len=512) :: dum
     character*4 :: yearc
     character(256) :: filename
-    integer :: i,j,ij,r,i1,j1,aez,h,z
+    integer :: i,j,ij,r,i1,j1,aez,h,z,ic
     integer :: row,g,t,y,yy
     integer :: iun,iyr,ier
     integer :: ymd, tod, dt,naez,nreg,ii,year,mon,day
@@ -714,10 +779,20 @@ call shr_cal_date2ymd(ymd,year,mon,day)
        end do
        close(5)
 
-       gcam_crop(:,n) = gcamo_base(iac_gcamo_crop,:)
+       ! Sum individual crop types into total crop area
+       gcam_crop(:,n) = 0.
+       do ic = iac_gcamo_crop_first, iac_gcamo_crop_last
+          gcam_crop(:,n) = gcam_crop(:,n) + gcamo_base(ic,:)
+       end do
+       ! Store per-crop areas for CFT fraction computation
+       do ic = 1, iac_num_gcam_crops
+          gcam_crop_area_byglu(ic,:) = gcamo_base(iac_gcamo_crop_first + ic - 1, :)
+       end do
        gcam_past(:,n) = gcamo_base(iac_gcamo_pasture,:)
        gcam_wh(:,n) = gcamo_base(iac_gcamo_woodharv,:)
        gcam_forest_area(:,n) = gcamo_base(iac_gcamo_forest,:)
+       ! Compute per-grid-cell CFT fractions from base data
+       call compute_gcam_cft_fractions(gcam_crop_area_byglu, gcam_crop(:,n))
     end if
  
     ! avd - write the harvest data to a diag file
@@ -738,10 +813,20 @@ call shr_cal_date2ymd(ymd,year,mon,day)
 
     ! note that the GCAM coupling now converts wh to MgC
 
-    gcam_crop(:,np1) = gcamo(iac_gcamo_crop,:)
+    ! Sum individual crop types from GCAM into total crop area
+    gcam_crop(:,np1) = 0.
+    do ic = iac_gcamo_crop_first, iac_gcamo_crop_last
+       gcam_crop(:,np1) = gcam_crop(:,np1) + gcamo(ic,:)
+    end do
+    ! Store per-crop areas for CFT fraction computation
+    do ic = 1, iac_num_gcam_crops
+       gcam_crop_area_byglu(ic,:) = gcamo(iac_gcamo_crop_first + ic - 1, :)
+    end do
     gcam_past(:,np1) = gcamo(iac_gcamo_pasture,:)
     gcam_wh(:,np1) = gcamo(iac_gcamo_woodharv,:)
     gcam_forest_area(:,np1) = gcamo(iac_gcamo_forest,:)
+    ! Compute per-grid-cell CFT fractions from current GCAM data
+    call compute_gcam_cft_fractions(gcam_crop_area_byglu, gcam_crop(:,np1))
 
     write(iulog,*) subname, 'initial global change in GCAM crop area km^2 = ', &
        real(nint(sum(1000*gcam_crop(:,np1))*100))/100. - real(nint(sum(1000*gcam_crop(:,n))*100))/100.
@@ -775,7 +860,7 @@ call shr_cal_date2ymd(ymd,year,mon,day)
 !end do
 
 ! avd - test this by setting no change
-!    gcam_crop(:,np1) = gcamo_base(iac_gcamo_crop,:)
+!    ! gcam_crop(:,np1) = sum(gcamo_base(iac_gcamo_crop_first:iac_gcamo_crop_last,:),dim=1)
 !    gcam_past(:,np1) = gcamo_base(iac_gcamo_pasture,:)
 !    gcam_wh(:,np1) = gcamo_base(iac_gcamo_woodharv,:)
 !    gcam_forest_area(:,np1) = gcamo_base(iac_gcamo_forest,:)
@@ -2823,6 +2908,8 @@ call shr_cal_date2ymd(ymd,year,mon,day)
     deallocate(rgmax)
 
     deallocate(gcamo_base)
+    deallocate(gcam_crop_area_byglu)
+    deallocate(gcam_cft_frac)
 
   end subroutine gcam2glm_final_mod
 !====================================================================================
@@ -3061,5 +3148,61 @@ End Subroutine D_mrgrnk
 
 
 !====================================================================================
+
+!===============================================================
+  subroutine compute_gcam_cft_fractions(crop_areas, total_crop)
+! Given per-crop areas for each GLU, compute per-GLU CFT fractions
+! and downscale to 0.5-degree grid using glu_weights.
+! crop_areas(iac_num_gcam_crops, nglu) = area per crop per GLU
+! total_crop(nglu) = total crop area per GLU (sum of crop_areas)
+! Output: gcam_cft_frac(num_elm_cfts, numLons*numLats) is updated
+    use iac_data_mod
+    implicit none
+    real(r8), intent(in) :: crop_areas(:,:)
+    real(r8), intent(in) :: total_crop(:)
+    character(len=*),parameter :: subname='(compute_gcam_cft_fractions) '
+    real(r8) :: cft_frac_glu(num_elm_cfts)
+    real(r8) :: total, w
+    integer :: g, ic, icft, i, j, ij
+
+    ! Initialize output: default all crop to c3_crop (CFT index 1, 1-based)
+    gcam_cft_frac = 0.
+    gcam_cft_frac(1,:) = 1.0  ! Default c3_crop
+
+    ! For each grid cell, compute a weighted average of CFT fractions
+    ! across all GLUs that overlap that cell
+    do j = 1, numLats
+       do i = 1, numLons
+          ij = (j-1)*numLons + i
+          cft_frac_glu(:) = 0.
+          total = 0.
+          do g = 1, size(total_crop)
+             w = glu_weights(g, i, j)
+             if (w > 0. .and. total_crop(g) > 0.) then
+                ! Accumulate crop-type fractions weighted by GLU weight * crop area
+                do ic = 1, iac_num_gcam_crops
+                   ! gcam_crop_to_cft is 0-based CFT index; convert to 1-based
+                   icft = gcam_crop_to_cft(ic) + 1
+                   cft_frac_glu(icft) = cft_frac_glu(icft) + &
+                        w * crop_areas(ic, g)
+                end do
+                total = total + w * total_crop(g)
+             end if
+          end do
+          ! Normalize to fractions
+          if (total > 0.) then
+             gcam_cft_frac(:, ij) = cft_frac_glu(:) / total
+          else
+             ! No crop: keep default (all c3_crop)
+             gcam_cft_frac(:, ij) = 0.
+             gcam_cft_frac(1, ij) = 1.0
+          end if
+       end do
+    end do
+
+    write(iulog,*) subname, 'computed CFT fractions on 0.5-deg grid'
+
+  end subroutine compute_gcam_cft_fractions
+
 end module gcam2glm_mod
 
