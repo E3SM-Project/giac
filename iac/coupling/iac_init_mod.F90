@@ -404,6 +404,12 @@ contains
     ierr= nf90_get_var(ncid_int, varid, iac2lnd_vars%pct_pft, start=start4, count=count4)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
 
+    ! initialize pct_pft_prev with the pct_pft data so the floating point check doesn't blow up in debug mode
+    iac2lnd_vars%pct_pft_prev(:,:,:) = iac2lnd_vars%pct_pft(:,:,:)
+
+    ! initialize the harvest array with zeros
+    iac2lnd_vars%harvest_frac(:,:,:) = 0.0_r8
+
     ierr= nf90_close(ncid_int)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
 
