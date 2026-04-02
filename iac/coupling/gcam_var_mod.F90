@@ -119,6 +119,7 @@ module gcam_var_mod
 
   ! gcam config and init files
   character(len=256), public ::  gcam_config
+  logical           , public ::  use_gcam_usa ! if .true., GCAM-USA is used
   character(len=256), public ::  base_gcam_co2_file  ! baseline gcam out
   character(len=256), public ::  base_gcam_lu_wh_file  ! baseline gcam out
   character(len=256), public ::  base_co2_surface_file ! gridded basline
@@ -137,7 +138,8 @@ module gcam_var_mod
 
   ! Grid and mapping and initialization files
   character(len=256), public ::  gcam_gridfile ! definition of iac grid
-  character(len=256), public ::  elm2gcam_mapping_file ! def gcam units to grid
+  character(len=256), public ::  elm2gcam_co2_mapping_file ! def gcam units to grid
+  character(len=256), public ::  elm2gcam_luc_mapping_file ! def gcam units to grid
   character(len=256), public :: gcam2glm_glumap
   character(len=256), public :: gcam2glm_baselu
   character(len=256), public :: gcam2glm_basebiomass
