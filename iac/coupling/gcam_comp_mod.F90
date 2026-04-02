@@ -365,7 +365,8 @@ contains
     integer :: ymd, tod, dt
     integer :: i,j,wc,gs,cs,rs,ws,rdd,wdd,rr,ays,dd
     character(len=256) :: scalar_source_dir_loc
-    character(len=256) :: elm2gcam_mapping_file_loc 
+    character(len=256) :: elm2gcam_co2_mapping_file_loc 
+    character(len=256) :: elm2gcam_luc_mapping_file_loc
     character(len=256) :: base_npp_file_loc
     character(len=256) :: base_hr_file_loc
     character(len=256) :: base_pft_file_loc
@@ -453,7 +454,8 @@ contains
   ! get some file names for scalars
   ! use local variables to avoid adding multiple null characters to the orig
   scalar_source_dir_loc=trim(scalar_source_dir)//c_null_char
-  elm2gcam_mapping_file_loc=trim(elm2gcam_mapping_file)//c_null_char
+  elm2gcam_co2_mapping_file_loc=trim(elm2gcam_co2_mapping_file)//c_null_char
+  elm2gcam_luc_mapping_file_loc=trim(elm2gcam_luc_mapping_file)//c_null_char
   base_npp_file_loc=trim(base_npp_file)//c_null_char
   base_hr_file_loc=trim(base_hr_file)//c_null_char
   base_pft_file_loc=trim(base_pft_file)//c_null_char
@@ -465,7 +467,7 @@ contains
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
                 iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%hdd, lnd2iac_vars%cdd, lnd2iac_vars%forc_hdm, &
                 iac_ctl%landfrac, iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
-                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, dd, &
+                elm2gcam_luc_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, dd, &
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, base_hdd_file_loc, base_cdd_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
@@ -489,12 +491,12 @@ contains
           gcamoco2airhijun, gcamoco2airhijul, gcamoco2airhiaug,               &
           gcamoco2airhisep, gcamoco2airhioct, gcamoco2airhinov,               &
           gcamoco2airhidec, &
- 	  elm2gcam_mapping_file_loc, country2grid_map, country2region_map,    &
+ 	  elm2gcam_co2_mapping_file_loc, country2grid_map, country2region_map,    &
           pop_iiasa_file, gdp_iiasa_file,                                     &
           pop_gcam_file, gdp_gcam_file, co2_gcam_file,                        &
 	  num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,  &
           num_lon, num_lat, wc, ymd,                                          &
-          surface_co2_downscaling_method)
+          surface_co2_downscaling_method, use_gcam_usa)
 
   end if
 
