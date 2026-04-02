@@ -488,8 +488,8 @@ contains
   !  Call runcGCAM method of E3SM Interface 
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
-                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%degree_days, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%degree_days, lnd2iac_vars%forc_hdm, &
+                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, iac_ctl%landfrac, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
                 elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, ays, cs, tr,&
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 

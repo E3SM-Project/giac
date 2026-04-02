@@ -72,6 +72,13 @@ contains
        end do ! global index g
     end do ! pft index p
 
+    ! Scalar per-gridcell fields
+    do g=iac_ctl%begg,iac_ctl%endg
+       i=iac_ctl%ilon(g)
+       j=iac_ctl%jlat(g)
+       lnd2iac_vars%forc_hdm(i,j) = x2z(index_x2z_Sl_forc_hdm, g)
+    end do ! global index g (forc_hdm)
+
   end subroutine iac_import
    !===============================================================================
 

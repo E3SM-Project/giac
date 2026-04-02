@@ -44,6 +44,7 @@ module gcam_cpl_indices
   integer, pointer, public ::index_x2z_Sl_npp(:)       ! net primary production
   integer, pointer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
   integer, pointer, public ::index_x2z_Sl_t_ref2m(:)   ! 2m reference temperature
+  integer, public ::index_x2z_Sl_forc_hdm = 0        ! human population density
   integer, public ::nflds_x2z = 0
 
   !-----------------------------------------------------------------------
@@ -216,6 +217,9 @@ contains
        index_x2z_Sl_t_ref2m(p) = mct_avect_indexra(x2z,trim('Sl_t_ref2m_topo' // pftstr))
 
     end do
+
+    ! Scalar per-gridcell lnd->iac field (no PFT loop needed)
+    index_x2z_Sl_forc_hdm = mct_avect_indexra(x2z, 'Sl_forc_hdm')
 
     ! iac -> atm
     ! Monthly sfc, low alt air, high alt air

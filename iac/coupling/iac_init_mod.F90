@@ -241,6 +241,8 @@ contains
     allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%t_ref2m(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%degree_days(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(lnd2iac_vars%forc_hdm(iac_ctl%nlon,iac_ctl%nlat))
+    lnd2iac_vars%forc_hdm(:,:) = 0.0_r8
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
