@@ -159,18 +159,18 @@ contains
        write(iulog, '(A,A)') "surface_co2_downscaling_method = ", trim(surface_co2_downscaling_method)
 
        write(iulog,*) 'future land conversion assumptions:'
-       write(iulog, '(A,I20)') "crop_addtreeonly = ",crop_addtreeonly
-       write(iulog, '(A,F20.17)') "crop_setherbfracrem = ",crop_setherbfracrem
-       write(iulog, '(A,F20.17)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
-       write(iulog, '(A,I20)') "pasture_addtreeonly = ",pasture_addtreeonly
-       write(iulog, '(A,F20.17)') "pasture_setherbfracrem = ",pasture_setherbfracrem
-       write(iulog, '(A,F20.17)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
+       write(iulog, '(A,I0)') "crop_addtreeonly = ",crop_addtreeonly
+       write(iulog, '(A,F5.2)') "crop_setherbfracrem = ",crop_setherbfracrem
+       write(iulog, '(A,F5.2)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
+       write(iulog, '(A,I0)') "pasture_addtreeonly = ",pasture_addtreeonly
+       write(iulog, '(A,F5.2)') "pasture_setherbfracrem = ",pasture_setherbfracrem
+       write(iulog, '(A,F5.2)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
 
        write(iulog,*) 'name of dynamic landuse timeseries file:'
        write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
 
-       write(iulog,*) 'rumtime options:'
-       write(iulog, '(A,L10)') "read_scalars = ",read_scalars
+       write(iulog,*) 'runtime options:'
+       write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
        write(iulog, '(A,L10)') "write_scalars = ",write_scalars
        write(iulog, '(A,L10)') "write_co2 = ",write_co2
