@@ -2075,6 +2075,11 @@ call shr_cal_date2ymd(ymd,year,mon,day)
        ! Here we are looping over regions, using the rgmin(r) and
        ! rgmax(r) to find the g's inside this region
        do r = 1,nreg
+          ! Skip regions not present in gcam2glm_glumap (e.g. GCAM-USA
+          ! states): their rgmin/rgmax keep their init sentinels
+          ! (1000/0), so rgmax(r) < rgmin(r). Without this, indxadn(1)
+          ! below holds uninitialised data and crashes at line 2126.
+          if (rgmax(r) < rgmin(r)) cycle
 
           regional_farea_needed = sum(unmet_farea(rgmin(r):rgmax(r)))
           
