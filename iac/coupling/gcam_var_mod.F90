@@ -149,12 +149,20 @@ module gcam_var_mod
   character(len=256), public :: co2_gcam_file
   character(len=256), public :: surface_co2_downscaling_method
  
-
+  ! future (>= 2015) land conversion assumptions 
+  integer, public :: crop_addtreeonly = 0
+  real(r8), public :: crop_setherbfracrem = 1.0
+  real(r8), public :: crop_setavailtreefracrem = 0.0
+  integer, public :: pasture_addtreeonly = 0
+  real(r8), public :: pasture_setherbfracrem = 1.0
+  real(r8), public :: pasture_setavailtreefracrem = 0.0
+  
   ! Name only of the dynamic landuse timeseries file
   character(len=256), public ::  fdyndat_ehc
 
   ! runtime options
-  logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr
+  logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr; If .TRUE., scalars are calculated from scalar_source_dir/scalar_
+  character(len=256), public :: scalar_source_dir
   logical, public :: write_scalars ! scalars will be written to a file.
   ! hr, area, pft weight) are passed from e3sm.
   logical, public :: write_co2 ! gridded co2 emissions will be

@@ -1,3 +1,9 @@
+/* these are the same declarations as in glm_future.c */
+void initialize(int *restart, int *year);
+void run_model();
+void stepglm_ccsm(int *year,double *glmi,int* glmi_fdim1, int* glmi_fdim2, double *glmi_wh, int *glmi_wh_fdim1,double *glmo, int* glmo_fdim1, int* glmo_fdim2);
+void finalize(void);
+
 void initglm_(int *restart, int *curryear) {
     initialize(restart, curryear);
 }

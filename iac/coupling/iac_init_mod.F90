@@ -66,8 +66,11 @@ contains
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
          pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
          surface_co2_downscaling_method, &
+         crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
+         pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
-         read_scalars, write_scalars, write_co2, &
+         read_scalars, scalar_source_dir, &
+         write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
@@ -155,11 +158,20 @@ contains
        write(iulog, '(A,A)') "co2_gcam_file = ", trim(co2_gcam_file)
        write(iulog, '(A,A)') "surface_co2_downscaling_method = ", trim(surface_co2_downscaling_method)
 
+       write(iulog,*) 'future land conversion assumptions:'
+       write(iulog, '(A,I)') "crop_addtreeonly = ",crop_addtreeonly
+       write(iulog, '(A,F)') "crop_setherbfracrem = ",crop_setherbfracrem
+       write(iulog, '(A,F)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
+       write(iulog, '(A,I)') "pasture_addtreeonly = ",pasture_addtreeonly
+       write(iulog, '(A,F)') "pasture_setherbfracrem = ",pasture_setherbfracrem
+       write(iulog, '(A,F)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
+
        write(iulog,*) 'name of dynamic landuse timeseries file:'
        write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
 
        write(iulog,*) 'rumtime options:'
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
+       write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
        write(iulog, '(A,L)') "write_scalars = ",write_scalars
        write(iulog, '(A,L)') "write_co2 = ",write_co2
        write(iulog, '(A,L)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
@@ -391,6 +403,12 @@ contains
     if(ierr /= nf90_NoErr) call handle_err(ierr)
     ierr= nf90_get_var(ncid_int, varid, iac2lnd_vars%pct_pft, start=start4, count=count4)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
+
+    ! initialize pct_pft_prev with the pct_pft data so the floating point check doesn't blow up in debug mode
+    iac2lnd_vars%pct_pft_prev(:,:,:) = iac2lnd_vars%pct_pft(:,:,:)
+
+    ! initialize the harvest array with zeros
+    iac2lnd_vars%harvest_frac(:,:,:) = 0.0_r8
 
     ierr= nf90_close(ncid_int)
     if(ierr /= nf90_NoErr) call handle_err(ierr)
