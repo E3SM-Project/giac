@@ -4697,7 +4697,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
        -adv
 ------*/
 void sethurttpasture(int outgrid, int modyear, int calcyear,
-                     int pasture_addtreeonly_fut, double pasture_setherbfracrem_fut, double pature_setavailtreefracrem_fut) {
+                     int pasture_addtreeonly_fut, double pasture_setherbfracrem_fut, double pasture_setavailtreefracrem_fut) {
     
    int maxpftid, outpft, pasturegrid, temppftid;
     double maxpftval, treepftsum, potvegpftsum, potvegtreepftsum;
@@ -4742,7 +4742,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 		ADDTREEONLY = pasture_addtreeonly_fut;	// For pasture removal: 1=addtreeonly; 0=add pfts proportionally based on setavailtreefracrem
 		HERBPASTURE = 0;	// 1=ensure enough herbaceous pfts to cover glmo pasture; 0=let there be some tree pft pasture if necessary
 		setherbfracrem = pasture_setherbfracrem_fut;	// pasture addition
-		setavailtreefracrem = pature_setavailtreefracrem_fut;	// pasture removal
+		setavailtreefracrem = pasture_setavailtreefracrem_fut;	// pasture removal
     } else {
 		// This is now set for default proportional removal of pfts when pasture is added, since pasture is now tracked
       //    this means that the conversions can be constrained better than just cutting trees, which was the original assumptions

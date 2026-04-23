@@ -329,7 +329,7 @@ subroutine mksurfdat_run(year,plodata)
     !    numpft            (if different than default of 16)
     ! ======================================================================
 
-    ! outnc_large_files and numpft are not in this namelist
+    ! outnc_large_files and numpft are not written to the namelist created here
     ! additional namelist items here:
     !outnc_double - enables double precision output
     !outnc_dims - two dimensions for output grid
@@ -407,7 +407,7 @@ subroutine mksurfdat_run(year,plodata)
     ! ----------------------------------------------------------------------
     
     ! Only read domain map once
-    if (domain_set(ldomain) == .false.) then 
+    if (.not. domain_set(ldomain)) then 
        write(6,*)'calling domain_read'
        if ( .not. domain_read_map(ldomain, fgrddat) )then
           call domain_read(ldomain, fgrddat)
