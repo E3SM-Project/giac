@@ -338,11 +338,11 @@ int main(int argc, char *argv[]){
 
   setbuf(stdout, NULL);
 
-  printf("\n");
+  fprintf(stderr, "\n");
   if( argc != 1 )
     {
-      printf("Usage Error:\tIncorrect number of arguments\n\n");
-      printf("usage: %s <file_name>\n", argv[0]);
+      fprintf(stderr, "Usage Error:\tIncorrect number of arguments\n\n");
+      fprintf(stderr, "usage: %s <file_name>\n", argv[0]);
       return;
     }
 
@@ -370,7 +370,7 @@ void option_settings(int smart_flow_option,
 		     int harvest_option) {
   int i,ia;
 
-  printf("\noption_settings...\n");
+  fprintf(stderr, "\noption_settings...\n");
 
   for (i=0;i<NREG;i++){
     rdata[i].smart_flow_option=smart_flow_option;
@@ -412,7 +412,7 @@ void initialize(int *restart, int *year){
   size_t count[] = {1, NY, NX};
   size_t start[] = {0, 0, 0}; /* start at first value */
   
-  printf("\n\nPROGRAM: 2015-2100 GLM\n\n");
+  fprintf(stderr, "\n\nPROGRAM: 2015-2100 GLM\n\n");
 
   /* Load up parser file */
   ini = iniparser_load("glm.fut.conf");
@@ -420,11 +420,11 @@ void initialize(int *restart, int *year){
 
   /* Get output from config file */
   s          = iniparser_getstring(ini, "output directory:output dir", NULL);
-  printf("main output directory:     [%s]\n", s ? s : "UNDEF");
+  fprintf(stderr, "main output directory:     [%s]\n", s ? s : "UNDEF");
 
   /* Get casename from config file */
   casename   = iniparser_getstring(ini, "control:case name", NULL);
-  printf("casename:     [%s]\n", casename ? casename : "UNDEF");
+  fprintf(stderr, "casename:     [%s]\n", casename ? casename : "UNDEF");
 
   /* create output/lu/tester/updated_states dirs */
   status     =  mkdir(s,0755);
@@ -702,11 +702,11 @@ void initialize(int *restart, int *year){
     strcat(restart_filename,".glm.restart.state.");
     sprintf(curryearc, "%d", *year);
     strcat(restart_filename, strcat(curryearc,".nc")); 
-    printf("read in restart data... %s\n", restart_filename);
+    fprintf(stderr, "read in restart data... %s\n", restart_filename);
     strcpy(new_path, restart_filename); 
   }else{
     strcpy(new_path,updated_initial_state);
-    printf("read in initial data... %s\n",new_path);
+    fprintf(stderr, "read in initial data... %s\n",new_path);
   } 
 
   start[0]=start[1]=start[2]=0;
@@ -757,7 +757,7 @@ void initialize(int *restart, int *year){
 	/* read it from the initial file */
 	/* this is a reference value for shifting cultivation */
 	strcpy(new_path,updated_initial_state);
-	printf("crop ref values in ... %s\n",new_path);
+	fprintf(stderr, "crop ref values in ... %s\n",new_path);
 	status = nc_open(new_path, NC_NOWRITE, &ncid_state);
 	check_err(status,__LINE__,__FILE__);
 	status = nc_inq_varid (ncid_state, "gcrop", &varidrst_crop);
@@ -795,7 +795,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
   char country_name[50], continent_name[50], regional_name[50];
 
   curryear=*year;
-  printf("\nglm, stepglm_ccsm: curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
+  fprintf(stderr, "\nglm, stepglm_ccsm: curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
   if (curryear >=start_year && curryear<=stop_year){
 
     if (initialrun && curryear==start_year) {
@@ -823,16 +823,16 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
     }
     //jt    for (i=0;i<NREG;i++){
     //jt      rtdata[i].wh==glmi_wh[i];
-    //jt      printf("rtdatawh %lf i %d\n",rtdata[i].wh,i);
+    //jt      fprintf(stderr, "rtdatawh %lf i %d\n",rtdata[i].wh,i);
     //jt    }
 
     //    for (it=0;it<2;it++){
     //      for (k=0;k<NY;k++){
     //    	for (m=0;m<NX;m++){
     // k=134;m=570;
-    //    printf("newdatac %lf it %d k %d m %d\n",newdata[it].c[k][m],it,k,m);
-    //    printf("newdatac %lf it %d k %d m %d\n",newdata[it].p[k][m],it,k,m);
-    //    printf("newdatac %lf it %d k %d m %d\n",newdata[it].v[k][m],it,k,m);
+    //    fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].c[k][m],it,k,m);
+    //    fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].p[k][m],it,k,m);
+    //    fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].v[k][m],it,k,m);
     //    	}
     //      }
 	  //    }
@@ -850,19 +850,19 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
     if (0) {
 
     for (it1=0;it1<2;it1++){
-      printf("stepglm_ccsm: newdata values in before transitions ..\n");
+      fprintf(stderr, "stepglm_ccsm: newdata values in before transitions ..\n");
       for (j=0;j<NY;j++){
 	for (i=0;i<NX;i++){   
 	  if (newdata[it1].c[j][i] != 0. || newdata[it1].p[j][i]!=0.  || newdata[it1].v[j][i]!=0. ) {
-	    printf("curryear %d it %d j %d i %d newdatac %lf\n",curryear,it1,j,i,newdata[it1].c[j][i]);
-	    printf("j %d i %d\n",j,i);
-	    printf("newdatap %lf\n",newdata[it1].p[j][i]);
-	    printf("newdatav %lf\n",newdata[it1].v[j][i]);
-	    printf("newdatai %lf\n",newdata[it1].i[j][i]);
-	    printf("newdataw %lf\n",newdata[it1].w[j][i]);
-	    printf("newdatas %lf\n",newdata[it1].s[j][i]);
-	    printf("newdatasma %lf\n",newdata[it1].sma[j][i]);
-	    printf("newdatasmb %lf\n",newdata[it1].smb[j][i]);
+	    fprintf(stderr, "curryear %d it %d j %d i %d newdatac %lf\n",curryear,it1,j,i,newdata[it1].c[j][i]);
+	    fprintf(stderr, "j %d i %d\n",j,i);
+	    fprintf(stderr, "newdatap %lf\n",newdata[it1].p[j][i]);
+	    fprintf(stderr, "newdatav %lf\n",newdata[it1].v[j][i]);
+	    fprintf(stderr, "newdatai %lf\n",newdata[it1].i[j][i]);
+	    fprintf(stderr, "newdataw %lf\n",newdata[it1].w[j][i]);
+	    fprintf(stderr, "newdatas %lf\n",newdata[it1].s[j][i]);
+	    fprintf(stderr, "newdatasma %lf\n",newdata[it1].sma[j][i]);
+	    fprintf(stderr, "newdatasmb %lf\n",newdata[it1].smb[j][i]);
 	  }
 	}
       }
@@ -872,7 +872,7 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
       for (j=0;j<rdata[i].num_glu;j++){
         if(i==3 && j==4){
            // africa congo
-	   printf("stepglm_ccsm: before transitions() aez_tdata[%d][%d].wh is %lf\n", i, j, aez_tdata[i][j].wh);
+	   fprintf(stderr, "stepglm_ccsm: before transitions() aez_tdata[%d][%d].wh is %lf\n", i, j, aez_tdata[i][j].wh);
         }
       }
     }
@@ -968,8 +968,8 @@ void stepglm_ccsm(int *year,double *glmi,int *glmi_fdim1, int *glmi_fdim2,double
   for ( k=0;k<NY;k++){
     for ( m=0;m<NX;m++){
       km=km+1;
-      //      printf("k=%d m=%d\n",k,m);
-      //      if (newdata[0].c[k][m] != 0.) printf("filling glmo1.c[%ld] with %lf\n kk=%d mm=%d\n",km,newdata[0].c[k][m],k,m);
+      //      fprintf(stderr, "k=%d m=%d\n",k,m);
+      //      if (newdata[0].c[k][m] != 0.) fprintf(stderr, "filling glmo1.c[%ld] with %lf\n kk=%d mm=%d\n",km,newdata[0].c[k][m],k,m);
       glmo[km] = newdata[1].c[k][m];
       km=km+1;
       glmo[km] = newdata[1].p[k][m];
@@ -1146,7 +1146,7 @@ void step(int *year){
   int country_code, continent_code, regional_code,curryear;
   char country_name[50], continent_name[50], regional_name[50];
   curryear=*year;
-  printf("curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
+  fprintf(stderr, "curryear=%d start_year=%d stop_year=%d\n",curryear,start_year,stop_year);
   if (curryear >=start_year && curryear<=stop_year){
     
     if (initialrun && curryear==start_year) {
@@ -1163,16 +1163,16 @@ void step(int *year){
     
     for (i=0;i<NREG;i++){
       for (j=0;j<NAEZ;j++){
-	printf("aez_tdata %lf i %d j %d\n",aez_tdata[i][j].wh,i,j);
+	fprintf(stderr, "aez_tdata %lf i %d j %d\n",aez_tdata[i][j].wh,i,j);
       }
     }
     //    for (it=0;it<2;it++){
     //      for (k=0;k<NY;k++){
     //    	for (m=0;m<NX;m++){
     //    k=134;m=570;
-    //    	  printf("newdatac %lf it %d k %d m %d\n",newdata[it].c[k][m],it,k,m);
-    //    	  printf("newdatac %lf it %d k %d m %d\n",newdata[it].p[k][m],it,k,m);
-    //    	  printf("newdatac %lf it %d k %d m %d\n",newdata[it].v[k][m],it,k,m);
+    //    	  fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].c[k][m],it,k,m);
+    //    	  fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].p[k][m],it,k,m);
+    //    	  fprintf(stderr, "newdatac %lf it %d k %d m %d\n",newdata[it].v[k][m],it,k,m);
     //    	}
     //      }
     //    }
@@ -1304,7 +1304,7 @@ void read_future_contructed_states_nc(int curryear){
   size_t start1[] = {0}; /* start at first value */
   size_t start[] = {0, 0, 0}; /* start at first value */
 
-  printf("\nreading data for future runs, 2015 and beyond...\n");
+  fprintf(stderr, "\nreading data for future runs, 2015 and beyond...\n");
   strcpy(new_path,PATH1); 
   strcat(new_path,future_crop_constructed_states); 
 
@@ -1484,7 +1484,7 @@ void read_future_contructed_states_nc(int curryear){
   if(start_year==curryear){
     //    strcpy(new_path,PATH1); 
     strcpy(new_path,updated_initial_state); 
-    printf("newdata values in read_data_past... %s\n",new_path);
+    fprintf(stderr, "newdata values in read_data_past... %s\n",new_path);
     start[0]=start[1]=start[2]=0;
     status = nc_open(new_path, NC_NOWRITE, &ncid_state);
     check_err(status,__LINE__,__FILE__);
@@ -1532,19 +1532,19 @@ void read_future_contructed_states_nc(int curryear){
   if (0) {
   
     for (it1=0;it1<2;it1++){
-      printf("newdata values in before transitions ..\n");
+      fprintf(stderr, "newdata values in before transitions ..\n");
       for (j=0;j<NY;j++){
 	for (i=0;i<NX;i++){   
 	  if (newdata[it1].c[j][i] != 0. || newdata[it1].p[j][i]!=0.  || newdata[it1].v[j][i]!=0. ) {
-	    printf("curryear %d it %d j %d i %d newdatac %lf\n",curryear,it1,j,i,newdata[it1].c[j][i]);
-	    printf("j %d i %d\n",j,i);
-	    printf("newdatap %lf\n",newdata[it1].p[j][i]);
-	    printf("newdatav %lf\n",newdata[it1].v[j][i]);
-	    printf("newdatai %lf\n",newdata[it1].i[j][i]);
-	    printf("newdataw %lf\n",newdata[it1].w[j][i]);
-	    printf("newdatas %lf\n",newdata[it1].s[j][i]);
-	    printf("newdatasma %lf\n",newdata[it1].sma[j][i]);
-	    printf("newdatasmb %lf\n",newdata[it1].smb[j][i]);
+	    fprintf(stderr, "curryear %d it %d j %d i %d newdatac %lf\n",curryear,it1,j,i,newdata[it1].c[j][i]);
+	    fprintf(stderr, "j %d i %d\n",j,i);
+	    fprintf(stderr, "newdatap %lf\n",newdata[it1].p[j][i]);
+	    fprintf(stderr, "newdatav %lf\n",newdata[it1].v[j][i]);
+	    fprintf(stderr, "newdatai %lf\n",newdata[it1].i[j][i]);
+	    fprintf(stderr, "newdataw %lf\n",newdata[it1].w[j][i]);
+	    fprintf(stderr, "newdatas %lf\n",newdata[it1].s[j][i]);
+	    fprintf(stderr, "newdatasma %lf\n",newdata[it1].sma[j][i]);
+	    fprintf(stderr, "newdatasmb %lf\n",newdata[it1].smb[j][i]);
 	  }
 	}
       }
@@ -1693,7 +1693,7 @@ void read_data_water_ice_nc(int curryear){
   size_t count[] = {1, NY, NX};
   size_t start[] = {0, 0, 0}; /* start at first value */
 
-  printf("\nglm, read_data_water_ice_nc: reading data for water and ice...\n");
+  fprintf(stderr, "\nglm, read_data_water_ice_nc: reading data for water and ice...\n");
 
   strcpy(new_path,PATH1); 
   strcat(new_path,future_icew_constructed_states); 
@@ -1824,7 +1824,7 @@ void read_country_codes(){
 
 
 
-  printf("\nreading country codes...\n");
+  fprintf(stderr, "\nreading country codes...\n");
   
   
   /* strcpy(new_path,PATH1); */
@@ -1941,7 +1941,7 @@ void read_regional_codes(){
   char new_path[256], tmp_path0[256], tmp_path1[256], newpath1[256], newpath[256];
   char gfname[256], ffname[256], outfname[256], fn[256],fout[256];
 
-  printf("\nreading regional codes...\n");
+  fprintf(stderr, "\nreading regional codes...\n");
 
  /* strcpy(new_path,PATH1); */
  /*  strcpy(tmp_path0,new_path); */
@@ -2071,7 +2071,7 @@ void read_aez_codes(){
   char region_fname[256], zone_fname[256];
 
 
-  printf("\nreading aez codes...\n");
+  fprintf(stderr, "\nreading aez codes...\n");
   
   for (ir1=0;ir1<NREG;ir1++){
     for (ia1=0;ia1<NAEZ;ia1++){
@@ -2131,7 +2131,7 @@ void read_continent_codes(){
 
 
 
-  printf("\nreading continent codes...\n");
+  fprintf(stderr, "\nreading continent codes...\n");
   
   
   /* strcpy(new_path,PATH1); */
@@ -2198,7 +2198,7 @@ void read_other_data(){
 /*   char new_path[130], tmp_path0[130], tmp_path1[130], ffname[130], newpath[90], newpath1[90], fn[90], fout[90], tmppath[130], ftag1[7], ftag2[90],fin[90],ayear[30]; */
 
 
-  printf("\nreading other data...\n");
+  fprintf(stderr, "\nreading other data...\n");
 
   /* static biomass grid, initial units=kgC/m2 */
   
@@ -2575,7 +2575,7 @@ void read_woodharvest_data_nc(int curryear){
 
 
   if(gridded_wh ==0){
-    printf("\n reading woodharvest data for year %d...\n",curryear);
+    fprintf(stderr, "\n reading woodharvest data for year %d...\n",curryear);
     
     /* wood harvest by country thru time, initial units=MgC */
     
@@ -2687,7 +2687,7 @@ void read_woodharvest_data_aez_nc(int curryear){
   size_t count3[] = {1,1,1};
   size_t start3[] = {0,0,0}; /* start at first value */
 
-  printf("\n reading woodharvest data for year %d...\n",curryear);
+  fprintf(stderr, "\n reading woodharvest data for year %d...\n",curryear);
 
   /* wood harvest projections */
 
@@ -2756,7 +2756,7 @@ void initialize_woodharvest_country_ratios(int baseyear){
   size_t count2[] = {1,1};
   size_t start2[] = {0,0}; /* start at first value */
 
-  printf("\n reading woodharvest data for year %d...\n",baseyear);
+  fprintf(stderr, "\n reading woodharvest data for year %d...\n",baseyear);
 
   /* wood harvest by country thru time, initial units=MgC */
 
@@ -2824,7 +2824,7 @@ void read_country_names(){
   char new_path[256], tmp_path0[256], tmp_path1[256], ffname[256];
   
 
-  printf("\nreading country names...\n");
+  fprintf(stderr, "\nreading country names...\n");
  
   /* strcpy(new_path,PATH1); */
   /* strcpy(tmp_path0,new_path); */
@@ -2860,7 +2860,7 @@ void read_regional_names(){
   char new_path[256], tmp_path0[256], tmp_path1[256], ffname[256];
   
 
-  printf("\nreading regional names...\n");
+  fprintf(stderr, "\nreading regional names...\n");
  
   /* strcpy(new_path,PATH1); */
   /* strcpy(tmp_path0,new_path); */
@@ -2935,7 +2935,7 @@ void transitions(int curryear){
   double tester1, tester2, tester3, tester4;
   
 
-  printf("\nglm, transitions: computing transitions...\n");
+  fprintf(stderr, "\nglm, transitions: computing transitions...\n");
 
 
 
@@ -2970,15 +2970,15 @@ void transitions(int curryear){
 	    /* minimum flows everywhere with abandonment in the tropics, primary priority */
 	
             //if(k==150 && (m==387 || m==391 || m==394)){
-            //   printf("before alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
-            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //   fprintf(stderr, "before alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   fprintf(stderr, "flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
             //}
 	
 	    alternative_smart_flow1(k,m,it);
 		 
             //if(k==150 && (m==387 || m==391 || m==394)){
-            //   printf("after alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
-            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //   fprintf(stderr, "after alternative_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   fprintf(stderr, "flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
             //}
  
 	    if (BEST_CASE_MIN_FLOWS_T4){    /* abandonment in tropical non Eurasia, primary priority */
@@ -2990,8 +2990,8 @@ void transitions(int curryear){
 	    }		 
 
             //if(k==150 && (m==387 || m==391 || m==394)){
-            //   printf("after adjust_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
-            //   printf("flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
+            //   fprintf(stderr, "after adjust_smart_flow1: it=%d, k=%d, m=%d\n",it,k,m);
+            //   fprintf(stderr, "flowvc=%lf, flowsc=%lf\n",newdata[it].flowvc[k][m], newdata[it].flowsc[k][m]);
             //}
  
 	  }
@@ -3135,7 +3135,7 @@ void transitions(int curryear){
   if(gridded_wh==0){
     //fix this:	if (TOTAL_HARVEST_SWITCH){
 
-    printf("glm, transitions: gridded_wh==0, beginning harvest, time= %d\n",curryear); 
+    fprintf(stderr, "glm, transitions: gridded_wh==0, beginning harvest, time= %d\n",curryear); 
 
     if(suit_option == 1) zdis_calc(it);
 
@@ -3240,7 +3240,7 @@ void transitions(int curryear){
       }
       else{
 	if (ctdata[i].predict_b != 0.){
-	  //jt	  printf("tcxglm1: %f %f %f\n",ctdata[i].whr,ctdata[i].predict_b,rtdata[cdata[i].rcode-1].reg_avail);
+	  //jt	  fprintf(stderr, "tcxglm1: %f %f %f\n",ctdata[i].whr,ctdata[i].predict_b,rtdata[cdata[i].rcode-1].reg_avail);
 	  ctdata[i].whr+=ctdata[i].predict_b/rtdata[cdata[i].rcode-1].reg_avail*rtdata[cdata[i].rcode-1].reg_avail;
 	}
       }
@@ -3258,7 +3258,7 @@ void transitions(int curryear){
   } /* end gridded_wh if */
   else if(gridded_wh==2){
 
-    printf("glm, transitions: gridded_wh==2, beginning harvest, time= %d\n",curryear); 
+    fprintf(stderr, "glm, transitions: gridded_wh==2, beginning harvest, time= %d\n",curryear); 
 
     if(suit_option == 1) zdis_calc_aez(it);
 
@@ -3274,9 +3274,9 @@ void transitions(int curryear){
       for (ia=0;ia<NAEZ;ia++){
        
         //if(ir==3 && ia==4){ // africa and congo
-        //   printf("glm, transitions: gridded_wh==2, first harvest loop\n");
-        //   printf("WH for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].wh);
-        //   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   fprintf(stderr, "glm, transitions: gridded_wh==2, first harvest loop\n");
+        //   fprintf(stderr, "WH for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].wh);
+        //   fprintf(stderr, "WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
         //}
  
 	aez_tdata[ir][ia].stbh=ZEROVALUE;
@@ -3328,9 +3328,9 @@ void transitions(int curryear){
       for (ia=0;ia<NAEZ;ia++){
 
         //if(ir==3 && ia==4){ // africa and congo
-        //   printf("glm, transitions: gridded_wh==2, summing unmet or avail harvest land; before calcs\n");
-        //   printf("WHR before calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
-        //   printf("predict_b and reg_avail and reg_unmet before calcs are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //   fprintf(stderr, "glm, transitions: gridded_wh==2, summing unmet or avail harvest land; before calcs\n");
+        //   fprintf(stderr, "WHR before calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   fprintf(stderr, "predict_b and reg_avail and reg_unmet before calcs are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
         //}
 
 	if(aez_tdata[ir][ia].whr <= aez_tdata[ir][ia].predict_b){
@@ -3344,8 +3344,8 @@ void transitions(int curryear){
 	}
 
         //if(ir==3){ // africa, and congo is index 4
-        //   printf("WHR after calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
-        //   printf("predict_b and reg_avail and reg_unmet after calcs are: %lf and %lf and %lf \n\n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //   fprintf(stderr, "WHR after calcs for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   fprintf(stderr, "predict_b and reg_avail and reg_unmet after calcs are: %lf and %lf and %lf \n\n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
         //}
 
       } /* end ia loop */
@@ -3356,31 +3356,31 @@ void transitions(int curryear){
       for (ia=0;ia<NAEZ;ia++){
 
         //if(ir==3){ // africa, and congo is index 4
-        //     printf("\nglm, transitions: gridded_wh==2, reassigning unmet harvest loop; before calcs\n");
-        //     printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
-        //     printf("predict_b and reg_avail and reg_unmet are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
+        //     fprintf(stderr, "\nglm, transitions: gridded_wh==2, reassigning unmet harvest loop; before calcs\n");
+        //     fprintf(stderr, "WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //     fprintf(stderr, "predict_b and reg_avail and reg_unmet are: %lf and %lf and %lf \n",aez_tdata[ir][ia].predict_b, rtdata[ir].reg_avail, rtdata[ir].reg_unmet);
         //}
 
 	if(rtdata[ir].reg_unmet<rtdata[ir].reg_avail && rtdata[ir].reg_avail>0){
 	  aez_tdata[ir][ia].whr+=aez_tdata[ir][ia].predict_b/rtdata[ir].reg_avail*rtdata[ir].reg_unmet;
           //if(ir==3){ // africa, and congo is index 4
-          //   printf("reassigning unmet harvest loop; enough land\n");
-          //   printf("WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+          //   fprintf(stderr, "reassigning unmet harvest loop; enough land\n");
+          //   fprintf(stderr, "WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
           //}
 	}
         else{
 	  if(rtdata[ir].reg_avail>0){
 	    aez_tdata[ir][ia].whr+=aez_tdata[ir][ia].predict_b/rtdata[ir].reg_avail*rtdata[ir].reg_avail;
             //if(ir==3){ // africa, and congo is index 4
-            // printf("reassigning unmet harvest loop; not enough land; avail>0\n");
-            // printf("WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+            // fprintf(stderr, "reassigning unmet harvest loop; not enough land; avail>0\n");
+            // fprintf(stderr, "WHR for region %d and zone %d at time %d after calc: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
             //}
 	  }
         }
 
         //if(ir==3){ // africa, and congo is index 4
-        //   printf("reassigning unmet harvest loop; after calcs\n");
-        //   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+        //   fprintf(stderr, "reassigning unmet harvest loop; after calcs\n");
+        //   fprintf(stderr, "WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
         //}
 
       } /* end ia loop */
@@ -3390,7 +3390,7 @@ void transitions(int curryear){
     /*      for (i=0;i<NCCODE;i++){ */
     /* 	rtdata[cdata[i].rcode-1].sum+=ctdata[i].whr; */
     /* 	if((cdata[i].rcode-1)==6){ */
-    /* 	    printf("China: %s, number %d WHR: %lf \n",cname[i], i, ctdata[i].whr);  */
+    /* 	    fprintf(stderr, "China: %s, number %d WHR: %lf \n",cname[i], i, ctdata[i].whr);  */
     /* 	} */
     /*       } */
 
@@ -3399,7 +3399,7 @@ void transitions(int curryear){
       for (ia=0;ia<NAEZ;ia++){
 
         //if(ir==3 && ia==4){ // africa and congo
-	//   printf("WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+	//   fprintf(stderr, "WHR for region %d and zone %d at time %d: %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
         //}
 
 	// #if BEST_CASE
@@ -3421,13 +3421,13 @@ void transitions(int curryear){
 	  else{	 
 	    aez_tdata[ir][ia].vwh = aez_tdata[ir][ia].whr;
 	    //if((ir==3)&&(ia==4)){ // africa and congo
-	    //  printf("glm, transitions: gridded_wh==2, Region %d zone %d time %d: WHR (before virgin harvest): %lf, VWH (before virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr,aez_tdata[ir][ia].vwh); 
+	    //  fprintf(stderr, "glm, transitions: gridded_wh==2, Region %d zone %d time %d: WHR (before virgin harvest): %lf, VWH (before virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr,aez_tdata[ir][ia].vwh); 
 	    //}
 	    //#if VIRGIN_HARVEST_SWITCH         
 	    if (VIRGIN_HARVEST_SWITCH)
 	      virgin_harvest_aez(it,ir,ia,curryear);
 	    //if((ir==3)&&(ia==4)){
-	    //  printf("Region %d zone %d time %d: WHR (after virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //  fprintf(stderr, "Region %d zone %d time %d: WHR (after virgin harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
 	    //}
 	    //#endif
 	 
@@ -3435,7 +3435,7 @@ void transitions(int curryear){
 	    if (SECONDARY_HARVEST_SWITCH)
 	      secondary_harvest_aez(it,ir,ia);
 	    //if((ir==3)&&(ia==4)){
-	    //  printf("Region %d zone %d time %d: WHR (after secondary harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //  fprintf(stderr, "Region %d zone %d time %d: WHR (after secondary harvest): %lf \n",ir,ia,it,aez_tdata[ir][ia].whr);
 	    //}
 	  }
 	  //#else  BEST_CASE
@@ -3477,7 +3477,7 @@ void transitions(int curryear){
 	  
 	    force_harvest_aez(it,ir,ia,curryear);
 	    //if((ir==3)&&(ia==4)){
-	    //  printf("Region %d zone %d time %d: WHR (after force harvest): %lf \n\n",ir,ia,it,aez_tdata[ir][ia].whr);
+	    //  fprintf(stderr, "Region %d zone %d time %d: WHR (after force harvest): %lf \n\n",ir,ia,it,aez_tdata[ir][ia].whr);
 	    //}
 	  }	
 	  //#endif
@@ -4103,7 +4103,7 @@ void virgin_harvest(int it, int i,int curryear){
 		  
 		}
 		else {
-		  printf("iz %d zmax %d\n",iz,zmax);
+		  fprintf(stderr, "iz %d zmax %d\n",iz,zmax);
 		}
 		
 	      }  /* end of else iz < MAXZ */
@@ -4383,7 +4383,7 @@ void virgin_harvest(int it, int i,int curryear){
 		      fprintf(testfile,"potential zmax trouble spot,reg %d basin %d zmax %d iz %d flowvs %lf wh_at_zmax %lf total %lf\n",ir,ia,zmax,iz,newdata[it].flowvs[k][m],aez_tdata[ir][ia].wh_at_zmax,total_avail); 
 		  }
 		  else {
-		    printf("iz %d zmax %d\n",iz,zmax);
+		    fprintf(stderr, "iz %d zmax %d\n",iz,zmax);
 		  }
 		}  /* end of else iz < MAXZ */
 
@@ -4654,7 +4654,7 @@ void virgin_harvest(int it, int i,int curryear){
 		  fprintf(testfile,"potential zmax trouble spot, %d %s zmax %d iz %d flowvs %lf wh_at_zmax %lf total %lf\n",curryear,cname[i],zmax,iz,newdata[it].flowvs[k][m],ctdata[i].wh_at_zmax,total_avail);  
 		}
 		else {
-		  printf("iz %d zmax %d\n",iz,zmax);
+		  fprintf(stderr, "iz %d zmax %d\n",iz,zmax);
 		}
 	      }  /* end of else iz < MAXZ */
 	    }/* end of fnf*/
@@ -6104,7 +6104,7 @@ float prob_harv(float biomass){
     if(i==0 && biomass <= (i*1.0)) flagger=1;
 
   }
-  if(flagger == 0) printf("BUG: prob_harv .not. set, b: %f\n",biomass);
+  if(flagger == 0) fprintf(stderr, "BUG: prob_harv .not. set, b: %f\n",biomass);
 
 
   return(p);
@@ -6210,7 +6210,7 @@ void update_vb_aez(int it){
 	  ia=dstatic[k][m].aez_zone_code - 1;
   
 	   if((ir==0)&(ia==6)){ 
-	     /*  printf("%d \n",dstatic[k][m].fnf); */
+	     /*  fprintf(stderr, "%d \n",dstatic[k][m].fnf); */
       	  } 
 	  if(dstatic[k][m].fnf == 1){
 	    aezdata[ir][ia].fnf = 1;
@@ -6226,7 +6226,7 @@ void update_vb_aez(int it){
     } /* end of k */
     
   //   for(iz=0;iz<MAXZ;iz++){ 
-     /*   printf("region 0 zone 6: iz=%d, vb=%lf \n",iz,aez_ztdata[0][6][iz][it].vb); */
+     /*   fprintf(stderr, "region 0 zone 6: iz=%d, vb=%lf \n",iz,aez_ztdata[0][6][iz][it].vb); */
   // 	  } 
 
     return;
@@ -6649,31 +6649,31 @@ void update_states(int it, int zmax){
 
     	/* checking for negative zero flows */
 
-	if(newdata[it].flowcp[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpc[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpv[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvp[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvc[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcv[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsp[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowps[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsc[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcs[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvs[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
-	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Update states flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcp[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpc[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpv[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvp[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvc[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcv[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsp[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowps[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsc[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcs[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvs[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcu[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpu[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvu[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsu[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowuc[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowup[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
+	if(newdata[it].flowus[k][m] < ZEROVALUE) {fprintf(stderr, "Update states flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
 	
 
 
-	if(newdata[it].vbh[k][m] < ZEROVALUE) {printf("Harvest Bug: vbh<0, resetting to 0 by force %10.15lf k: %d m: %d\n",newdata[it].vbh[k][m],k,m);newdata[it].vbh[k][m] = ZEROVALUE;}
-	if(newdata[it].sbh[k][m] < ZEROVALUE) {printf("Harvest Bug: sbh<0, resetting to 0 by force %10.15lf\n",newdata[it].sbh[k][m]);newdata[it].sbh[k][m] = ZEROVALUE;}
-	if(newdata[it].vbh2[k][m] < ZEROVALUE) {printf("Harvest Bug: vbh2<0, resetting to 0 by force %10.15lf\n",newdata[it].vbh2[k][m]);newdata[it].vbh2[k][m] = ZEROVALUE;}
-	if(newdata[it].sbh2[k][m] < ZEROVALUE) {printf("Harvest Bug: sbh2<0, resetting to 0 by force %10.15lf\n",newdata[it].sbh2[k][m]);newdata[it].sbh2[k][m] = ZEROVALUE;}
+	if(newdata[it].vbh[k][m] < ZEROVALUE) {fprintf(stderr, "Harvest Bug: vbh<0, resetting to 0 by force %10.15lf k: %d m: %d\n",newdata[it].vbh[k][m],k,m);newdata[it].vbh[k][m] = ZEROVALUE;}
+	if(newdata[it].sbh[k][m] < ZEROVALUE) {fprintf(stderr, "Harvest Bug: sbh<0, resetting to 0 by force %10.15lf\n",newdata[it].sbh[k][m]);newdata[it].sbh[k][m] = ZEROVALUE;}
+	if(newdata[it].vbh2[k][m] < ZEROVALUE) {fprintf(stderr, "Harvest Bug: vbh2<0, resetting to 0 by force %10.15lf\n",newdata[it].vbh2[k][m]);newdata[it].vbh2[k][m] = ZEROVALUE;}
+	if(newdata[it].sbh2[k][m] < ZEROVALUE) {fprintf(stderr, "Harvest Bug: sbh2<0, resetting to 0 by force %10.15lf\n",newdata[it].sbh2[k][m]);newdata[it].sbh2[k][m] = ZEROVALUE;}
 
 
 
@@ -6735,23 +6735,23 @@ void update_states(int it, int zmax){
 	if (STATE_BUG_PRINT){
       
 	if(newdata[it+1].v[k][m] < ZEROVALUE) { 
-           printf("Update states Bug: v<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d v(t)=%lf v(t+1)=%lf pv %lf cv %lf vp %lf vc %lf vs %lf\n",k,m,it,it+1,newdata[it].v[k][m],newdata[it+1].v[k][m],newdata[it].flowpv[k][m],newdata[it].flowcv[k][m],newdata[it].flowvp[k][m],newdata[it].flowvc[k][m],newdata[it].flowvs[k][m]);                
+           fprintf(stderr, "Update states Bug: v<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d v(t)=%lf v(t+1)=%lf pv %lf cv %lf vp %lf vc %lf vs %lf\n",k,m,it,it+1,newdata[it].v[k][m],newdata[it+1].v[k][m],newdata[it].flowpv[k][m],newdata[it].flowcv[k][m],newdata[it].flowvp[k][m],newdata[it].flowvc[k][m],newdata[it].flowvs[k][m]);                
            newdata[it+1].v[k][m] = ZEROVALUE;
         }
 	if(newdata[it+1].s[k][m] < ZEROVALUE) {         
-           printf("Update states Bug: s<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d s(t)=%lf s(t+1)=%lf cs %lf ps %lf vs %lf sc %lf sp %lf\n",k,m,it,it+1,newdata[it].s[k][m],newdata[it+1].s[k][m],newdata[it].flowcs[k][m],newdata[it].flowps[k][m],newdata[it].flowvs[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m]);
+           fprintf(stderr, "Update states Bug: s<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d s(t)=%lf s(t+1)=%lf cs %lf ps %lf vs %lf sc %lf sp %lf\n",k,m,it,it+1,newdata[it].s[k][m],newdata[it+1].s[k][m],newdata[it].flowcs[k][m],newdata[it].flowps[k][m],newdata[it].flowvs[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m]);
            newdata[it+1].s[k][m] =ZEROVALUE;  
         }
 	if(newdata[it+1].c[k][m] < ZEROVALUE) {   
-           printf("Update states Bug: c<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d c(t)=%lf c(t+1)=%lf pc %lf vc %lf sc %lf cp %lf cv %lf cs %lf\n",k,m,it,it+1,newdata[it].c[k][m],newdata[it+1].c[k][m],newdata[it].flowpc[k][m],newdata[it].flowvc[k][m],newdata[it].flowsc[k][m],newdata[it].flowcp[k][m],newdata[it].flowcv[k][m],newdata[it].flowcs[k][m]);
+           fprintf(stderr, "Update states Bug: c<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d c(t)=%lf c(t+1)=%lf pc %lf vc %lf sc %lf cp %lf cv %lf cs %lf\n",k,m,it,it+1,newdata[it].c[k][m],newdata[it+1].c[k][m],newdata[it].flowpc[k][m],newdata[it].flowvc[k][m],newdata[it].flowsc[k][m],newdata[it].flowcp[k][m],newdata[it].flowcv[k][m],newdata[it].flowcs[k][m]);
            newdata[it+1].c[k][m] = ZEROVALUE; 
         }
 	if(newdata[it+1].p[k][m] < ZEROVALUE) {
-           printf("Update states Bug: p<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d p(t)=%lf p(t+1)=%lf cp %lf vp %lf sp %lf pc %lf pv %lf ps %lf\n",k,m,it,it+1,newdata[it].p[k][m],newdata[it+1].p[k][m],newdata[it].flowcp[k][m],newdata[it].flowvp[k][m],newdata[it].flowsp[k][m],newdata[it].flowpc[k][m],newdata[it].flowpv[k][m],newdata[it].flowps[k][m]);
+           fprintf(stderr, "Update states Bug: p<0 at t+1, resetting to 0 by force. k=%d m=%d it=%d it+1=%d p(t)=%lf p(t+1)=%lf cp %lf vp %lf sp %lf pc %lf pv %lf ps %lf\n",k,m,it,it+1,newdata[it].p[k][m],newdata[it+1].p[k][m],newdata[it].flowcp[k][m],newdata[it].flowvp[k][m],newdata[it].flowsp[k][m],newdata[it].flowpc[k][m],newdata[it].flowpv[k][m],newdata[it].flowps[k][m]);
            newdata[it+1].p[k][m] = ZEROVALUE; 
 	}
 	if(newdata[it+1].u[k][m] < ZEROVALUE) {
-           printf("Update states Bug: u<0 at t+1, resetting to 0 by force. k=%d\
+           fprintf(stderr, "Update states Bug: u<0 at t+1, resetting to 0 by force. k=%d\
  m=%d it=%d it+1=%d u(t)=%lf u(t+1)=%lf pu %lf vu %lf su %lf up %lf cu %lf us %\
 lf\n",k,m,it,it+1,newdata[it].u[k][m],newdata[it+1].u[k][m],newdata[it].flowpu[k][m],newdata[it].flowvu[k][m],newdata[it].flowsu[k][m],newdata[it].flowup[k][m],newdata[it].flowcu[k][m],newdata[it].flowus[k][m]);
            newdata[it+1].u[k][m] = ZEROVALUE; 
@@ -6819,7 +6819,7 @@ lf\n",k,m,it,it+1,newdata[it].u[k][m],newdata[it+1].u[k][m],newdata[it].flowpu[k
 	  
 	  /* 0.38 is wood fraction of NPP, 0.75 is the aboveground fraction of NPP */
 
-	  //	  printf("sma debug print. k=%d m=%d it+1=%d sma(t) %10.15lf sma(t+1) %10.15lf sma_area_notlost %10.15lf s(t) %10.15lf sma_area_lost %10.15lf sma_area_gained %10.15lf smb(t) %10.15lf\n",k,m,it+1,newdata[it].sma[k][m],newdata[it+1].sma[k][m],sma_area_notlost,newdata[it].s[k][m],sma_area_lost,sma_area_gained,newdata[it].smb[k][m]);
+	  //	  fprintf(stderr, "sma debug print. k=%d m=%d it+1=%d sma(t) %10.15lf sma(t+1) %10.15lf sma_area_notlost %10.15lf s(t) %10.15lf sma_area_lost %10.15lf sma_area_gained %10.15lf smb(t) %10.15lf\n",k,m,it+1,newdata[it].sma[k][m],newdata[it+1].sma[k][m],sma_area_notlost,newdata[it].s[k][m],sma_area_lost,sma_area_gained,newdata[it].smb[k][m]);
 	   
 
 	  newdata[it+1].smb[k][m]=dstatic[k][m].vba*(1.0000000-exp(-(dstatic[k][m].vnppa*0.75*0.38*newdata[it].sma[k][m])/dstatic[k][m].vba));   
@@ -6832,7 +6832,7 @@ lf\n",k,m,it,it+1,newdata[it].u[k][m],newdata[it+1].u[k][m],newdata[it].flowpu[k
 	
 	
 	if(newdata[it+1].sma[k][m] < ZEROVALUE) {
-	  printf("Bug: sma < 0, being reset to zero by force. k=%d m=%d it+1=%d sma(t) %10.15lf sma(t+1) %10.15lf sma_area_notlost %lf s(t) %lf sma_area_lost %lf sma_area_gained %lf smb(t) %lf\n",k,m,it+1,newdata[it].sma[k][m],newdata[it+1].sma[k][m],sma_area_notlost,newdata[it].s[k][m],sma_area_lost,sma_area_gained,newdata[it].smb[k][m]);
+	  fprintf(stderr, "Bug: sma < 0, being reset to zero by force. k=%d m=%d it+1=%d sma(t) %10.15lf sma(t+1) %10.15lf sma_area_notlost %lf s(t) %lf sma_area_lost %lf sma_area_gained %lf smb(t) %lf\n",k,m,it+1,newdata[it].sma[k][m],newdata[it+1].sma[k][m],sma_area_notlost,newdata[it].s[k][m],sma_area_lost,sma_area_gained,newdata[it].smb[k][m]);
 	   
 	   newdata[it+1].sma[k][m] = 1.0;
 	}
@@ -7222,27 +7222,27 @@ void output_updated_states_nc(int curryear,int rstwr){
     // let the land model do it at the correct time
     if (rstwr) {
       //create_restart_inifile(curryear);
-      printf("glm, output_updated_states_nc: creating restart file for year %i \n", curryear);
+      fprintf(stderr, "glm, output_updated_states_nc: creating restart file for year %i \n", curryear);
     }else{
-      printf("glm, output_updated_states_nc: output previous state for year %i to netcdf file \n", curryear-1);
+      fprintf(stderr, "glm, output_updated_states_nc: output previous state for year %i to netcdf file \n", curryear-1);
     }
 
 
     // update flows needed for output to clm - these are not needed for restart
     for (k=0;k<NY;k++){
       for (m=0;m<NX;m++){
-	//	printf("k is %ld m is %ld",k,m);
+	//	fprintf(stderr, "k is %ld m is %ld",k,m);
 	newdata[0].flowsbh[k][m]=(newdata[0].smb[k][m] > ZEROVALUE) ? newdata[0].sbh[k][m]/newdata[0].smb[k][m]/garea[k][m] : ZEROVALUE;
 	//	if (newdata[0].smb[k][m] > ZEROVALUE) {
-	//	  printf("sbh smb garea flowsbh %f %f %f %f \n", newdata[0].sbh[k][m],newdata[0].smb[k][m],garea[k][m], newdata[0].sbh[k][m]/newdata[0].smb[k][m]/garea[k][m]);
+	//	  fprintf(stderr, "sbh smb garea flowsbh %f %f %f %f \n", newdata[0].sbh[k][m],newdata[0].smb[k][m],garea[k][m], newdata[0].sbh[k][m]/newdata[0].smb[k][m]/garea[k][m]);
 	//	    }
 	newdata[0].flowvbh[k][m]=(dstatic[k][m].vba > ZEROVALUE) ? newdata[0].vbh[k][m]/dstatic[k][m].vba/garea[k][m] : ZEROVALUE;
 	newdata[0].flowsbh2[k][m]=(newdata[0].smb[k][m] > ZEROVALUE) ? newdata[0].sbh2[k][m]/newdata[0].smb[k][m]/garea[k][m] : ZEROVALUE;
 	newdata[0].flowvbh2[k][m]=(dstatic[k][m].vba > ZEROVALUE) ? newdata[0].vbh2[k][m]/dstatic[k][m].vba/garea[k][m] : ZEROVALUE;
 	newdata[0].flowsbh3[k][m]=(newdata[0].smb[k][m] > ZEROVALUE) ? newdata[0].flowsbh3[k][m]=newdata[0].sbh3[k][m]/newdata[0].smb[k][m]/garea[k][m] : ZEROVALUE;
         //if(newdata[0].flowvbh[k][m] > 0.05) {
-        //   printf("glm: high harvest value at lat from top k=%ld and lon from -180 m=%ld\n",k,m);
-        //   printf("vbh sva garea flowvbh %f %f %f %f \n", newdata[0].vbh[k][m],dstatic[k][m].vba,garea[k][m],newdata[0].flowvbh[k][m]);
+        //   fprintf(stderr, "glm: high harvest value at lat from top k=%ld and lon from -180 m=%ld\n",k,m);
+        //   fprintf(stderr, "vbh sva garea flowvbh %f %f %f %f \n", newdata[0].vbh[k][m],dstatic[k][m].vba,garea[k][m],newdata[0].flowvbh[k][m]);
         //} 
       }
     }
@@ -7785,8 +7785,8 @@ void output_updated_states_nc(int curryear,int rstwr){
 	newdata[timeidx].flowsbh2[k][m]=fround(newdata[timeidx].flowsbh2[k][m],6);
 	newdata[timeidx].flowsbh3[k][m]=fround(newdata[timeidx].flowsbh3[k][m],6);
 
-        //printf("k is %ld m is %ld tind is %i\n",k,m,timeidx);
-        //printf("fvh1 fvh2 fsh1 fsh2 fsh3 %f %f %f %f %f\n", newdata[timeidx].flowvbh[k][m],newdata[timeidx].flowvbh2[k][m],
+        //fprintf(stderr, "k is %ld m is %ld tind is %i\n",k,m,timeidx);
+        //fprintf(stderr, "fvh1 fvh2 fsh1 fsh2 fsh3 %f %f %f %f %f\n", newdata[timeidx].flowvbh[k][m],newdata[timeidx].flowvbh2[k][m],
         //       newdata[timeidx].flowsbh[k][m], newdata[timeidx].flowsbh2[k][m], newdata[timeidx].flowsbh3[k][m]);
 
       }
@@ -7962,7 +7962,7 @@ void output_lu_nc(int curryear){
     int lon_dims[RANK_lon];
     int time_dims[RANK_time];
 
-    printf("glm, output_lu_nc: output land change netcdf file \n");
+    fprintf(stderr, "glm, output_lu_nc: output land change netcdf file \n");
  
     sprintf(curryearc, "%d", curryear-1);
     //jt fix the casename
@@ -8931,24 +8931,24 @@ void smart_flow(int k, int m, int it){
   
     	/* checking for negative zero flows */
 
-	if(newdata[it].flowcp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowps[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
-	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowps[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowuc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowup[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
+	if(newdata[it].flowus[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
 
 
 
@@ -9092,24 +9092,24 @@ void alternative_smart_flow1(int k, int m, int it){
 
     	/* checking for negative zero flows */
 
-	if(newdata[it].flowcp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowps[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
-	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcv<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsp<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowps[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowps<0, resetting to 0 by force %10.15lf\n",newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvs<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowuc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowup[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
+	if(newdata[it].flowus[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
 
   }
     
@@ -9242,28 +9242,28 @@ void alternative_smart_flow2(int k, int m, int it){
 
   if (SMART_FLOW_BUG_PRINT){
 
- 	if((newdata[it].flowvc[k][m] < ZEROVALUE) || (newdata[it].flowvp[k][m] < ZEROVALUE) || (newdata[it].flowsc[k][m] < ZEROVALUE) || (newdata[it].flowsp[k][m] < ZEROVALUE)) printf("v(t) %lf s(t) %lf c(t) %lf p(t) %lf v(t+1) %lf s(t+1) %lf c(t+1) %lf p(t+1) %lf k %d m %d vc %lf vp %lf sc %lf sp %lf delta_p %lf delta_o %lf delta_c %lf\n",newdata[it].v[k][m],newdata[it].s[k][m],newdata[it].c[k][m],newdata[it].p[k][m],newdata[it+1].v[k][m],newdata[it+1].s[k][m],newdata[it+1].c[k][m],newdata[it+1].p[k][m],k,m,newdata[it].flowvc[k][m],newdata[it].flowvp[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m],delta_p,delta_o,delta_c); 
+ 	if((newdata[it].flowvc[k][m] < ZEROVALUE) || (newdata[it].flowvp[k][m] < ZEROVALUE) || (newdata[it].flowsc[k][m] < ZEROVALUE) || (newdata[it].flowsp[k][m] < ZEROVALUE)) fprintf(stderr, "v(t) %lf s(t) %lf c(t) %lf p(t) %lf v(t+1) %lf s(t+1) %lf c(t+1) %lf p(t+1) %lf k %d m %d vc %lf vp %lf sc %lf sp %lf delta_p %lf delta_o %lf delta_c %lf\n",newdata[it].v[k][m],newdata[it].s[k][m],newdata[it].c[k][m],newdata[it].p[k][m],newdata[it+1].v[k][m],newdata[it+1].s[k][m],newdata[it+1].c[k][m],newdata[it+1].p[k][m],k,m,newdata[it].flowvc[k][m],newdata[it].flowvp[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m],delta_p,delta_o,delta_c); 
   
     	/* checking for negative zero flows */
 
-	if(newdata[it].flowcp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpv<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcv[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcv<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsp[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
-	if(newdata[it].flowps[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowps<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvs[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
-	if(newdata[it].flowcu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowpu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowvu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowsu[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
-	if(newdata[it].flowuc[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
-	if(newdata[it].flowup[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
-	if(newdata[it].flowus[k][m] < ZEROVALUE) {printf("Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcp[k][m]);newdata[it].flowcp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowpc[k][m]);newdata[it].flowpc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpv<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowpv[k][m]);newdata[it].flowpv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvp[k][m]);newdata[it].flowvp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvc[k][m]);newdata[it].flowvc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcv[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcv<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcv[k][m]);newdata[it].flowcv[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsp[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsp<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowsp[k][m]);newdata[it].flowsp[k][m] = ZEROVALUE;}
+	if(newdata[it].flowps[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowps<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowps[k][m]);newdata[it].flowps[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsc<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowsc[k][m]);newdata[it].flowsc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowcs[k][m]);newdata[it].flowcs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvs[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvs<0, resetting to 0 by force k %d m %d %10.15lf\n",k,m,newdata[it].flowvs[k][m]);newdata[it].flowvs[k][m] = ZEROVALUE;}
+	if(newdata[it].flowcu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowcu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowcu[k][m]);newdata[it].flowcu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowpu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowpu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowpu[k][m]);newdata[it].flowpu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowvu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowvu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowvu[k][m]);newdata[it].flowvu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowsu[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowsu<0, resetting to 0 by force %10.15lf\n",newdata[it].flowsu[k][m]);newdata[it].flowsu[k][m] = ZEROVALUE;}
+	if(newdata[it].flowuc[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowuc<0, resetting to 0 by force %10.15lf\n",newdata[it].flowuc[k][m]);newdata[it].flowuc[k][m] = ZEROVALUE;}
+	if(newdata[it].flowup[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowup<0, resetting to 0 by force %10.15lf\n",newdata[it].flowup[k][m]);newdata[it].flowup[k][m] = ZEROVALUE;}
+	if(newdata[it].flowus[k][m] < ZEROVALUE) {fprintf(stderr, "Smart flow Bug: flowus<0, resetting to 0 by force %10.15lf\n",newdata[it].flowus[k][m]);newdata[it].flowus[k][m] = ZEROVALUE;}
 
 
   }
@@ -9296,8 +9296,8 @@ void adjust_smart_flow1(int k, int m, int it, int i){
   past=newdata[it].p[k][m]-newdata[it].flowps[k][m]-newdata[it].flowpc[k][m]-newdata[it].flowpu[k][m];
 
   //if(k==150 && (m==387 || m==391 || m==394)){
-  //   printf("adjust_smart_flow1: k=%d, m=%d, it=%d, i=%d\n", k, m, it, i); 
-  //   printf("vtotal=%lf, stotal=%lf, vstotal=%lf, crop=%lf, past=%lf\n",vtotal, stotal, vstotal, crop, past);
+  //   fprintf(stderr, "adjust_smart_flow1: k=%d, m=%d, it=%d, i=%d\n", k, m, it, i); 
+  //   fprintf(stderr, "vtotal=%lf, stotal=%lf, vstotal=%lf, crop=%lf, past=%lf\n",vtotal, stotal, vstotal, crop, past);
   //}
 
  
@@ -9326,8 +9326,8 @@ void adjust_smart_flow1(int k, int m, int it, int i){
            //flowps_prime=past*time_k;
 	   // set this to zero so some lines below don't have to change
 	   flowps_prime=0;
-           //jt    printf("asf1 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
-           //jt    printf("asf1 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
+           //jt    fprintf(stderr, "asf1 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
+           //jt    fprintf(stderr, "asf1 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
 
   
            // recall that thus function assumes primary land priority
@@ -9342,7 +9342,7 @@ void adjust_smart_flow1(int k, int m, int it, int i){
                  else { /* not enough v, but enough v+s */
                     
                     if(k==150 && (m==387 || m==391 || m==394)){
-                       printf("adjust_smart_flow1, enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
+                       fprintf(stderr, "adjust_smart_flow1, enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
                     }
 
                     if(vtotal > ZEROVALUE){
@@ -9356,7 +9356,7 @@ void adjust_smart_flow1(int k, int m, int it, int i){
 	            //flowsp_prime=flowps_prime-flowvp_prime;
 	
                     if(k==150 && (m==387 || m==391 || m==394)){
-                       printf("adjust_smart_flow1, enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf\n", flowvc_prime, flowsc_prime);
+                       fprintf(stderr, "adjust_smart_flow1, enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf\n", flowvc_prime, flowsc_prime);
                     }
 
                  }
@@ -9368,7 +9368,7 @@ void adjust_smart_flow1(int k, int m, int it, int i){
            else{ /* not enough v+s, take all v+s (everything) that is possible */
 
               if(k==150 && (m==387 || m==391 || m==394)){
-                       printf("adjust_smart_flow1, not enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
+                       fprintf(stderr, "adjust_smart_flow1, not enough vs, before calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf, flowps_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime, flowps_prime);
                     }
 
               if(vtotal > ZEROVALUE){
@@ -9391,12 +9391,12 @@ void adjust_smart_flow1(int k, int m, int it, int i){
               //flowps_prime=flowvp_prime+flowsp_prime;
               
               if(k==150 && (m==387 || m==391 || m==394)){
-                       printf("adjust_smart_flow1, not enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime);
+                       fprintf(stderr, "adjust_smart_flow1, not enough vs, after calcs: flowvc_prime=%lf, flowsc_prime=%lf; flowcs_prime=%lf\n", flowvc_prime, flowsc_prime, flowcs_prime);
                     }
            }
 
            rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
-           //jt    printf("asf1 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
+           //jt    fprintf(stderr, "asf1 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
            //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
            //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
            rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
@@ -9427,10 +9427,10 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 
 #if 1
   vtotal=newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m]-newdata[it].flowvu[k][m]; 
-  //jt  printf("asf2 vtotal=v  %lf flowvc %lf  flowvp %lf flowvu %lf vtotal %lf it %d k %d m %d\n",newdata[it].v[k][m],newdata[it].flowvc[k][m],newdata[it].flowvp[k][m],newdata[it].flowvu[k][m],vtotal,it,k,m);
+  //jt  fprintf(stderr, "asf2 vtotal=v  %lf flowvc %lf  flowvp %lf flowvu %lf vtotal %lf it %d k %d m %d\n",newdata[it].v[k][m],newdata[it].flowvc[k][m],newdata[it].flowvp[k][m],newdata[it].flowvu[k][m],vtotal,it,k,m);
  
   stotal=newdata[it].s[k][m]-newdata[it].flowsc[k][m]-newdata[it].flowsp[k][m]-newdata[it].flowsu[k][m];
-  //jt  printf("asf2 stotal=s  %lf flowsc %lf  flowsp %lf flowsu %lf stotal %lf it %d k %d m %d\n",newdata[it].s[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m],newdata[it].flowsu[k][m],stotal,it,k,m);
+  //jt  fprintf(stderr, "asf2 stotal=s  %lf flowsc %lf  flowsp %lf flowsu %lf stotal %lf it %d k %d m %d\n",newdata[it].s[k][m],newdata[it].flowsc[k][m],newdata[it].flowsp[k][m],newdata[it].flowsu[k][m],stotal,it,k,m);
 
   vstotal=vtotal+stotal;
 
@@ -9464,8 +9464,8 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 		//flowps_prime=past*time_k;
 		// set this to zero so some lines below don't have to change
 		flowps_prime=0;
-    //jt    printf("asf2 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
-    //jt    printf("asf2 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
+    //jt    fprintf(stderr, "asf2 flowcs_prime  %lf vtotal %lf it %d k %d m %d\n",flowcs_prime,vtotal,it,k,m);
+    //jt    fprintf(stderr, "asf2 flowps_prime  %lf vtotal %lf it %d k %d m %d\n",flowps_prime,vtotal,it,k,m);
 
     // recall that this function assumes secondary priority
     if((flowcs_prime+flowps_prime) <= vstotal){
@@ -9474,7 +9474,7 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 
 	flowsc_prime=flowcs_prime;
 	//flowsp_prime=flowps_prime;
-	//jt        printf("1 \n");
+	//jt        fprintf(stderr, "1 \n");
       }
       else { /* not enough s, but enough v+s */
 
@@ -9483,7 +9483,7 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 	
 	flowvc_prime=flowcs_prime-flowsc_prime;
 	//flowvp_prime=flowps_prime-flowsp_prime;
-	//jt        printf("2 \n");
+	//jt        fprintf(stderr, "2 \n");
 	
       }
 
@@ -9500,13 +9500,13 @@ void adjust_smart_flow2(int k, int m, int it, int i){
 
       flowcs_prime=flowvc_prime+flowsc_prime; 
       //flowps_prime=flowvp_prime+flowsp_prime;
-      //jt      printf("3 \n");
+      //jt      fprintf(stderr, "3 \n");
 
       
     }
 
     rtdata[i].flowvc_prime+=flowvc_prime*garea[k][m]/1000./1000.;
-    //jt    printf("asf2 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
+    //jt    fprintf(stderr, "asf2 rtdatasum flowvc %lf flowvc_prime contrib %lf garea %lf i %d k %d m %d\n",rtdata[i].flowvc_prime,flowvc_prime,garea[k][m],i,k,m);
     //rtdata[i].flowvp_prime+=flowvp_prime*garea[k][m]/1000./1000.;
     //rtdata[i].flowsp_prime+=flowsp_prime*garea[k][m]/1000./1000.;
     rtdata[i].flowsc_prime+=flowsc_prime*garea[k][m]/1000./1000.;
@@ -9769,7 +9769,7 @@ void initialize_checker(int regional_code){
 
 
  
-  printf("glm, global_timeseries_checker: printing global tester...\n"); 
+  fprintf(stderr, "glm, global_timeseries_checker: printing global tester...\n"); 
 
   initialize_checker(regional_code);
  
@@ -10159,7 +10159,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   //  char outstat[2], ffname[90];
 
  
-  printf("glm, global_timeseries_checker_aez: printing global tester...\n"); 
+  fprintf(stderr, "glm, global_timeseries_checker_aez: printing global tester...\n"); 
 
   initialize_checker(regional_code);
  
@@ -10168,21 +10168,21 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   strcat(ffname,".test");
 
   //jt  outfile=fopen(ffname,outstat);
-  //jt  printf("opening outfile outstat= %d\n",outstat);
+  //jt  fprintf(stderr, "opening outfile outstat= %d\n",outstat);
   //jt  outfile2=fopen("global.primeflow.txt",outstat);
-  //jt  printf("opening outfile2 outstat= %d\n",outstat);
+  //jt  fprintf(stderr, "opening outfile2 outstat= %d\n",outstat);
 
   if ((outfile=fopen(ffname,outstat))==NULL) {
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", ffname);
   }
 
-  //printf("opening outfile outstat= %s\n",outstat);
+  //fprintf(stderr, "opening outfile outstat= %s\n",outstat);
 
   if ((outfile2=fopen("global.primeflow.txt",outstat))==NULL) {
     fprintf(stderr, "global_timeseries_checker_aez: cannot open %s\n", "global.primeflow.txt");
   }
 
-  //printf("opening outfile2 outstat= %s\n",outstat);
+  //fprintf(stderr, "opening outfile2 outstat= %s\n",outstat);
 
   it=0;
 
@@ -10238,7 +10238,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
 
 
       byclass_sum.flowvc_prime+=rtdata[i].flowvc_prime;
-      //jt      printf("flowvc_prime sum %lf newflowvc addition %lf region %d\n",byclass_sum.flowvc_prime,rtdata[i].flowvc_prime,i);
+      //jt      fprintf(stderr, "flowvc_prime sum %lf newflowvc addition %lf region %d\n",byclass_sum.flowvc_prime,rtdata[i].flowvc_prime,i);
       byclass_sum.flowsc_prime+=rtdata[i].flowsc_prime;
       byclass_sum.flowvp_prime+=rtdata[i].flowvp_prime;
       byclass_sum.flowsp_prime+=rtdata[i].flowsp_prime;
@@ -10257,7 +10257,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   
   fnf_s_area=ZEROVALUE;
   nf_s_area=ZEROVALUE;
-  //jt  printf("setting fnf and nf_s to 0= %lf\n",fnf_s_area);
+  //jt  fprintf(stderr, "setting fnf and nf_s to 0= %lf\n",fnf_s_area);
   
   if(gridded_wh==1){
     byclass_sum.wh=ZEROVALUE;
@@ -10357,8 +10357,8 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
   
   if(nf_s_area > ZEROVALUE) byclass_sum.smanf=byclass_sum.smanf/nf_s_area;
   
-  //jt    printf("about to print headers to outfile %lf\n",fnf_s_area);
-  //jt    printf("nf_s_area %lf\n",nf_s_area);
+  //jt    fprintf(stderr, "about to print headers to outfile %lf\n",fnf_s_area);
+  //jt    fprintf(stderr, "nf_s_area %lf\n",nf_s_area);
 
   
   if(print_file_headers) fprintf(outfile,"yr c p v i w s fsum vf vnf sf snf smaf smanf vbh sbh vbh2 sbh2 sbh3 sum wh clearing_amount_total clearing_amount_used wh-sum-clearing_amount_ifused(unmet) flowcp flowpc flowpv flowvp flowvc flowcv flowsp flowps flowsc flowcs flowvbh flowsbh flowvbh2 flowsbh2 flowsbh3 land_asum_km2 land_iw_asum_km2 total_asum_km2\n");
@@ -10444,11 +10444,11 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
 
 
 
-  printf("printing regional tester...\n");  
+  fprintf(stderr, "printing regional tester...\n");  
 
   initialize_checker(regional_code);
 
-  printf("code %d\n",regional_code);
+  fprintf(stderr, "code %d\n",regional_code);
 
 
   strcpy(ffname,regional_name);  
@@ -10770,7 +10770,7 @@ void global_timeseries_checker_aez(int regional_code, char regional_name[50], in
 
 
  
-  printf("printing continent tester...\n");
+  fprintf(stderr, "printing continent tester...\n");
 
 
 
@@ -11513,8 +11513,8 @@ void loop_call_for_country_final_stats(int curryear){
    double vf=ZEROVALUE, vnf=ZEROVALUE, sf=ZEROVALUE, snf=ZEROVALUE;
  
   if(ir==3 && (isnan(vf) || isnan(sf) || isnan(vnf) ||isnan(snf))  ) {
-     printf("predict_available_biomass_aez before calcs: Region %d, Zone %d, it=%d: \n",ir,ia,it);
-     printf("vf=%lf, sf=%lf, vnf=%lf, snf=%lf\n",vf,sf,vnf,snf);
+     fprintf(stderr, "predict_available_biomass_aez before calcs: Region %d, Zone %d, it=%d: \n",ir,ia,it);
+     fprintf(stderr, "vf=%lf, sf=%lf, vnf=%lf, snf=%lf\n",vf,sf,vnf,snf);
   }
  
   for (iz=0;iz<NZ;iz++){
@@ -11539,13 +11539,13 @@ void loop_call_for_country_final_stats(int curryear){
               vnf+=dstatic[k][m].vba*(newdata[it].v[k][m]-newdata[it].flowvc[k][m]-newdata[it].flowvp[k][m])*garea[k][m]/1000.;
 
               if(isnan(vnf) && ir==3){
-                 printf("predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
-                 printf("vba=%lf, v=%lf, flowvc=%lf, flowvp=%lf, garea=%lf \n", dstatic[k][m].vba, newdata[it].v[k][m], newdata[it].flowvc[k][m], newdata[it].flowvp[k][m], garea[k][m]);
+                 fprintf(stderr, "predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
+                 fprintf(stderr, "vba=%lf, v=%lf, flowvc=%lf, flowvp=%lf, garea=%lf \n", dstatic[k][m].vba, newdata[it].v[k][m], newdata[it].flowvc[k][m], newdata[it].flowvp[k][m], garea[k][m]);
               }
 
               if(isnan(snf) && ir==3){
-                 printf("predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
-                 printf("smb=%lf, s=%lf, flowsc=%lf, flowsp=%lf, garea=%lf \n", newdata[it].smb[k][m], newdata[it].s[k][m], newdata[it].flowsc[k][m], newdata[it].flowsp[k][m], garea[k][m]);
+                 fprintf(stderr, "predict_available_biomass_aez: Region %d, Zone %d, k=%d, m=%d, it=%d: \n",ir,ia,k,m,it);
+                 fprintf(stderr, "smb=%lf, s=%lf, flowsc=%lf, flowsp=%lf, garea=%lf \n", newdata[it].smb[k][m], newdata[it].s[k][m], newdata[it].flowsc[k][m], newdata[it].flowsp[k][m], garea[k][m]);
               }
 
 	    } /* end of fnf */
@@ -11559,7 +11559,7 @@ void loop_call_for_country_final_stats(int curryear){
     aez_tdata[ir][ia].predict_b = vf+vnf+sf+snf;
    
     if(aez_tdata[ir][ia].predict_b<ZEROVALUE_CHECK){
-      //printf("glm, predict_available_biomass_aez: Region %d, Zone %d: predict_b = %lf, reset to ZERO \n",ir,ia,aez_tdata[ir][ia].predict_b);
+      //fprintf(stderr, "glm, predict_available_biomass_aez: Region %d, Zone %d: predict_b = %lf, reset to ZERO \n",ir,ia,aez_tdata[ir][ia].predict_b);
       aez_tdata[ir][ia].predict_b=ZEROVALUE;
     }
 
@@ -12293,7 +12293,7 @@ if(dstatic[k][m].rcode == 3) sbhtest+=ctdata[i].whr;
 
 		  }
 		  else {
-		    printf("iz %d zmax %d\n",iz,zmax);
+		    fprintf(stderr, "iz %d zmax %d\n",iz,zmax);
 		  }
 		  
 		}  /* end of else iz < MAXZ */
@@ -13904,32 +13904,32 @@ int main(int argc, char *argv[])
 	char		cval[90] ;
 
 	/* Allocate dictionary */
-	printf("allocating...\n");
+	fprintf(stderr, "allocating...\n");
 	d = dictionary_new(0);
 	
 	/* Set values in dictionary */
-	printf("setting %d values...\n", NVALS);
+	fprintf(stderr, "setting %d values...\n", NVALS);
 	for (i=0 ; i<NVALS ; i++) {
 		sprintf(cval, "%04d", i);
 		dictionary_set(d, cval, "salut");
 	}
-	printf("getting %d values...\n", NVALS);
+	fprintf(stderr, "getting %d values...\n", NVALS);
 	for (i=0 ; i<NVALS ; i++) {
 		sprintf(cval, "%04d", i);
 		val = dictionary_get(d, cval, DICT_INVALID_KEY);
 		if (val==DICT_INVALID_KEY) {
-			printf("cannot get value for key [%s]\n", cval);
+			fprintf(stderr, "cannot get value for key [%s]\n", cval);
 		}
 	}
-    printf("unsetting %d values...\n", NVALS);
+    fprintf(stderr, "unsetting %d values...\n", NVALS);
 	for (i=0 ; i<NVALS ; i++) {
 		sprintf(cval, "%04d", i);
 		dictionary_unset(d, cval);
 	}
     if (d->n != 0) {
-        printf("error deleting values\n");
+        fprintf(stderr, "error deleting values\n");
     }
-	printf("deallocating...\n");
+	fprintf(stderr, "deallocating...\n");
 	dictionary_del(d);
 	return 0 ;
 }

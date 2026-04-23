@@ -548,7 +548,7 @@ readpftparamfile(char *filenamestr) {
     char infilename[50], inpftname[50];
     double inlaimax, inheightbot, inheighttop, ingroup1, ingroup2;
     
-    printf("Reading %s\n",filenamestr);
+    fprintf(stderr, "Reading %s\n",filenamestr);
     pftparamfile = fopen(filenamestr,"r");
     
     for (inpft = 0; inpft < MAXPFT; inpft++) {
@@ -574,7 +574,7 @@ opennetcdf(char *filenamestr) {
     
     innetcdfstat = nc_open(filenamestr, NC_WRITE, &innetcdfid);
     if (innetcdfstat != NC_NOERR) {
-        printf("Error no such file %s\n", filenamestr);
+        fprintf(stderr, "Error no such file %s\n", filenamestr);
         openstatus = 0;
         
         
@@ -601,22 +601,22 @@ opennetcdf(char *filenamestr) {
             }
         
         if (londim == -1) {
-            printf("Error Longitude dimension Not Found\n");
+            fprintf(stderr, "Error Longitude dimension Not Found\n");
             openstatus = 0;
         }
         
         if (latdim == -1) {
-            printf("Error Latitude dimension Not Found\n");
+            fprintf(stderr, "Error Latitude dimension Not Found\n");
             openstatus = 0;
         }
         
         if (lonlen != MAXOUTPIX) {
-            printf("Error Longitude dimension Wrong Size %d Expected %d\n",londim,MAXOUTPIX);
+            fprintf(stderr, "Error Longitude dimension Wrong Size %d Expected %d\n",londim,MAXOUTPIX);
             openstatus = 0;
         }
         
         if (latlen != MAXOUTLIN) {
-            printf("Error Latitude dimension Wrong Size %d Expected %d\n",latdim,MAXOUTLIN);
+            fprintf(stderr, "Error Latitude dimension Wrong Size %d Expected %d\n",latdim,MAXOUTLIN);
             openstatus = 0;
         }
     }
@@ -633,7 +633,7 @@ closenetcdf(char *filenamestr) {
     
     innetcdfstat = nc_close(innetcdfid);
     if (innetcdfstat != NC_NOERR) {
-        printf("Error closing file %s\n", filenamestr);
+        fprintf(stderr, "Error closing file %s\n", filenamestr);
         closestatus = 0;
     }
     
@@ -665,13 +665,13 @@ updatehurttlandfrac() {
         if (strcmp(varname,"LANDFRAC") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
         if (strcmp(varname,"LANDMASK") == 0) {
             selectedvarids[1] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -718,7 +718,7 @@ updatehurttlakefrac() {
         if (strcmp(varname,"PCT_LAKE") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -756,7 +756,7 @@ updatehurttwetlandfrac() {
         if (strcmp(varname,"PCT_WETLAND") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -794,7 +794,7 @@ updatehurtticefrac() {
         if (strcmp(varname,"PCT_GLACIER") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -833,7 +833,7 @@ updatehurttsand() {
         if (strcmp(varname,"PCT_SAND") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -875,7 +875,7 @@ updatehurttclay() {
         if (strcmp(varname,"PCT_CLAY") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -917,7 +917,7 @@ updatehurttsoilslope() {
         if (strcmp(varname,"SOIL_SLOPE") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -956,7 +956,7 @@ updatehurttsoilcolor() {
         if (strcmp(varname,"SOIL_COLOR") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -994,7 +994,7 @@ updatehurttpftpct() {
         if (strcmp(varname,"PCT_PFT") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
     }
     
@@ -1037,7 +1037,7 @@ updatehurttpftlai() {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
             sprintf(varname,"MONTHLY_LAI");
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
     }
     
@@ -1089,7 +1089,7 @@ updatehurttpftsai() {
             sprintf(varname,"MONTHLY_SAI");
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
     }
     
@@ -1142,7 +1142,7 @@ updatehurttpfttop() {
             sprintf(varname,"MONTHLY_HEIGHT_TOP");
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
     }
     
@@ -1191,7 +1191,7 @@ updatehurttpftbot() {
             sprintf(varname,"MONTHLY_HEIGHT_BOT");
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
     }
     
@@ -1238,7 +1238,7 @@ updatehurttvh1() {
         if (strcmp(varname,"HARVEST_VH1") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1275,7 +1275,7 @@ updatehurttvh2() {
         if (strcmp(varname,"HARVEST_VH2") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1312,7 +1312,7 @@ updatehurttsh1() {
         if (strcmp(varname,"HARVEST_SH1") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1349,7 +1349,7 @@ updatehurttsh2() {
         if (strcmp(varname,"HARVEST_SH2") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1386,7 +1386,7 @@ updatehurttsh3() {
         if (strcmp(varname,"HARVEST_SH3") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1423,7 +1423,7 @@ updatehurttgrazing() {
         if (strcmp(varname,"GRAZING") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Updating variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Updating variable: %d %s \n",nvarspcnt,varname);
         }
         
     }
@@ -1471,7 +1471,7 @@ readhurttprimary(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GOTHR") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt, varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt, varname);
 			break;
         }        
     }
@@ -1531,7 +1531,7 @@ readhurttsecondary(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GSECD") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1591,7 +1591,7 @@ readhurttcrop(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GCROP") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1607,8 +1607,8 @@ readhurttcrop(long hurttbaseyear, long hurttyear, int ISFUTURE) {
     cropvalues = malloc(sizeof(double) * lonlen * latlen * varlayers * varlayers2);
     nc_get_var_double(innetcdfid,selectedvarids[0],cropvalues);
     
-    //printf("hurttbaseyear: %li \n",hurttbaseyear);
-    //printf("hurttyear: %li \n",hurttyear);
+    //fprintf(stderr, "hurttbaseyear: %li \n",hurttbaseyear);
+    //fprintf(stderr, "hurttyear: %li \n",hurttyear);
     
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         // hurttbaseyear is set to 0. This means that it is reading values for year 1850
@@ -1671,7 +1671,7 @@ readhurttpasture(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GPAST") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1761,7 +1761,7 @@ readhurttvh1(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GFVH1") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1772,7 +1772,7 @@ readhurttvh1(long hurttbaseyear, long hurttyear, int ISFUTURE) {
 	// vara doesn't work on the new file either, but var does
     //nc_get_vara_double(innetcdfid,selectedvarids[0],start,count,vh1values);
 	nc_get_var_double(innetcdfid,selectedvarids[0],vh1values);
-	//printf("varlayers=%i\tcount0=%zu\tcount1=%zu\tcount2=%zu\tvarid=%i\n", varlayers, count[0], count[1], count[2], selectedvarids[0]);
+	//fprintf(stderr, "varlayers=%i\tcount0=%zu\tcount1=%zu\tcount2=%zu\tvarid=%i\n", varlayers, count[0], count[1], count[2], selectedvarids[0]);
 
     if (hurttyear >= 0) {
         for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
@@ -1787,7 +1787,7 @@ readhurttvh1(long hurttbaseyear, long hurttyear, int ISFUTURE) {
             else {
                 inhurttvh1[outgrid] = 0.0;
             }
-			//printf("outgrid=%li\toffsetgrid=%li\tinval=%f\tihvh1=%f\tvh1val=%f\n", outgrid, offsetgrid, invh1value, inhurttvh1[outgrid], vh1values[offsetgrid]);
+			//fprintf(stderr, "outgrid=%li\toffsetgrid=%li\tinval=%f\tihvh1=%f\tvh1val=%f\n", outgrid, offsetgrid, invh1value, inhurttvh1[outgrid], vh1values[offsetgrid]);
         }
     }
     
@@ -1825,7 +1825,7 @@ readhurttvh2(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GFVH2") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1888,7 +1888,7 @@ readhurttsh1(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GFSH1") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -1951,7 +1951,7 @@ readhurttsh2(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GFSH2") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2014,7 +2014,7 @@ readhurttsh3(long hurttbaseyear, long hurttyear, int ISFUTURE) {
         if (strcmp(varname,"GFSH3") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2072,7 +2072,7 @@ readhurttbasecrop() {
         if (strcmp(varname,"GCROP") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2129,7 +2129,7 @@ readhurttbasepasture() {
         if (strcmp(varname,"GPAST") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2215,7 +2215,7 @@ readhurttdyncrop(long modyear) {
         if (strcmp(varname,"GCROP") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2232,7 +2232,7 @@ readhurttdyncrop(long modyear) {
 		}
 	}
 	if(year_ind == ((long) numrecs)) {
-		printf("Error reading reference year glm crop data %li from invalid index %li\n",modyear,year_ind);
+		fprintf(stderr, "Error reading reference year glm crop data %li from invalid index %li\n",modyear,year_ind);
 	}
 	
 	start = calloc(ndimsp, sizeof(size_t));
@@ -2295,7 +2295,7 @@ readhurttdynpasture(long modyear) {
         if (strcmp(varname,"GPAST") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2312,7 +2312,7 @@ readhurttdynpasture(long modyear) {
 		}
 	}
 	if(year_ind == ((long) numrecs)) {
-		printf("Error reading reference year glm pasture data %li from invalid index %li\n",modyear,year_ind);
+		fprintf(stderr, "Error reading reference year glm pasture data %li from invalid index %li\n",modyear,year_ind);
 	}
 	
 	start = calloc(ndimsp, sizeof(size_t));
@@ -2371,20 +2371,20 @@ readhurttdynprimary(long modyear) {
     
     nc_inq(innetcdfid, &ndimsp, &loc_nvars, &nattsp, &unlimdimidp);
 
-//printf("readhurttdynprimary first loc_nvars=%i\n", loc_nvars );
+//fprintf(stderr, "readhurttdynprimary first loc_nvars=%i\n", loc_nvars );
 //nc_inq_nvars(innetcdfid, &nvarsp);
-//printf("readhurttdynprimary second nvarsp=%i\n", nvarsp );
+//fprintf(stderr, "readhurttdynprimary second nvarsp=%i\n", nvarsp );
     
     for (nvarspcnt = 0; nvarspcnt < loc_nvars; nvarspcnt ++) {
         nc_inq_varname(innetcdfid, nvarspcnt, varname);
         nc_inq_var(innetcdfid, nvarspcnt, varname, &vartype, &vardimsp, &vardimidsp, &varattsp);
 
-//printf("readhurttdynprimary nvarspcnt=%i varname=%s loc_nvars=%i\n", nvarspcnt, varname, loc_nvars);
+//fprintf(stderr, "readhurttdynprimary nvarspcnt=%i varname=%s loc_nvars=%i\n", nvarspcnt, varname, loc_nvars);
 
         if (strcmp(varname,"GOTHR") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2396,13 +2396,13 @@ readhurttdynprimary(long modyear) {
 	nc_inq_varid(innetcdfid, "TIME", &year_varid);
 	nc_get_var_double(innetcdfid, year_varid, years);
 	for(year_ind = 0; year_ind < ((long) numrecs); year_ind++) {
-            // printf("%d years: %f %d\n", year_ind, years[year_ind], modyear);
+            // fprintf(stderr, "%d years: %f %d\n", year_ind, years[year_ind], modyear);
 		if (((long) years[year_ind]) == modyear) {
 			break;
 		}
 	}
 	if(year_ind == ((long) numrecs)) {
-		printf("Error reading harvest year glm primary data %li from invalid index %li\n",modyear,year_ind);
+		fprintf(stderr, "Error reading harvest year glm primary data %li from invalid index %li\n",modyear,year_ind);
 	}
 	
 	start = calloc(ndimsp, sizeof(size_t));
@@ -2414,7 +2414,7 @@ readhurttdynprimary(long modyear) {
 	count[1] = latlen;
 	count[2] = lonlen;
     
-printf("readhurttdynprimary year_ind=%li sv0=%i\n", year_ind, selectedvarids[0]);
+fprintf(stderr, "readhurttdynprimary year_ind=%li sv0=%i\n", year_ind, selectedvarids[0]);
 
     varlayers = 1;
     varlayers2 = 1;
@@ -2430,7 +2430,7 @@ printf("readhurttdynprimary year_ind=%li sv0=%i\n", year_ind, selectedvarids[0])
                 prevprimary[outgrid] = 100.0;
             }
 
-//printf("read outgrid=%li prevprimary=%f\n", outgrid, prevprimary[outgrid]);
+//fprintf(stderr, "read outgrid=%li prevprimary=%f\n", outgrid, prevprimary[outgrid]);
 
         }
         else {
@@ -2471,7 +2471,7 @@ readhurttdynsecondary(long modyear) {
         if (strcmp(varname,"GSECD") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2488,7 +2488,7 @@ readhurttdynsecondary(long modyear) {
 		}
 	}
 	if(year_ind == ((long) numrecs)) {
-		printf("Error reading harvest year glm secondary data %li from invalid index %li\n",modyear,year_ind);
+		fprintf(stderr, "Error reading harvest year glm secondary data %li from invalid index %li\n",modyear,year_ind);
 	}
 	
 	start = calloc(ndimsp, sizeof(size_t));
@@ -2559,7 +2559,7 @@ writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
 	/* get the number of current records - only need this once */
 	/* this works here because there is only one call to this function per year */
 	nc_inq_dimlen(innetcdfid, unlimdimidp, &numrecs);
-	//printf("\n\n\n %%%%%%%\n\n\n\n%%%% writehurttdynfile %d\n", numrecs);
+	//fprintf(stderr, "\n\n\n %%%%%%%\n\n\n\n%%%% writehurttdynfile %d\n", numrecs);
 
 	nc_inq_varid(innetcdfid, "TIME", &year_varid);
 
@@ -2593,22 +2593,22 @@ writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
         if (strcmp(varname,"GCROP") == 0) {
             selectedvarids[crop_index] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
         }
 		else if (strcmp(varname,"GPAST") == 0) {
             selectedvarids[past_index] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
         }
 		else if (strcmp(varname,"GOTHR") == 0) {
             selectedvarids[prim_index] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
         }
 		else if (strcmp(varname,"GSECD") == 0) {
             selectedvarids[secd_index] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
         }
     }
 	
@@ -2638,7 +2638,7 @@ writehurttdynfile(long outyear, double glmo[][GLMONFLDS]) {
     }
     nc_put_vara_double(innetcdfid,selectedvarids[secd_index], start, count, values);
     // nc_inq_dimlen(innetcdfid, unlimdimidp, &numrecs);
-    // printf("\n\n\n ^^^^^^^^^^\n\n\n\n%%%% writehurttdynfile %d\n", numrecs);
+    // fprintf(stderr, "\n\n\n ^^^^^^^^^^\n\n\n\n%%%% writehurttdynfile %d\n", numrecs);
 	free(start);
 	free(count);
 	free(values);
@@ -2701,7 +2701,7 @@ normglmo(double array[MAXOUTPIX * MAXOUTLIN]) {
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         if (invegbare[outgrid] > 0.0 && invegbare[outgrid] <= 100.1) {
 			// mystery line that keeps my version from crashing
-			//printf("");
+			//fprintf(stderr, "");
             value = array[outgrid] * 100.0 / inland[outgrid] / invegbare[outgrid];
 			   //array[outgrid] = round(value * 100.0);
             array[outgrid] = value * 100.0;
@@ -2730,7 +2730,7 @@ init_crop_cft_fractions(void) {
         /* Default: 100% of crop goes to c3_crop (rainfed generic crop) */
         crop_cft_fraction[0][outgrid] = 1.0;
     }
-    printf("init_crop_cft_fractions: initialized %d CFTs, default = all c3_crop\n", NUM_CFT);
+    fprintf(stderr, "init_crop_cft_fractions: initialized %d CFTs, default = all c3_crop\n", NUM_CFT);
 }
 
 /*------
@@ -2750,7 +2750,7 @@ set_crop_cft_fractions(double *frac_data, int *ngridcells_ptr) {
     double total;
 
     if (ngrid != MAXOUTPIX * MAXOUTLIN) {
-        printf("WARNING set_crop_cft_fractions: ngridcells=%d != expected %d\n",
+        fprintf(stderr, "WARNING set_crop_cft_fractions: ngridcells=%d != expected %d\n",
                ngrid, MAXOUTPIX * MAXOUTLIN);
     }
 
@@ -2770,7 +2770,7 @@ set_crop_cft_fractions(double *frac_data, int *ngridcells_ptr) {
             crop_cft_fraction[0][outgrid] = 1.0;
         }
     }
-    printf("set_crop_cft_fractions: set %d CFTs for %d grid cells\n", NUM_CFT, ngrid);
+    fprintf(stderr, "set_crop_cft_fractions: set %d CFTs for %d grid cells\n", NUM_CFT, ngrid);
 }
 
 void
@@ -2827,7 +2827,7 @@ writearray(double array[MAXOUTPIX * MAXOUTLIN], const char *tstring) {
         if (value < minval) minval = value;
         if (value > maxval) maxval = value;
     }
-    printf("writearray %s = %f %f %f \n", tstring, minval, maxval, sum);
+    fprintf(stderr, "writearray %s = %f %f %f \n", tstring, minval, maxval, sum);
     
 }
 
@@ -2929,7 +2929,7 @@ readlandmask() {
         if (strcmp(varname,"LANDMASK") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -2965,7 +2965,7 @@ readlandfrac() {
         if (strcmp(varname,"LANDFRAC") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3001,7 +3001,7 @@ readlakefrac() {
         if (strcmp(varname,"PCT_LAKE") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3038,7 +3038,7 @@ readwetlandfrac() {
         if (strcmp(varname,"PCT_WETLAND") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3075,7 +3075,7 @@ readicefrac() {
         if (strcmp(varname,"PCT_GLACIER") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3114,7 +3114,7 @@ readsand() {
         if (strcmp(varname,"PCT_SAND") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3158,7 +3158,7 @@ readclay() {
         if (strcmp(varname,"PCT_CLAY") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3201,7 +3201,7 @@ readsoilslope() {
         if (strcmp(varname,"SOIL_SLOPE") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3277,7 +3277,7 @@ readcurrentpft() {
          if (strcmp(varname,"PCT_PFT") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
             break;
          }
       }
@@ -3289,12 +3289,12 @@ readcurrentpft() {
       nc_get_var_double(innetcdfid, year_varid, years);
       for(year_ind = 0; year_ind < ((long) numrecs); year_ind++) {
          if (((long) years[year_ind]) == modyear) {
-            //printf("Selected year: %f %li\n", years[year_ind], modyear);
+            //fprintf(stderr, "Selected year: %f %li\n", years[year_ind], modyear);
             break;
          }
       }
       if(year_ind == ((long) numrecs)) {
-         printf("Error reading reference year data %li from invalid index %li\n",modyear,year_ind);
+         fprintf(stderr, "Error reading reference year data %li from invalid index %li\n",modyear,year_ind);
       }
       
       start = calloc(numdims, sizeof(size_t));
@@ -3367,7 +3367,7 @@ writepftdynfile(long outyear) {
         if (strcmp(varname,"PCT_PFT") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Writing variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Writing variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
     }
@@ -3443,7 +3443,7 @@ readcurrentpftlai() {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
             sprintf(varname,"MONTHLY_LAI");
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
     }
@@ -3485,7 +3485,7 @@ readcurrentpftsai() {
             sprintf(varname,"MONTHLY_SAI");
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
     }
@@ -3526,7 +3526,7 @@ readcurrentsoilcolor() {
         if (strcmp(varname,"SOIL_COLOR") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading variable: %d %s \n",nvarspcnt,varname);
 			break;
         }
         
@@ -3577,7 +3577,7 @@ readpotvegpft() {
          if (strcmp(varname,"PCT_PFT") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
-            printf("Reading potential veg variable: %d %s \n",nvarspcnt,varname);
+            fprintf(stderr, "Reading potential veg variable: %d %s \n",nvarspcnt,varname);
             break;
          }
       }
@@ -3981,27 +3981,27 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
 	
     if (removepftsum > 0.0) {		/* crops being added, other PFTs removed */
 #ifdef DEBUG
-		printf("\naddcrop\n");
-		printf("newcropval: %f\n", newcropval);
-		printf("vegpftsum: %f\n", vegpftsum);
-      printf("availablecropsum: %f\n", availablecropsum);
-		printf("removepftsum: %f\n", removepftsum);
-		printf("treepftsum: %f\n", treepftsum);
-      printf("availabletreepftsum: %f\n", availabletreepftsum);
-		printf("herbaceouspftsum: %f\n", herbaceouspftsum);
-      printf("availableherbaceouspftsum: %f\n", availableherbaceouspftsum);
+		fprintf(stderr, "\naddcrop\n");
+		fprintf(stderr, "newcropval: %f\n", newcropval);
+		fprintf(stderr, "vegpftsum: %f\n", vegpftsum);
+      fprintf(stderr, "availablecropsum: %f\n", availablecropsum);
+		fprintf(stderr, "removepftsum: %f\n", removepftsum);
+		fprintf(stderr, "treepftsum: %f\n", treepftsum);
+      fprintf(stderr, "availabletreepftsum: %f\n", availabletreepftsum);
+		fprintf(stderr, "herbaceouspftsum: %f\n", herbaceouspftsum);
+      fprintf(stderr, "availableherbaceouspftsum: %f\n", availableherbaceouspftsum);
 #endif
        if (availablecropsum < removepftsum) {	/* not enough available veg pfts to accommodate crops -adv */
           if (outhurttpftval[BPFT][outgrid] > (removepftsum - availablecropsum)) {	/* there is enough bare soil to make up the difference, so remove it -adv */
 #ifdef DEBUG
-             printf("adding crops, removing bare\n");
-             printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
+             fprintf(stderr, "adding crops, removing bare\n");
+             fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
 #endif
              outhurttpftval[BPFT][outgrid] = outhurttpftval[BPFT][outgrid] - (removepftsum - availablecropsum);
              removepftsum = availablecropsum;
 #ifdef DEBUG
-             printf("adjusted bare: %f\n", outhurttpftval[BPFT][outgrid]);
-             printf("adjusted removepftsum: %f\n", removepftsum);
+             fprintf(stderr, "adjusted bare: %f\n", outhurttpftval[BPFT][outgrid]);
+             fprintf(stderr, "adjusted removepftsum: %f\n", removepftsum);
 #endif
           }
           else {	// not enough vegetated land unit for both crop and pasture (if any)
@@ -4012,9 +4012,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
              reducecrop = cropgap - pasturepftsum;
              if (reducecrop < 0.0) {
 #ifdef DEBUG
-                printf("adding crops, removing all bare and some pasture, not reducing newcropval\n");
-                printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
-                printf("pasturepftsum: %f\n", pasturepftsum);
+                fprintf(stderr, "adding crops, removing all bare and some pasture, not reducing newcropval\n");
+                fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
+                fprintf(stderr, "pasturepftsum: %f\n", pasturepftsum);
 #endif
                 // no crop reduction, use some pasture
                 pasturepftsum = -reducecrop;
@@ -4024,9 +4024,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
              }
              else {
 #ifdef DEBUG
-                printf("adding crops, removing all bare and all pasture (if any), and reducing newcropval\n");
-                printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
-                printf("pasturepftsum: %f\n", pasturepftsum);
+                fprintf(stderr, "adding crops, removing all bare and all pasture (if any), and reducing newcropval\n");
+                fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
+                fprintf(stderr, "pasturepftsum: %f\n", pasturepftsum);
 #endif
                 // some crop reduction, use all pasture
                 // make sure newcropval is not negative - this shouldn't happen, but check anyway
@@ -4041,9 +4041,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
              }
              removepftsum = availablecropsum;
 #ifdef DEBUG
-             printf("adjusted pasturepftsum: %f\n", pasturepftsum);
-             printf("adjusted removepftsum: %f\n", removepftsum);
-             printf("adjusted newcropval: %f\n", newcropval);
+             fprintf(stderr, "adjusted pasturepftsum: %f\n", pasturepftsum);
+             fprintf(stderr, "adjusted removepftsum: %f\n", removepftsum);
+             fprintf(stderr, "adjusted newcropval: %f\n", newcropval);
 #endif
              // adjust the pasture related values
              availableherbaceouspftsum = herbaceouspftsum - pasturepftsum;
@@ -4067,17 +4067,17 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
        
        // check for errors, but if they are over 100 they can be corrected here
        if (removepftsum < 0.0 - TOLERANCE || removepftsum > 100.0 + TOLERANCE) {
-          printf("Error in add crop removepftsum %f\n",removepftsum);
+          fprintf(stderr, "Error in add crop removepftsum %f\n",removepftsum);
        }
        if (availablecropsum < 0.0 - TOLERANCE || availablecropsum > 100.0 + TOLERANCE) {
-          printf("Error in add crop availablecropsum %f\n",removepftsum);
+          fprintf(stderr, "Error in add crop availablecropsum %f\n",removepftsum);
        }
        if (removepftsum > 100.0) { removepftsum = 100.0; }
        if (availablecropsum > 100.0) { availablecropsum = 100.0; }
        
        if (removepftsum > 0.0) {
            if (availablecropsum <= 0.0) {	/* no pfts to remove -adv */
-              printf("Error: availablecropsum = %f while removepftsum = %f\n", availablecropsum, removepftsum);
+              fprintf(stderr, "Error: availablecropsum = %f while removepftsum = %f\n", availablecropsum, removepftsum);
               //for (outpft = NEMPFT;outpft <= GC4PFT;outpft++) {
                  //outhurttpftval[outpft][outgrid] = round( (outhurttpftval[outpft][outgrid]));
               //}
@@ -4150,7 +4150,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                  setherbfracrem = setherbfracrem - 1.0;
                  herbaceousfracremain = propherbaceousfracremain + setherbfracrem * (maxherbaceousfracremain - propherbaceousfracremain);
               } else {
-                 printf("Error: setherbfracrem %f not within input range of 0 to 2 in sethurttcrop(); setting to proportional value of 1\n", setherbfracrem);
+                 fprintf(stderr, "Error: setherbfracrem %f not within input range of 0 to 2 in sethurttcrop(); setting to proportional value of 1\n", setherbfracrem);
                  setherbfracrem = 1;
                  herbaceousfracremain = minherbaceousfracremain + setherbfracrem * (propherbaceousfracremain - minherbaceousfracremain);
               }
@@ -4168,8 +4168,8 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
               if (treefracremain < 0.0) { treefracremain = 0.0; }
               if (treefracremain > 1.0) { treefracremain = 1.0; }
 #ifdef DEBUG
-              printf("herbaceousfracremain: %f of availableherbaceouspftsum\n", herbaceousfracremain);
-              printf("treefracremain: %f of availabletreepftsum\n", treefracremain);
+              fprintf(stderr, "herbaceousfracremain: %f of availableherbaceouspftsum\n", herbaceousfracremain);
+              fprintf(stderr, "treefracremain: %f of availabletreepftsum\n", treefracremain);
 #endif
               // now calculate the remaining fractions of the total of each pft
               // and update the output arrays if necessary
@@ -4179,7 +4179,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
               if (herbaceouspftsum > 0.0) {
                  herbaceousfracremain = (pastureherbaceouspftsum + availableherbaceouspftsum * herbaceousfracremain) / herbaceouspftsum;
 #ifdef DEBUG
-                 printf("herbaceousfracremain: %f of herbaceouspftsum\n", herbaceousfracremain);
+                 fprintf(stderr, "herbaceousfracremain: %f of herbaceouspftsum\n", herbaceousfracremain);
 #endif
                  for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
                     //outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] * herbaceousfracremain);
@@ -4193,25 +4193,25 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
               if (treepftsum > 0.0) {
                  treefracremain = (pasturetreepftsum + availabletreepftsum * treefracremain) / treepftsum;
 #ifdef DEBUG
-                 printf("treefracremain: %f of treepftsum\n", treefracremain);
+                 fprintf(stderr, "treefracremain: %f of treepftsum\n", treefracremain);
 #endif
                  for (outpft = NEMPFT;outpft <= BDBPFT;outpft++) {
 #ifdef DEBUG
-                    printf("pft %i: outhurttpftval before calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
-                    printf("pft %i: outhurttpftval before rounding: %f\n", outpft, outhurttpftval[outpft][outgrid] * treefracremain);
+                    fprintf(stderr, "pft %i: outhurttpftval before calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
+                    fprintf(stderr, "pft %i: outhurttpftval before rounding: %f\n", outpft, outhurttpftval[outpft][outgrid] * treefracremain);
 #endif
                     //outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] * treefracremain);
                     outhurttpftval[outpft][outgrid] = outhurttpftval[outpft][outgrid] * treefracremain;
                     outtreepftsum = outtreepftsum + outhurttpftval[outpft][outgrid];
                     
 #ifdef DEBUG
-                    printf("pft %i: outhurttpftval after calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
+                    fprintf(stderr, "pft %i: outhurttpftval after calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
 #endif
                  }
               } else { outtreepftsum = treepftsum; }
 #ifdef DEBUG
-              printf("outtreepftsum: %f\n", outtreepftsum);
-              printf("outherbaceouspftsum: %f\n", outherbaceouspftsum);
+              fprintf(stderr, "outtreepftsum: %f\n", outtreepftsum);
+              fprintf(stderr, "outherbaceouspftsum: %f\n", outherbaceouspftsum);
 #endif
               // this is no longer valid because removepftsum does not refer to total pft amounts any more
               /*
@@ -4219,20 +4219,20 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                // this check takes into account rounding error up to 1 unit (percent) of veg land unit
                if (setherbfracrem == 0.0 && removepftsum >= herbaceouspftsum &&
                (outherbaceouspftsum < -1.0 || outherbaceouspftsum > 1.0)) {
-               printf("notreemax when adding crops and when all herbs and some trees need to be removed\n");
+               fprintf(stderr, "notreemax when adding crops and when all herbs and some trees need to be removed\n");
                }
                if (setherbfracrem == 0.0 && removepftsum < herbaceouspftsum && outtreepftsum != treepftsum) {
-               printf("notreemax when adding crops and when only herbs need to be removed\n");
+               fprintf(stderr, "notreemax when adding crops and when only herbs need to be removed\n");
                }
                
                // check for forest minimization
                // this check takes into account rounding error up to 1 unit (percent) of veg land unit
                if (setherbfracrem == 2.0 && removepftsum >= treepftsum &&
                (outtreepftsum < -1.0 || outtreepftsum > 1.0)) {
-               printf("notreemin when adding crops and when all trees need to be removed\n");
+               fprintf(stderr, "notreemin when adding crops and when all trees need to be removed\n");
                }
                if (setherbfracrem == 2.0 && removepftsum < treepftsum && outherbaceouspftsum != herbaceouspftsum) {
-               printf("notreemin when adding crops and when only trees need to be removed\n");
+               fprintf(stderr, "notreemin when adding crops and when only trees need to be removed\n");
                }
                // end invalid section removepftsum does not refer to total pft amounts any more
                */
@@ -4243,27 +4243,27 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
     else {
        if (addpftsum > 0.0) {		/* crops being removed, other PFTs added */
 #ifdef DEBUG            
-          printf("\nremovecrop\n");
-          printf("newcropval: %f\n", newcropval);
-          printf("vegpftsum: %f\n", vegpftsum);
-          printf("addpftsum: %f\n", addpftsum);
-          printf("availpotvegtreepftsum: %f\n", availpotvegtreepftsum);
-          printf("availpotvegherbpftsum: %f\n", availpotvegherbpftsum);
+          fprintf(stderr, "\nremovecrop\n");
+          fprintf(stderr, "newcropval: %f\n", newcropval);
+          fprintf(stderr, "vegpftsum: %f\n", vegpftsum);
+          fprintf(stderr, "addpftsum: %f\n", addpftsum);
+          fprintf(stderr, "availpotvegtreepftsum: %f\n", availpotvegtreepftsum);
+          fprintf(stderr, "availpotvegherbpftsum: %f\n", availpotvegherbpftsum);
 #endif                        
           if (vegpftsum + addpftsum + newcropval + outhurttpftval[BPFT][outgrid] > 100.0) {	/* cap the addition of pfts to the veg land unit -adv */
 #ifdef DEBUG
-             printf("removing crops, capping pft addition\n");
-             printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
+             fprintf(stderr, "removing crops, capping pft addition\n");
+             fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
 #endif                                
              addpftsum = 100.0 - (vegpftsum + newcropval + outhurttpftval[BPFT][outgrid]);
 #ifdef DEBUG                                
-             printf("adjusted addpftsum: %f\n", addpftsum);
+             fprintf(stderr, "adjusted addpftsum: %f\n", addpftsum);
 #endif                                
           }
           
           // check for errors, and limit to 100 after calculation above
           if (addpftsum < 0.0 - TOLERANCE || addpftsum > 100.0 + TOLERANCE) {
-             printf("Error in remove crop addpftsum %f\n",addpftsum);
+             fprintf(stderr, "Error in remove crop addpftsum %f\n",addpftsum);
           }
           if (addpftsum > 100.0) { addpftsum = 100.0; }
           
@@ -4271,7 +4271,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
           if (availpotvegtreepftsum >= addpftsum) {
              cropavailpotvegtreepftval[outgrid] = 1;
 #ifdef DEBUG                                
-             printf("trees can replace all removed crops\n");
+             fprintf(stderr, "trees can replace all removed crops\n");
 #endif                                
           }
           else {
@@ -4312,15 +4312,15 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
              /* this zero potveg catch isn't necessary, but it avoids going through the calculations below -adv */
              if (potvegpftsum <= 0.0) {	/* add bare soil if no potential pfts reside in this cell -adv */
 #ifdef DEBUG                                    
-                printf("removing crops, adding only bare\n");
-                printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
-                printf("addpftsum: %f\n", addpftsum);
+                fprintf(stderr, "removing crops, adding only bare\n");
+                fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
+                fprintf(stderr, "addpftsum: %f\n", addpftsum);
 #endif                                        
                 potvegpftsum = 0.0;
                 outhurttpftval[BPFT][outgrid] = outhurttpftval[BPFT][outgrid] + addpftsum;
                 addpftsum = 0.0;
 #ifdef DEBUG                                        
-                printf("adjusted addpftsum: %f\n", addpftsum);
+                fprintf(stderr, "adjusted addpftsum: %f\n", addpftsum);
 #endif                                        
              }
              
@@ -4355,14 +4355,14 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                 //  but the land could have been degraded...
                 if(addpftsum > availpotvegtreeherbpftsum) {
 #ifdef DEBUG                                            
-                   printf("removing crops, adding bare because not enough available potential veg\n");
-                   printf("bare: %f\n", outhurttpftval[BPFT][outgrid]);
-                   printf("availpotvegtreeherbpftsum: %f\n", availpotvegtreeherbpftsum);
+                   fprintf(stderr, "removing crops, adding bare because not enough available potential veg\n");
+                   fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid]);
+                   fprintf(stderr, "availpotvegtreeherbpftsum: %f\n", availpotvegtreeherbpftsum);
 #endif                                                
                    outhurttpftval[BPFT][outgrid] = outhurttpftval[BPFT][outgrid] + addpftsum - availpotvegtreeherbpftsum;
                    addpftsum = availpotvegtreeherbpftsum;
 #ifdef DEBUG                                                
-                   printf("adjusted addpftsum: %f\n", addpftsum);
+                   fprintf(stderr, "adjusted addpftsum: %f\n", addpftsum);
 #endif                                                
                 }
                 
@@ -4414,7 +4414,7 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                    setavailtreefracrem = setavailtreefracrem - 1.0;
                    availtreefracremain = propavailtreefracremain + setavailtreefracrem * (maxavailtreefracremain - propavailtreefracremain);
                 } else {
-                   printf("Error: setavailtreefracrem %f not within input range of 0 to 2 in sethurttcrop(); setting to proportional value of 1\n", setavailtreefracrem);
+                   fprintf(stderr, "Error: setavailtreefracrem %f not within input range of 0 to 2 in sethurttcrop(); setting to proportional value of 1\n", setavailtreefracrem);
                    setavailtreefracrem = 1;
                    availtreefracremain = minavailtreefracremain + setavailtreefracrem * (propavailtreefracremain - minavailtreefracremain);
                 }
@@ -4434,21 +4434,21 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                 if (availtreefracremain < 0.0 + TOLERANCE) { availtreefracremain = 0.0; }
                 if (availtreefracremain > 1.0) { availtreefracremain = 1.0; }
 #ifdef DEBUG					
-                printf("availtreefracremain: %f\n", availtreefracremain);
-                printf("availherbfracremain: %f\n", availherbfracremain);
-                printf("availpotvegtreepftsum before calcs: %f\n", availpotvegtreepftsum);
-                printf("potvegtreepftsum before calcs: %f\n", potvegtreepftsum);
-                printf("availpotvegherbpftsum before calcs: %f\n", availpotvegherbpftsum);
-                printf("availpotveggrasspftsum before calcs: %f\n", availpotveggrasspftsum);
-                printf("potvegshrubpftsum before calcs: %f\n", potvegshrubpftsum);
-                printf("potveggrasspftsum before calcs: %f\n", potveggrasspftsum);
+                fprintf(stderr, "availtreefracremain: %f\n", availtreefracremain);
+                fprintf(stderr, "availherbfracremain: %f\n", availherbfracremain);
+                fprintf(stderr, "availpotvegtreepftsum before calcs: %f\n", availpotvegtreepftsum);
+                fprintf(stderr, "potvegtreepftsum before calcs: %f\n", potvegtreepftsum);
+                fprintf(stderr, "availpotvegherbpftsum before calcs: %f\n", availpotvegherbpftsum);
+                fprintf(stderr, "availpotveggrasspftsum before calcs: %f\n", availpotveggrasspftsum);
+                fprintf(stderr, "potvegshrubpftsum before calcs: %f\n", potvegshrubpftsum);
+                fprintf(stderr, "potveggrasspftsum before calcs: %f\n", potveggrasspftsum);
 #endif                                        
                 
                 // add tree pfts by available potential proportions
                 // if there is no potential tree veg then these outhurttpftvals do not change
                 outavailpotvegtreepftsum = availpotvegtreepftsum;
 #ifdef DEBUG
-                printf("outavailpotvegtreepftsum before calcs: %f\n", outavailpotvegtreepftsum);
+                fprintf(stderr, "outavailpotvegtreepftsum before calcs: %f\n", outavailpotvegtreepftsum);
 #endif
                 if(potvegtreepftsum > 0.0) {
                    for (outpft = NEMPFT;outpft <= BDBPFT;outpft++) {
@@ -4476,10 +4476,10 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                 removeavailpotvegshrub = removeavailpotvegherb - removeavailpotveggrass;
                 
 #ifdef DEBUG
-                printf("outavailpotvegherbpftsum before calcs: %f\n", outavailpotvegherbpftsum);
-                printf("removeavailpotvegherb: %f\n", removeavailpotvegherb);
-                printf("removeavailpotveggrass: %f\n", removeavailpotveggrass);
-                printf("removeavailpotvegshrub: %f\n", removeavailpotvegshrub);
+                fprintf(stderr, "outavailpotvegherbpftsum before calcs: %f\n", outavailpotvegherbpftsum);
+                fprintf(stderr, "removeavailpotvegherb: %f\n", removeavailpotvegherb);
+                fprintf(stderr, "removeavailpotveggrass: %f\n", removeavailpotveggrass);
+                fprintf(stderr, "removeavailpotvegshrub: %f\n", removeavailpotvegshrub);
 #endif
                 
                 if(potveggrasspftsum > 0.0) {
@@ -4493,9 +4493,9 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                       outavailpotvegherbpftsum = outavailpotvegherbpftsum -
                       inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum;
 #ifdef DEBUG
-                      printf("grass pft %i:\n", outpft);
-                      printf("inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
-                      printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+                      fprintf(stderr, "grass pft %i:\n", outpft);
+                      fprintf(stderr, "inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
+                      fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
 #endif
                    }
                 } else {potveggrasspftsum = 0.0;}
@@ -4511,36 +4511,36 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
                       outavailpotvegherbpftsum = outavailpotvegherbpftsum -
                       inpotvegpftval[outpft][outgrid] * removeavailpotvegshrub / potvegshrubpftsum;
 #ifdef DEBUG
-                      printf("shrub pft %i:\n", outpft);
-                      printf("inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
-                      printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+                      fprintf(stderr, "shrub pft %i:\n", outpft);
+                      fprintf(stderr, "inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
+                      fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
 #endif
                    }
                 }else {potvegshrubpftsum = 0.0;}
 #ifdef DEBUG				 
-                printf("outavailpotvegtreepftsum: %f\n", outavailpotvegtreepftsum);
-                printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+                fprintf(stderr, "outavailpotvegtreepftsum: %f\n", outavailpotvegtreepftsum);
+                fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
 #endif                                        
                 // check forest maximization
                 // this check takes into account rounding error up to 1/100 percent of veg land unit
                 if (setavailtreefracrem == 0.0 && addpftsum >= availpotvegtreepftsum &&
                     (outavailpotvegtreepftsum < -0.01 || outavailpotvegtreepftsum > 0.01)) {
-                   printf("Error: notreemax when removing crops and when all avail trees and some herb need to be added\n");
+                   fprintf(stderr, "Error: notreemax when removing crops and when all avail trees and some herb need to be added\n");
                 }
                 if (setavailtreefracrem == 0.0 && addpftsum < availpotvegtreepftsum &&
                     (outavailpotvegherbpftsum - availpotvegherbpftsum > 0.01 || outavailpotvegherbpftsum - availpotvegherbpftsum < -0.01) ) {
-                   printf("Error: notreemax when removing crops and when only avail trees need to be added\n");
+                   fprintf(stderr, "Error: notreemax when removing crops and when only avail trees need to be added\n");
                 }
                 
                 // check forest minimization
                 // this check takes into account rounding error up to 1/100 percent of veg land unit
                 if (setavailtreefracrem == 2.0 && addpftsum >= availpotvegherbpftsum &&
                     (outavailpotvegherbpftsum < -0.01 || outavailpotvegherbpftsum > 0.01)) {
-                   printf("Error: notreemin when removing crops and when all avail herb and some trees need to be added\n");
+                   fprintf(stderr, "Error: notreemin when removing crops and when all avail herb and some trees need to be added\n");
                 }
                 if (setavailtreefracrem == 2.0 && addpftsum < availpotvegherbpftsum &&
                     (outavailpotvegtreepftsum - availpotvegtreepftsum > 0.01 || outavailpotvegtreepftsum - availpotvegtreepftsum < -0.01) ) {
-                   printf("Error: notreemin when removing crops and when only avail herb need to be added\n");
+                   fprintf(stderr, "Error: notreemin when removing crops and when only avail herb need to be added\n");
                 }
                 
                 // end new code block -adv */
@@ -4577,13 +4577,13 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
         addpftsum = (100.0 * ROUND_PREC) - (updatedpftsum + newcropval);
        if (addpftsum >= 0.0) {
 #ifdef DEBUG            
-          printf("Crop Addsum = %f\npftvals before adding to non-crop maxpftid %i: ",addpftsum / ROUND_PREC, maxpftid);
+          fprintf(stderr, "Crop Addsum = %f\npftvals before adding to non-crop maxpftid %i: ",addpftsum / ROUND_PREC, maxpftid);
           for (temppftid = 0; temppftid < MAXPFT-1; temppftid++) {
-             printf("pft %i val=%f, ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
+             fprintf(stderr, "pft %i val=%f, ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
           }
           /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[MAXPFT] -adv */
-          printf("crop: %f ",newcropval / ROUND_PREC);
-          printf("\n");
+          fprintf(stderr, "crop: %f ",newcropval / ROUND_PREC);
+          fprintf(stderr, "\n");
 #endif            
        }
         outhurttpftval[maxpftid][outgrid] = outhurttpftval[maxpftid][outgrid] + addpftsum;
@@ -4594,22 +4594,22 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
         removepftsum = (updatedpftsum + newcropval - (100.0 * ROUND_PREC));
        if (removepftsum >= 0.0) {
 #ifdef DEBUG            
-          printf("Crop Removesum = %f\npftvals before removing from non-crop maxpftid %i: ",removepftsum / ROUND_PREC, maxpftid);
+          fprintf(stderr, "Crop Removesum = %f\npftvals before removing from non-crop maxpftid %i: ",removepftsum / ROUND_PREC, maxpftid);
           for (temppftid = 0; temppftid < MAXPFT-1; temppftid++) {
-             printf("pft %i val=%f ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
+             fprintf(stderr, "pft %i val=%f ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
           }
           /* Bugfix: newcropval is the new crop pft sum, so don't add it to the outhurttpftval[MAXPFT] -adv */
-          printf("crop: %f ",newcropval / ROUND_PREC);
-          printf("\n");
+          fprintf(stderr, "crop: %f ",newcropval / ROUND_PREC);
+          fprintf(stderr, "\n");
 #endif            
        }
         outhurttpftval[maxpftid][outgrid] = outhurttpftval[maxpftid][outgrid] - removepftsum;
        if (outhurttpftval[maxpftid][outgrid] < 0.0) {
           // in some cases maxpftid may be bare ground in order to not have id-val mismatches above
 #ifdef DEBUG            
-          printf("balance pft sum in sethurttcrop, subtracting bare\n");
-          printf("bare: %f\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
-          printf("outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
+          fprintf(stderr, "balance pft sum in sethurttcrop, subtracting bare\n");
+          fprintf(stderr, "bare: %f\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+          fprintf(stderr, "outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
           
 #endif                        
           if (maxpftid != BPFT) {
@@ -4621,12 +4621,12 @@ void sethurttcrop(int outgrid, int modyear, int calcyear,
              outhurttpftval[maxpftid][outgrid] = 0.0;
           }
 #ifdef DEBUG            
-          printf("adjusted bare: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
-          printf("adjusted outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
+          fprintf(stderr, "adjusted bare: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+          fprintf(stderr, "adjusted outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
 #endif                        
           if (outhurttpftval[BPFT][outgrid] < 0) {
              if (outhurttpftval[BPFT][outgrid] != 0) {
-                printf("Error: balance pft sum in sethurttcrop sends adjusted bare negative: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+                fprintf(stderr, "Error: balance pft sum in sethurttcrop sends adjusted bare negative: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
              }
              outhurttpftval[BPFT][outgrid] = 0;
           }
@@ -4847,7 +4847,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
             }   // end remove trees if-else
             // add herbaceous
             if (herbaceouspftsum > 0.0) {
-                //printf("\nEnsure herb pasture, herb>0: outgrid = %i \n", outgrid);
+                //fprintf(stderr, "\nEnsure herb pasture, herb>0: outgrid = %i \n", outgrid);
                 for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
                     //outhurttpftval[outpft][outgrid] = outhurttpftval[outpft][outgrid] +
                      //round(outhurttpftval[outpft][outgrid] * addherbaceouspftsum / herbaceouspftsum);
@@ -4856,7 +4856,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
                 }
             }
             else if (baseherbpftsum > 0.0) {
-                //printf("\nEnsure herb pasture, baseherb>0: outgrid = %i \n", outgrid);
+                //fprintf(stderr, "\nEnsure herb pasture, baseherb>0: outgrid = %i \n", outgrid);
                 // add the grass and shrub using the proportions of the nearest reference year grid cell with grass in it (which is the model year prior to crop adjustment)
                 for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
                     //outhurttpftval[outpft][outgrid] =
@@ -4866,7 +4866,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
                 }
             }
             else {
-                //printf("\nEnsure herb pasture, else: outgrid = %i \n", outgrid);
+                //fprintf(stderr, "\nEnsure herb pasture, else: outgrid = %i \n", outgrid);
                 // add herbaceous in equal proportions and make sure to follow the latitutde rules for grass
                 // add the grass based on latitude:
                 //  need to account for arctic vs non-arctic
@@ -4920,13 +4920,13 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
             for (outpft = SEMPFT;outpft <= SDBPFT;outpft++) {
                 shrubpftsum = shrubpftsum + outhurttpftval[outpft][outgrid];
             }
-            printf("\nEnsure herb pasture: outgrid = %i \n", outgrid);
-            printf("Ensure herb pasture: replacing %f tree pfts with herbaceous\n", addherbaceouspftsum);
-            printf("Ensure herb pasture: treepftsum = %f\n", treepftsum);
-            printf("Ensure herb pasture: herbaceouspftsum = %f\n", herbaceouspftsum);
-            printf("Ensure herb pasture: vegpftsum = %f\n", vegpftsum);
-            printf("Ensure herb pasture: grasspftsum = %f\n", grasspftsum);
-            printf("Ensure herb pasture: shrubpftsum = %f\n\n", shrubpftsum);
+            fprintf(stderr, "\nEnsure herb pasture: outgrid = %i \n", outgrid);
+            fprintf(stderr, "Ensure herb pasture: replacing %f tree pfts with herbaceous\n", addherbaceouspftsum);
+            fprintf(stderr, "Ensure herb pasture: treepftsum = %f\n", treepftsum);
+            fprintf(stderr, "Ensure herb pasture: herbaceouspftsum = %f\n", herbaceouspftsum);
+            fprintf(stderr, "Ensure herb pasture: vegpftsum = %f\n", vegpftsum);
+            fprintf(stderr, "Ensure herb pasture: grasspftsum = %f\n", grasspftsum);
+            fprintf(stderr, "Ensure herb pasture: shrubpftsum = %f\n\n", shrubpftsum);
         } // end if herbaceous need to replace trees (addheraceouspftsum > 0.0)
     } // end if ensure HERBPASTURE
     
@@ -5020,15 +5020,15 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
    if( availpotvegherbpftsum < 0.0 ) { availpotvegherbpftsum = 0.0; }
    availpotvegtreeherbpftsum = availpotvegtreepftsum + availpotvegherbpftsum;
 #ifdef DEBUG
-   printf("\nCheck availpotveg pasture: outgrid = %i\n", outgrid);
-   printf("Check availpotveg: treepftsum = %f\n", treepftsum);
-   printf("Check availpotveg: herbaceouspftsum = %f\n", herbaceouspftsum);
-   printf("Check availpotveg: potvegtreepftsum = %f\n", potvegtreepftsum);
-   printf("Check availpotveg: addpftsum = %f\n", addpftsum);
-   printf("Check availpotveg: potvegherbaceouspftsum = %f\n", potvegherbaceouspftsum);
-   printf("Check availpotveg: availpotvegtreepftsum = %f\n", availpotvegtreepftsum);
-   printf("Check availpotveg: availpotvegherbpftsum = %f\n", availpotvegherbpftsum);
-   printf("Check availpotveg: availpotvegtreeherbpftsum = %f\n\n", availpotvegtreeherbpftsum);
+   fprintf(stderr, "\nCheck availpotveg pasture: outgrid = %i\n", outgrid);
+   fprintf(stderr, "Check availpotveg: treepftsum = %f\n", treepftsum);
+   fprintf(stderr, "Check availpotveg: herbaceouspftsum = %f\n", herbaceouspftsum);
+   fprintf(stderr, "Check availpotveg: potvegtreepftsum = %f\n", potvegtreepftsum);
+   fprintf(stderr, "Check availpotveg: addpftsum = %f\n", addpftsum);
+   fprintf(stderr, "Check availpotveg: potvegherbaceouspftsum = %f\n", potvegherbaceouspftsum);
+   fprintf(stderr, "Check availpotveg: availpotvegtreepftsum = %f\n", availpotvegtreepftsum);
+   fprintf(stderr, "Check availpotveg: availpotvegherbpftsum = %f\n", availpotvegherbpftsum);
+   fprintf(stderr, "Check availpotveg: availpotvegtreeherbpftsum = %f\n\n", availpotvegtreeherbpftsum);
 #endif
    if (herbaceouspftsum <= 0) {
       // if this is the case then no pfts are removed or added below, so this calculation isn't used
@@ -5041,38 +5041,38 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
    if( availpotveggrasspftsum < 0.0 ) { availpotveggrasspftsum = 0.0; }
    if( availpotvegshrubpftsum < 0.0 ) { availpotvegshrubpftsum = 0.0; }
 #ifdef DEBUG
-   printf("Check availpotveg: potveggrasspftsum = %f\n", potveggrasspftsum);
-   printf("Check availpotveg: grasspftsum = %f\n", grasspftsum);
-   printf("Check availpotveg: potvegshrubpftsum = %f\n", potvegshrubpftsum);
-   printf("Check availpotveg: shrubpftsum = %f\n", shrubpftsum);
+   fprintf(stderr, "Check availpotveg: potveggrasspftsum = %f\n", potveggrasspftsum);
+   fprintf(stderr, "Check availpotveg: grasspftsum = %f\n", grasspftsum);
+   fprintf(stderr, "Check availpotveg: potvegshrubpftsum = %f\n", potvegshrubpftsum);
+   fprintf(stderr, "Check availpotveg: shrubpftsum = %f\n", shrubpftsum);
 #endif
 	 
    // check for errors, but if they are over 100 they can be corrected here
    if (removepftsum < 0.0 - TOLERANCE || removepftsum > 100.0 + TOLERANCE) {
-      printf("Error in add pasture removepftsum %f\n",removepftsum);
+      fprintf(stderr, "Error in add pasture removepftsum %f\n",removepftsum);
    }
    if (availablepasturesum < 0.0 - TOLERANCE || availablepasturesum > 100.0 + TOLERANCE) {
-      printf("Error in add pasture availablecropsum %f\n",removepftsum);
+      fprintf(stderr, "Error in add pasture availablecropsum %f\n",removepftsum);
    }
    if (removepftsum > 100.0) { removepftsum = 100.0; }
    if (availablepasturesum > 100.0) { availablepasturesum = 100.0; }
    
 	if (removepftsum > 0.0) {		// pasture (grass) being added
 #ifdef DEBUG
-		printf("\naddpasture, outgrid = %i\n", outgrid);
-		printf("basepasturepftsum: %f\n",basepasturepftsum);
-      printf("inhurttbasepasture[outgrid]: %f\n",inhurttbasepasture[outgrid]);
-      printf("availablepasturesum: %f\n",availablepasturesum);
-		printf("outpasturesum: %f\n",outpasturesum);
-      printf("inhurttpasture[outgrid]: %f\n",inhurttpasture[outgrid]);
-		printf("removepftsum: %f\n", removepftsum);
-		printf("treepftsum: %f\n", treepftsum);
-      printf("availabletreepftsum: %f\n", availabletreepftsum);
-      printf("pasturetreepftsum: %f\n", pasturetreepftsum);
-		printf("shrubpftsum: %f\n", shrubpftsum);
-		printf("grasspftsum: %f\n", grasspftsum);
-      printf("herbaceouspftsum: %f\n", herbaceouspftsum);
-      printf("availableherbaceouspftsum: %f\n", availableherbaceouspftsum);
+		fprintf(stderr, "\naddpasture, outgrid = %i\n", outgrid);
+		fprintf(stderr, "basepasturepftsum: %f\n",basepasturepftsum);
+      fprintf(stderr, "inhurttbasepasture[outgrid]: %f\n",inhurttbasepasture[outgrid]);
+      fprintf(stderr, "availablepasturesum: %f\n",availablepasturesum);
+		fprintf(stderr, "outpasturesum: %f\n",outpasturesum);
+      fprintf(stderr, "inhurttpasture[outgrid]: %f\n",inhurttpasture[outgrid]);
+		fprintf(stderr, "removepftsum: %f\n", removepftsum);
+		fprintf(stderr, "treepftsum: %f\n", treepftsum);
+      fprintf(stderr, "availabletreepftsum: %f\n", availabletreepftsum);
+      fprintf(stderr, "pasturetreepftsum: %f\n", pasturetreepftsum);
+		fprintf(stderr, "shrubpftsum: %f\n", shrubpftsum);
+		fprintf(stderr, "grasspftsum: %f\n", grasspftsum);
+      fprintf(stderr, "herbaceouspftsum: %f\n", herbaceouspftsum);
+      fprintf(stderr, "availableherbaceouspftsum: %f\n", availableherbaceouspftsum);
 #endif
 		// !!! preferentially add pasture to non-forest PFTs, or to forest PFTs -adv
         // this code is now set up to accommodate chronological land conversion assumptions -adv
@@ -5135,7 +5135,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 			setherbfracrem = setherbfracrem - 1.0;
 			herbaceousfracremain = propherbaceousfracremain + setherbfracrem * (maxherbaceousfracremain - propherbaceousfracremain);
 		} else {
-         printf("Error: setherbfracrem %f not within input range of 0 to 2 in sethurttpasture(); setting to proportional value of 1\n", setherbfracrem);
+         fprintf(stderr, "Error: setherbfracrem %f not within input range of 0 to 2 in sethurttpasture(); setting to proportional value of 1\n", setherbfracrem);
          setherbfracrem = 1;
          herbaceousfracremain = minherbaceousfracremain + setherbfracrem * (propherbaceousfracremain - minherbaceousfracremain);
 		}
@@ -5153,8 +5153,8 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 		if (treefracremain < 0.0) { treefracremain = 0.0; }
 		if (treefracremain > 1.0) { treefracremain = 1.0; }
 #ifdef DEBUG		
-        printf("herbaceousfracremain: %f of availableherbaceouspftsum\n", herbaceousfracremain);
-        printf("treefracremain: %f of availabletreepftsum\n", treefracremain);
+        fprintf(stderr, "herbaceousfracremain: %f of availableherbaceouspftsum\n", herbaceousfracremain);
+        fprintf(stderr, "treefracremain: %f of availabletreepftsum\n", treefracremain);
 #endif
 		 
         // now calculate the remaining fractions of the total of each pft
@@ -5168,7 +5168,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
            grasspftsum = 0.0;
             herbaceousfracremain = (pastureherbaceouspftsum + availableherbaceouspftsum * herbaceousfracremain) / herbaceouspftsum;
 #ifdef DEBUG
-            printf("herbaceousfracremain: %f of herbaceouspftsum\n", herbaceousfracremain);
+            fprintf(stderr, "herbaceousfracremain: %f of herbaceouspftsum\n", herbaceousfracremain);
 #endif
             for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
                 //outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] * herbaceousfracremain);
@@ -5185,7 +5185,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
         if (treepftsum > 0.0) {
             treefracremain = (pasturetreepftsum + availabletreepftsum * treefracremain) / treepftsum;
 #ifdef DEBUG
-            printf("treefracremain: %f of treepftsum\n", treefracremain);
+            fprintf(stderr, "treefracremain: %f of treepftsum\n", treefracremain);
 #endif
             for (outpft = NEMPFT;outpft <= BDBPFT;outpft++) {
                 //outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] * treefracremain);
@@ -5195,7 +5195,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
         } else { outtreepftsum = treepftsum; }
         
 #ifdef DEBUG
-      printf("outherbaceouspftsum before grass addition: %f\n", outherbaceouspftsum);
+      fprintf(stderr, "outherbaceouspftsum before grass addition: %f\n", outherbaceouspftsum);
 #endif
 
 		// add the pasture grass and add to the herbaceous diagnostic
@@ -5269,8 +5269,8 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 			 
 		}	// end if-else for adding pasture grass
 #ifdef DEBUG                
-		printf("outtreepftsum: %f\n", outtreepftsum);
-		printf("outherbaceouspftsum: %f\n", outherbaceouspftsum);
+		fprintf(stderr, "outtreepftsum: %f\n", outtreepftsum);
+		fprintf(stderr, "outherbaceouspftsum: %f\n", outherbaceouspftsum);
 #endif
             /* no longer valid code
             // can't check this anymore because removepftsum is now in relation to available pft amounts, not total
@@ -5279,20 +5279,20 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
             // this check takes into account rounding error up to 1 unit (percent) of veg land unit
             if (setherbfracrem == 0.0 && removepftsum >= herbaceouspftsum &&
                 (outherbaceouspftsum < -1.0 || outherbaceouspftsum > 1.0)) {
-                printf("notreemax when adding pasture when all herbaceous and some trees need to be removed\n");
+                fprintf(stderr, "notreemax when adding pasture when all herbaceous and some trees need to be removed\n");
             }
             if (setherbfracrem == 0.0 && removepftsum < herbaceouspftsum && outtreepftsum != treepftsum) {
-                printf("notreemax when adding pasture when no trees need to be removed\n");
+                fprintf(stderr, "notreemax when adding pasture when no trees need to be removed\n");
             }
             
             // check forest minimization
             // this check takes into account rounding error up to 1 unit (percent) of veg land unit
             if (setherbfracrem == 2.0 && removepftsum >= treepftsum &&
                 (outtreepftsum < -1.0 || outtreepftsum > 1.0)) {
-                printf("notreemin when adding pasture when all trees and some herbaceous need to be removed\n");
+                fprintf(stderr, "notreemin when adding pasture when all trees and some herbaceous need to be removed\n");
             }
             if (setherbfracrem == 2.0 && removepftsum < treepftsum && outherbaceouspftsum != herbaceouspftsum) {
-                printf("notreemin when adding pasture when no herbaceous need to be removed\n");
+                fprintf(stderr, "notreemin when adding pasture when no herbaceous need to be removed\n");
             }
              // end no longer valid code
             */
@@ -5302,27 +5302,27 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 	 
 		 if (addpftsum > 0.0) {
 #ifdef DEBUG
-			 printf("\nremovepasture, outgrid = %i\n", outgrid);
-          printf("basepasturepftsum: %f\n",basepasturepftsum);
-          printf("inhurttbasepasture[outgrid]: %f\n",inhurttbasepasture[outgrid]);
-			 printf("outpasturesum: %f\n",outpasturesum);
-          printf("inhurttpasture[outgrid]: %f\n",inhurttpasture[outgrid]);
-			 printf("addpftsum: %f\n", addpftsum);
-			 printf("availpotvegtreepftsum: %f\n", availpotvegtreepftsum);
-			 printf("availpotvegherbpftsum: %f\n", availpotvegherbpftsum);
-          printf("treepftsum: %f\n", treepftsum);
-          printf("pasturetreepftsum: %f\n", pasturetreepftsum);
+			 fprintf(stderr, "\nremovepasture, outgrid = %i\n", outgrid);
+          fprintf(stderr, "basepasturepftsum: %f\n",basepasturepftsum);
+          fprintf(stderr, "inhurttbasepasture[outgrid]: %f\n",inhurttbasepasture[outgrid]);
+			 fprintf(stderr, "outpasturesum: %f\n",outpasturesum);
+          fprintf(stderr, "inhurttpasture[outgrid]: %f\n",inhurttpasture[outgrid]);
+			 fprintf(stderr, "addpftsum: %f\n", addpftsum);
+			 fprintf(stderr, "availpotvegtreepftsum: %f\n", availpotvegtreepftsum);
+			 fprintf(stderr, "availpotvegherbpftsum: %f\n", availpotvegherbpftsum);
+          fprintf(stderr, "treepftsum: %f\n", treepftsum);
+          fprintf(stderr, "pasturetreepftsum: %f\n", pasturetreepftsum);
 #endif
          
           // check for errors, but if over 100 they can be corrected here
           if (addpftsum < 0.0 - TOLERANCE || addpftsum > 100.0 + TOLERANCE) {
-             printf("Error in add pasture removepftsum %f\n",removepftsum);
+             fprintf(stderr, "Error in add pasture removepftsum %f\n",removepftsum);
           }
           if (addpftsum > 100.0) { addpftsum = 100.0; }
           
           // remove herbaceous pfts
           if (herbaceouspftsum <= 0.0) {
-             printf("Error: herbaceouspftsum <= 0 when addpftsum > 0\n");
+             fprintf(stderr, "Error: herbaceouspftsum <= 0 when addpftsum > 0\n");
              for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
                 outhurttpftval[outpft][outgrid] = 0.0;
              }
@@ -5330,16 +5330,16 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
           else {
              for (outpft = SEMPFT;outpft <= GC4PFT;outpft++) {
 #ifdef DEBUG
-                printf("pft %i: outhurttpftval before calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
-                printf("pft %i: outhurttpftval before rounding: %f\n", outpft, outhurttpftval[outpft][outgrid] * (herbaceouspftsum - addpftsum) / herbaceouspftsum);
-                printf("pft %i: multiplier: %f\n", outpft, (herbaceouspftsum - addpftsum) / herbaceouspftsum);
+                fprintf(stderr, "pft %i: outhurttpftval before calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
+                fprintf(stderr, "pft %i: outhurttpftval before rounding: %f\n", outpft, outhurttpftval[outpft][outgrid] * (herbaceouspftsum - addpftsum) / herbaceouspftsum);
+                fprintf(stderr, "pft %i: multiplier: %f\n", outpft, (herbaceouspftsum - addpftsum) / herbaceouspftsum);
 #endif
                 //outhurttpftval[outpft][outgrid] =
                   //round(outhurttpftval[outpft][outgrid] * (herbaceouspftsum - addpftsum) / herbaceouspftsum);
                 outhurttpftval[outpft][outgrid] =
                   outhurttpftval[outpft][outgrid] * (herbaceouspftsum - addpftsum) / herbaceouspftsum;
 #ifdef DEBUG
-                printf("pft %i: outhurttpftval after calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
+                fprintf(stderr, "pft %i: outhurttpftval after calc: %f\n", outpft, outhurttpftval[outpft][outgrid]);
 #endif
              }
           }
@@ -5348,7 +5348,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 			 if (availpotvegtreepftsum >= addpftsum) {
 				 pastureavailpotvegtreepftval[outgrid] = 1;
 #ifdef DEBUG                                 
-				 printf("trees can replace all removed pasture\n");
+				 fprintf(stderr, "trees can replace all removed pasture\n");
 #endif                                 
 			 }
 			 else {
@@ -5434,7 +5434,7 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 					 setavailtreefracrem = setavailtreefracrem - 1.0;
 					 availtreefracremain = propavailtreefracremain + setavailtreefracrem * (maxavailtreefracremain - propavailtreefracremain);
 				 } else {
-                printf("Error: setavailtreefracrem %f not within input range of 0 to 2 in sethurttpasture(); setting it to proportional value of 1\n", setavailtreefracrem);
+                fprintf(stderr, "Error: setavailtreefracrem %f not within input range of 0 to 2 in sethurttpasture(); setting it to proportional value of 1\n", setavailtreefracrem);
                 setavailtreefracrem = 1;
                 availtreefracremain = minavailtreefracremain + setavailtreefracrem * (propavailtreefracremain - minavailtreefracremain);
 				 }
@@ -5454,21 +5454,21 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 				 if (availtreefracremain < 0.0) { availtreefracremain = 0.0; }
 				 if (availtreefracremain > 1.0) { availtreefracremain = 1.0; }
 #ifdef DEBUG				 
-				 printf("availtreefracremain: %f\n", availtreefracremain);
-				 printf("availherbfracremain: %f\n", availherbfracremain);
-             printf("availpotvegtreepftsum before calcs: %f\n", availpotvegtreepftsum);
-             printf("potvegtreepftsum before calcs: %f\n", potvegtreepftsum);
-             printf("availpotvegherbpftsum before calcs: %f\n", availpotvegherbpftsum);
-             printf("availpotveggrasspftsum before calcs: %f\n", availpotveggrasspftsum);
-             printf("potvegshrubpftsum before calcs: %f\n", potvegshrubpftsum);
-             printf("potveggrasspftsum before calcs: %f\n", potveggrasspftsum);
+				 fprintf(stderr, "availtreefracremain: %f\n", availtreefracremain);
+				 fprintf(stderr, "availherbfracremain: %f\n", availherbfracremain);
+             fprintf(stderr, "availpotvegtreepftsum before calcs: %f\n", availpotvegtreepftsum);
+             fprintf(stderr, "potvegtreepftsum before calcs: %f\n", potvegtreepftsum);
+             fprintf(stderr, "availpotvegherbpftsum before calcs: %f\n", availpotvegherbpftsum);
+             fprintf(stderr, "availpotveggrasspftsum before calcs: %f\n", availpotveggrasspftsum);
+             fprintf(stderr, "potvegshrubpftsum before calcs: %f\n", potvegshrubpftsum);
+             fprintf(stderr, "potveggrasspftsum before calcs: %f\n", potveggrasspftsum);
 #endif                                 
 			 
 				 // add tree pfts by potential proportion
 				 // if there is no potential tree veg then these outhurttpftvals do not change
 				 outavailpotvegtreepftsum = availpotvegtreepftsum;
 #ifdef DEBUG
-             printf("outavailpotvegtreepftsum before calcs: %f\n", outavailpotvegtreepftsum);
+             fprintf(stderr, "outavailpotvegtreepftsum before calcs: %f\n", outavailpotvegtreepftsum);
 #endif
 				 if(potvegtreepftsum > 0.0) {
 					 for (outpft = NEMPFT;outpft <= BDBPFT;outpft++) {
@@ -5492,17 +5492,17 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
 				 removeavailpotveggrass = availpotveggrasspftsum * (1.0 - availherbfracremain);
 				 removeavailpotvegshrub = removeavailpotvegherb - removeavailpotveggrass;
 #ifdef DEBUG
-             printf("outavailpotvegherbpftsum before calcs: %f\n", outavailpotvegherbpftsum);
-             printf("removeavailpotvegherb: %f\n", removeavailpotvegherb);
-             printf("removeavailpotveggrass: %f\n", removeavailpotveggrass);
-             printf("removeavailpotvegshrub: %f\n", removeavailpotvegshrub);
+             fprintf(stderr, "outavailpotvegherbpftsum before calcs: %f\n", outavailpotvegherbpftsum);
+             fprintf(stderr, "removeavailpotvegherb: %f\n", removeavailpotvegherb);
+             fprintf(stderr, "removeavailpotveggrass: %f\n", removeavailpotveggrass);
+             fprintf(stderr, "removeavailpotvegshrub: %f\n", removeavailpotvegshrub);
 #endif
 				 if(potveggrasspftsum > 0.0) {
 					 for (outpft = GA3PFT;outpft <= GC4PFT;outpft++) {
 #ifdef DEBUG
-                   printf("grass pft %i:\n", outpft);
-                   printf("outhurttpftval before rounding: %f:\n", outhurttpftval[outpft][outgrid] + inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum);
-                   printf("added term before rounding: %f:\n", inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum);
+                   fprintf(stderr, "grass pft %i:\n", outpft);
+                   fprintf(stderr, "outhurttpftval before rounding: %f:\n", outhurttpftval[outpft][outgrid] + inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum);
+                   fprintf(stderr, "added term before rounding: %f:\n", inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum);
 #endif
 						 //outhurttpftval[outpft][outgrid] = round(outhurttpftval[outpft][outgrid] + inpotvegpftval[outpft][outgrid] *
 																 //removeavailpotveggrass / potveggrasspftsum);
@@ -5513,9 +5513,9 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
                    outavailpotvegherbpftsum = outavailpotvegherbpftsum -
                      inpotvegpftval[outpft][outgrid] * removeavailpotveggrass / potveggrasspftsum;
 #ifdef DEBUG
-                   printf("inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
-                   printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
-                   printf("outhurttpftval after calc: %f:\n", outhurttpftval[outpft][outgrid]);
+                   fprintf(stderr, "inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
+                   fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+                   fprintf(stderr, "outhurttpftval after calc: %f:\n", outhurttpftval[outpft][outgrid]);
 #endif
 					 }
 				 } else { potveggrasspftsum = 0.0; }
@@ -5531,36 +5531,36 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
                    outavailpotvegherbpftsum = outavailpotvegherbpftsum -
                      inpotvegpftval[outpft][outgrid] * removeavailpotvegshrub / potvegshrubpftsum;
 #ifdef DEBUG
-                   printf("shrub pft %i:\n", outpft);
-                   printf("inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
-                   printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+                   fprintf(stderr, "shrub pft %i:\n", outpft);
+                   fprintf(stderr, "inpotvegpftval: %f\n", inpotvegpftval[outpft][outgrid]);
+                   fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
 #endif
 					 }
 				 } else { potvegshrubpftsum = 0.0; }
 #ifdef DEBUG			
-				 printf("outavailpotvegtreepftsum: %f\n", outavailpotvegtreepftsum);
-				 printf("outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
+				 fprintf(stderr, "outavailpotvegtreepftsum: %f\n", outavailpotvegtreepftsum);
+				 fprintf(stderr, "outavailpotvegherbpftsum: %f\n", outavailpotvegherbpftsum);
 #endif                                 
 				 // check forest maximization
 				 // this check takes into account rounding error up to 1/100 percent of veg land unit
 				 if (setavailtreefracrem == 0.0 && addpftsum >= availpotvegtreepftsum &&
 					 (outavailpotvegtreepftsum < -0.01 || outavailpotvegtreepftsum > 0.01)) {
-                printf("Error: notreemax when removing pasture and all avail trees and some herbaceous are added\n");
+                fprintf(stderr, "Error: notreemax when removing pasture and all avail trees and some herbaceous are added\n");
 				 }
 				 if (setavailtreefracrem == 0.0 && addpftsum < availpotvegtreepftsum &&
 					 (outavailpotvegherbpftsum - availpotvegherbpftsum > 0.01 || outavailpotvegherbpftsum - availpotvegherbpftsum < -0.01) ) {
-					 printf("Error: notreemax when removing pasture and only avail trees should be added\n");
+					 fprintf(stderr, "Error: notreemax when removing pasture and only avail trees should be added\n");
 				 }
 				 
 				 // check forest minimization
 				 // this check takes into account rounding error up to 1/100 percent of veg land unit
 				 if (setavailtreefracrem == 2.0 && addpftsum >= availpotvegherbpftsum &&
 					 (outavailpotvegherbpftsum < -0.01 || outavailpotvegherbpftsum > 0.01)) {
-					 printf("Error: notreemin when removing pasture and all avail herbaceous and some trees are added\n");
+					 fprintf(stderr, "Error: notreemin when removing pasture and all avail herbaceous and some trees are added\n");
 				 }
 				 if (setavailtreefracrem == 2.0 && addpftsum < availpotvegherbpftsum &&
 					 (outavailpotvegtreepftsum - availpotvegtreepftsum > 0.01 || outavailpotvegtreepftsum - availpotvegtreepftsum < -0.01) ) {
-					 printf("Error: notreemin when removing pasture and only avail herbaceous should be added\n");
+					 fprintf(stderr, "Error: notreemin when removing pasture and only avail herbaceous should be added\n");
 				 }
 				 
 			} // end else potential veg based additoin of pfts
@@ -5596,12 +5596,12 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
       addpftsum = (100.0 * ROUND_PREC) - updatedpftsum;
       if (addpftsum >= 0.0) {
 #ifdef DEBUG            
-         printf("Pasture Addsum = %f; before adjustment to maxpftid=%i\n",addpftsum / ROUND_PREC, maxpftid);
+         fprintf(stderr, "Pasture Addsum = %f; before adjustment to maxpftid=%i\n",addpftsum / ROUND_PREC, maxpftid);
          
          for (temppftid = 0; temppftid < MAXPFT; temppftid++) {
-            printf("pft %i val=%f, ",temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
+            fprintf(stderr, "pft %i val=%f, ",temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
          }
-         printf("\n");
+         fprintf(stderr, "\n");
 #endif
       }
       outhurttpftval[maxpftid][outgrid] = outhurttpftval[maxpftid][outgrid] + addpftsum;
@@ -5612,20 +5612,20 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
       removepftsum = updatedpftsum - (100.0 * ROUND_PREC);
       if (removepftsum >= 0.0) {
 #ifdef DEBUG            
-         printf("Pasture Removesum = %f; before adjustment to maxpftid=%i\n",removepftsum / ROUND_PREC, maxpftid);
+         fprintf(stderr, "Pasture Removesum = %f; before adjustment to maxpftid=%i\n",removepftsum / ROUND_PREC, maxpftid);
          
          for (temppftid = 0; temppftid < MAXPFT; temppftid++) {
-            printf("pft %i val=%f, ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
+            fprintf(stderr, "pft %i val=%f, ", temppftid, outhurttpftval[temppftid][outgrid] / ROUND_PREC);
          }
-         printf("\n");
+         fprintf(stderr, "\n");
 #endif
       }
       outhurttpftval[maxpftid][outgrid] = outhurttpftval[maxpftid][outgrid] - removepftsum;
       if (outhurttpftval[maxpftid][outgrid] < 0.0) {
 #ifdef DEBUG            
-         printf("balance pft sum in sethurttpasture, subtracting bare\n");
-         printf("bare: %f\n\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
-         printf("outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
+         fprintf(stderr, "balance pft sum in sethurttpasture, subtracting bare\n");
+         fprintf(stderr, "bare: %f\n\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+         fprintf(stderr, "outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
 #endif                        
          if (maxpftid != BPFT) {
             // adjust bare ground only if it is not maxpftid
@@ -5636,12 +5636,12 @@ void sethurttpasture(int outgrid, int modyear, int calcyear,
             outhurttpftval[maxpftid][outgrid] = 0.0;
          }
 #ifdef DEBUG
-         printf("adjusted bare: %f\n\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
-         printf("adjusted outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
+         fprintf(stderr, "adjusted bare: %f\n\n", outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+         fprintf(stderr, "adjusted outhurttpftval[maxpftid][outgrid]: %f\n", outhurttpftval[maxpftid][outgrid] / ROUND_PREC);
 #endif
          if (outhurttpftval[BPFT][outgrid] < 0) {
             if (outhurttpftval[BPFT][outgrid] != 0) {
-               printf("Error: balance pft sum in sethurttpasture sends adjusted bare negative: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
+               fprintf(stderr, "Error: balance pft sum in sethurttpasture sends adjusted bare negative: %f\n",outhurttpftval[BPFT][outgrid] / ROUND_PREC);
             }
             outhurttpftval[BPFT][outgrid] = 0;
          }
@@ -5693,7 +5693,7 @@ void sethurttlanduse(int outgrid) {
     /* biomass density of land being selected for harvest, and harvest on forest vs. non-forest could be used */
     /* here to improve methods                                       -lpc    */
 
-	//printf("outgrid=%i\tpp=%f\tps=%f\tihvh1=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid], inhurttvh1[outgrid]);
+	//fprintf(stderr, "outgrid=%i\tpp=%f\tps=%f\tihvh1=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid], inhurttvh1[outgrid]);
 	
    // round these to the same precision as the pft outputs
    // this means 100*ROUND_PREC because these are fractions, while pfts are percents
@@ -5702,12 +5702,12 @@ void sethurttlanduse(int outgrid) {
 #ifdef DEBUG
 if(0){
 //if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
-   printf("sethurttlanduse before calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
-   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
-   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
-   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
-   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
-   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+   fprintf(stderr, "sethurttlanduse before calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   fprintf(stderr, "inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   fprintf(stderr, "inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   fprintf(stderr, "inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   fprintf(stderr, "inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   fprintf(stderr, "inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
 }
 #endif
  
@@ -5733,20 +5733,20 @@ if(0){
    
 #ifdef DEBUG
    if (outhurttvh2[outgrid] - (inhurttvh2[outgrid] / 100) < -0.00001) {
-      printf("Warning at outgrid %i: scaled outhurttvh2 %f < orig inhurttvh2 %f\n", outgrid, outhurttvh2[outgrid], inhurttvh2[outgrid] / 100.0);
-      printf("prevprimary=%f, prevsec=%f, inhurttvh2=%f\n", prevprimary[outgrid], prevsecondary[outgrid], inhurttvh2[outgrid]);
+      fprintf(stderr, "Warning at outgrid %i: scaled outhurttvh2 %f < orig inhurttvh2 %f\n", outgrid, outhurttvh2[outgrid], inhurttvh2[outgrid] / 100.0);
+      fprintf(stderr, "prevprimary=%f, prevsec=%f, inhurttvh2=%f\n", prevprimary[outgrid], prevsecondary[outgrid], inhurttvh2[outgrid]);
    }
 #endif
   
 #ifdef DEBUG
 if(0){
 //if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
-   printf("sethurttlanduse after calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
-   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
-   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
-   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
-   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
-   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+   fprintf(stderr, "sethurttlanduse after calc outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   fprintf(stderr, "inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   fprintf(stderr, "inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   fprintf(stderr, "inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   fprintf(stderr, "inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   fprintf(stderr, "inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
 }
 #endif
  
@@ -5799,12 +5799,12 @@ if(0){
 #ifdef DEBUG
 if(0){
 if ((prevprimary[outgrid] + prevsecondary[outgrid]) > 0.0) {
-   printf("sethurttlanduse post-correction outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
-   printf("inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
-   printf("inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
-   printf("inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
-   printf("inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
-   printf("inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
+   fprintf(stderr, "sethurttlanduse post-correction outgrid %i: prevprimary=%f, prevsecondary=%f\n", outgrid, prevprimary[outgrid], prevsecondary[outgrid]);
+   fprintf(stderr, "inhurttvh1=%f, outhurttvh1=%f\n", inhurttvh1[outgrid], outhurttvh1[outgrid]);
+   fprintf(stderr, "inhurttvh2=%f, outhurttvh2=%f\n", inhurttvh2[outgrid], outhurttvh2[outgrid]);
+   fprintf(stderr, "inhurttsh1=%f, outhurttsh1=%f\n", inhurttsh1[outgrid], outhurttsh1[outgrid]);
+   fprintf(stderr, "inhurttsh2=%f, outhurttsh2=%f\n", inhurttsh2[outgrid], outhurttsh2[outgrid]);
+   fprintf(stderr, "inhurttsh3=%f, outhurttsh3=%f\n", inhurttsh3[outgrid], outhurttsh3[outgrid]);
 }
 #endif
 	
@@ -5861,7 +5861,7 @@ calchurtt(int modyear, int calcyear,
                 outhurttgrazing[outgrid] = 0.0;
 	
 #ifdef DEBUG
-       printf("\noutgrid: %i\n", outgrid);
+       fprintf(stderr, "\noutgrid: %i\n", outgrid);
 #endif
        
     	/* put the base year pfts into the output pft array -adv */
@@ -5962,11 +5962,11 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	
 	outyear = *inyear;
 	modyear = outyear - 1;
-	printf("outyear in updateannuallanduse = %li, and modyear = %li \n", outyear, modyear);
+	fprintf(stderr, "outyear in updateannuallanduse = %li, and modyear = %li \n", outyear, modyear);
 	
 	// this allows model year 1849
 	if (outyear < min_year || outyear > max_year) {
-		printf("Invalid Year %li not in range %i - %i\n", outyear, min_year, max_year);
+		fprintf(stderr, "Invalid Year %li not in range %i - %i\n", outyear, min_year, max_year);
 		exit(0);
 	}
 	
@@ -5990,10 +5990,10 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
         double pasture_setherbfracrem_fut = 1.0;          // pasture addition
         double pasture_setavailtreefracrem_fut = 0.0;     // pasture removal
 
-	/* Initialize crop CFT fractions (default: all crop = c3_crop).
-	   TODO: In the future, populate from GCAM per-crop-type output passed
-	   via glmo or a side array from gcam2glm_mod.F90. */
-	init_crop_cft_fractions();
+       /* Initialize crop CFT fractions (default: all crop = c3_crop).
+          TODO: In the future, populate from GCAM per-crop-type output passed
+          via glmo or a side array from gcam2glm_mod.F90. */
+       init_crop_cft_fractions();
 
 	// the following is for standalone mode only
 #ifdef STANDALONE
@@ -6070,7 +6070,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	// create the dynamic crop/pasture file and the dynamic pft file for 1850 start
 	// label the file with the date
 	if (modyear == initial_hist_year || modyear == model_year_1849) {
-		printf("***************\n");
+		fprintf(stderr, "***************\n");
 		t = time(NULL);
 		tm = localtime(&t);
 		strftime(buf,250, "c%m%d%Y", tm);
@@ -6086,12 +6086,12 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		system(msg);
 		sprintf(msg, "chmod 666 %s", dyn_pft_file);
 		system(msg);
-		printf("***************\n");
+		fprintf(stderr, "***************\n");
 	}
 	// create the dynamic crop/pasture file and the dynamic pft file for 2015 start
 	// label the file with the date
 	if (modyear == initial_future_year) {
-		printf("***************\n");
+		fprintf(stderr, "***************\n");
 		t = time(NULL);
 		tm = localtime(&t);
 		strftime(buf,250, "c%m%d%Y", tm);
@@ -6107,7 +6107,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		system(msg);
 		sprintf(msg, "chmod 666 %s", dyn_pft_file);
 		system(msg);
-		printf("***************\n");
+		fprintf(stderr, "***************\n");
 	}
 	
 	if (modyear < initial_future_year){
@@ -6118,9 +6118,9 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		hurttyear = outyear - initial_future_year;  // use this line for future simulations
 	}
 	
-	printf("***************\n");
-	printf("hurttyear index, modyear: %li %li", hurttyear, modyear);
-	printf("\n***************\n");
+	fprintf(stderr, "***************\n");
+	fprintf(stderr, "hurttyear index, modyear: %li %li", hurttyear, modyear);
+	fprintf(stderr, "\n***************\n");
 	
 	// contains GOTHR GSECD GCROP GPAST GURBN LANDMASK ...
    // the historical/future file name has already been sorted out
@@ -6128,13 +6128,13 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		strcpy(filenamestr, in_dir);
       strcat(filenamestr, luh_state_file);  // LUH2 data in LUH1 format (1850 - 2015) - use for historical simulations
 		if (opennetcdf(filenamestr) == 0) {
-			printf("LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		// check that the initial luh year matches the respective initial year (1850 is still the initial year for 1849 run)
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_hist_year) {
-			printf("LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
+			fprintf(stderr, "LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
 			exit(0);
 		}
 	}
@@ -6142,18 +6142,18 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
       strcpy(filenamestr, in_dir);
 		strcat(filenamestr, luh_state_file);  //LUH2 future scenario in LUH1 format - for future simulations (2015-2100)
 		if (opennetcdf(filenamestr) == 0) {
-			printf("LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "LUH file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		// check that the initial luh year matches the respective initial year
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_future_year) {
-			printf("LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
+			fprintf(stderr, "LUH data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
 			exit(0);
 		}
 	}
 	
-	printf("reading in land use data\n");
+	fprintf(stderr, "reading in land use data\n");
 	// just set the first argument to the first year of data
 	// these functions read the data of the first argument into the inhurttbase arrays
 	//   these inhurttbase arrays are overwritten below by the reference year data
@@ -6171,10 +6171,10 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
    }
    
 	// write the glmo array to dynamic crop/pasture file
-	printf("writing in land use data to dynamic crop/pasture file\n");
+	fprintf(stderr, "writing in land use data to dynamic crop/pasture file\n");
 	strcpy(filenamestr,dyn_luh_file);
 	if (opennetcdf(filenamestr) == 0) {
-		printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
+		fprintf(stderr, "Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 		exit(0);
 	}
 	
@@ -6199,13 +6199,13 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		strcpy(filenamestr, in_dir);
       strcat(filenamestr, luh_harvest_file); // LUH2 wood harvest data in LUH1 format (1850 - 2014) - use for historical simulations
 		if (opennetcdf(filenamestr) == 0) {
-			printf("LUH harvest file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "LUH harvest file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		// check that the initial luh harvest year matches the respective initial year (1850 is still the initial year for 1849 run)
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_hist_year) {
-			printf("LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
+			fprintf(stderr, "LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_hist_year);
 			exit(0);
 		}
 	}
@@ -6213,20 +6213,20 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		strcpy(filenamestr, in_dir);
       strcat(filenamestr, luh_harvest_file);  //LUH2 future wood harvest scenario in LUH1 format - use for future simulations (2015-2099)
 		if (opennetcdf(filenamestr) == 0) {
-			printf("LUH harvest file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "LUH harvest file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		// check that the initial luh harvest year matches the respective start year
 		getinithurttyear(&hurttinityear);
 		if((int) hurttinityear != initial_future_year) {
-			printf("LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
+			fprintf(stderr, "LUH harvest data initial year %li does not match model start year %i\n", hurttinityear, initial_future_year);
 			exit(0);
 		}
 	}
 	
 	// Harvest data is used for model year i.e. hurttyear - 1
 	// hurttyear is year of input GLM data
-	printf("reading in harvest data\n");
+	fprintf(stderr, "reading in harvest data\n");
 	hurttinityear = 0;
 	readhurttvh1(hurttinityear, hurttyear-1, ISFUTURE); // hurttinityear is not used here, inhurttvh1
 	readhurttvh2(hurttinityear, hurttyear-1, ISFUTURE); // hurttinityear is not used here, inhurttvh2
@@ -6266,7 +6266,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	/* this function add a record to the time dimension */
 	strcpy(filenamestr, dyn_luh_file);
 	if (opennetcdf(filenamestr) == 0) {
-		printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
+		fprintf(stderr, "Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 		exit(0);
 	}
 
@@ -6323,13 +6323,13 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	// post-2000 is set up here to use the previous year, starting in model year 2001
 	// Note that the output iESM_Dyn_CropPast.nc for previous LUH1 runs has same 2000 data as iESM_Ref_CropPast2000_c10142019.nc
 	
-	printf("reading reference year land use data\n");
+	fprintf(stderr, "reading reference year land use data\n");
 	if (modyear <= hist_ref_year){
       strcpy(filenamestr, in_dir);
 		strcat(filenamestr, luh_hist_ref_file); // use this line for historical simulations
 		
 		if (opennetcdf(filenamestr) == 0) {
-			printf("Reference hurtt pl file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "Reference hurtt pl file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		readhurttdynpasture(hist_ref_year);	// the reference (model) year pasture - original year is 2000
@@ -6342,7 +6342,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	else {
 		strcpy(filenamestr, dyn_luh_file);  //use this line for future simulations
 		if (opennetcdf(filenamestr) == 0) {
-			printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		readhurttdynpasture(modyear);	// the reference (model) year pasture
@@ -6360,7 +6360,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 	// 	because there are no 1849 data in these files and the harvest normalization is currently set to the previous year (output year minus 1)
 	strcpy(filenamestr, dyn_luh_file);
 	if (opennetcdf(filenamestr) == 0) {
-		printf("Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
+		fprintf(stderr, "Dynamic hurtt pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 		exit(0);
 	}
 	if (modyear == model_year_1849) {
@@ -6368,7 +6368,7 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
 		readhurttdynsecondary(initial_hist_year);
 	} else {
 
-printf("ualu dyn file is %s\n", dyn_luh_file);
+fprintf(stderr, "ualu dyn file is %s\n", dyn_luh_file);
 
 		readhurttdynprimary(modyear);
 		readhurttdynsecondary(modyear);
@@ -6391,12 +6391,12 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 	/* the previous year reference begins with model year 2001 to generate a consistent future trajectory */
 	// get the base year clm surface data, including the pfts
 	
-	printf("reading reference year pft data\n");
+	fprintf(stderr, "reading reference year pft data\n");
 	if (modyear <= hist_ref_year) {
       strcpy(filenamestr, in_dir);
 		strcat(filenamestr, pft_hist_ref_file); /*original file */
 		if (opennetcdf(filenamestr) == 0) {
-			printf("Reference pft pl file %s is not available; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "Reference pft pl file %s is not available; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		
@@ -6421,7 +6421,7 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 		strcpy(filenamestr, dyn_pft_file);
 		/* the initial dynamic file is simply a copy of the initial data file, this is done in the build process; see clm.buildnml.csh */
 		if (opennetcdf(filenamestr) == 0) {
-			printf("Dynamic pft pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
+			fprintf(stderr, "Dynamic pft pl file %s has not been created; current modyear = %li\n", filenamestr, modyear);
 			exit(0);
 		}
 		
@@ -6450,7 +6450,7 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 	 alternatively, the harvest data and primary and secondary could be normalized, but this would introduce unnecessary calculations */
 	
 	// terminal/log output
-	printf("writeinhurtt() before normalization to clm vegetated land unit\n");
+	fprintf(stderr, "writeinhurtt() before normalization to clm vegetated land unit\n");
 	writeinhurtt();
 	
 	normglmo(inhurttcrop);
@@ -6460,7 +6460,7 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 	
     /* !!! write these post normalization to the log file also -adv */
 	// the harvest data are not normalized by normglmo, they are normalized in sethurttland and stored in the output arrays
-    printf("writeinhurtt() after non-harvest normalization to clm vegetated land unit\n");
+    fprintf(stderr, "writeinhurtt() after non-harvest normalization to clm vegetated land unit\n");
     writeinhurtt();
     
 	/* get the clm potential vegetation pft data -adv */
@@ -6496,7 +6496,7 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
     // here to the 'also add' comment is for standalone only
 #ifdef STANDALONE
 	
-	printf("write updated land use and harvest data with pfts\n");
+	fprintf(stderr, "write updated land use and harvest data with pfts\n");
 	
 	t = time(NULL);
 	tm = localtime(&t);
@@ -6543,7 +6543,7 @@ printf("ualu dyn file is %s\n", dyn_luh_file);
 	/* this function adds a record to the time dimension of PCT_PFT */
 	strcpy(filenamestr, dyn_pft_file);
 	
-	printf("writing dynamic pft file\n");
+	fprintf(stderr, "writing dynamic pft file\n");
 	
 	if (opennetcdf(filenamestr) == 0) {
 		exit(0);
@@ -6613,13 +6613,13 @@ int main(int argc, char **argv) {
 	char out_dir[1000];
 	
 	if(argc < 3 || argc > 4){
-      printf("Usage:\nThere are two requried arguments and one optional argument:");
-      printf("\n\tFirst argument: Land use state file name:");
-      printf("\n\t\tThis determines which scenario to process");
-      printf("\n\t\tIf this is 1850 then the historical files are used to run a single year to create an 1850 initial file");
-      printf("\n\tSecond argument: Full path to input files");
-      printf("\n\tOptional third argument: Full path to output files");
-      printf("\n\t\tThe defualt path to output files is ./output\n");
+      fprintf(stderr, "Usage:\nThere are two requried arguments and one optional argument:");
+      fprintf(stderr, "\n\tFirst argument: Land use state file name:");
+      fprintf(stderr, "\n\t\tThis determines which scenario to process");
+      fprintf(stderr, "\n\t\tIf this is 1850 then the historical files are used to run a single year to create an 1850 initial file");
+      fprintf(stderr, "\n\tSecond argument: Full path to input files");
+      fprintf(stderr, "\n\tOptional third argument: Full path to output files");
+      fprintf(stderr, "\n\t\tThe defualt path to output files is ./output\n");
 		exit(0);
 	}
 	
@@ -6627,10 +6627,10 @@ int main(int argc, char **argv) {
    
 	if(argc == 3){
 		strcpy(out_dir, "./output");
-		printf("The output path is ./output\n");
+		fprintf(stderr, "The output path is ./output\n");
 	} else {
 		strcpy(out_dir, argv[3]);
-		printf("The output path is %s\n", argv[3]);
+		fprintf(stderr, "The output path is %s\n", argv[3]);
 	}
 	
     int i=0;
