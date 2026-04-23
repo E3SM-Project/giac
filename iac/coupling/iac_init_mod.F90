@@ -159,26 +159,26 @@ contains
        write(iulog, '(A,A)') "surface_co2_downscaling_method = ", trim(surface_co2_downscaling_method)
 
        write(iulog,*) 'future land conversion assumptions:'
-       write(iulog, '(A,I)') "crop_addtreeonly = ",crop_addtreeonly
-       write(iulog, '(A,F)') "crop_setherbfracrem = ",crop_setherbfracrem
-       write(iulog, '(A,F)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
-       write(iulog, '(A,I)') "pasture_addtreeonly = ",pasture_addtreeonly
-       write(iulog, '(A,F)') "pasture_setherbfracrem = ",pasture_setherbfracrem
-       write(iulog, '(A,F)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
+       write(iulog, '(A,I20)') "crop_addtreeonly = ",crop_addtreeonly
+       write(iulog, '(A,F20.17)') "crop_setherbfracrem = ",crop_setherbfracrem
+       write(iulog, '(A,F20.17)') "crop_setavailtreefracrem = ",crop_setavailtreefracrem
+       write(iulog, '(A,I20)') "pasture_addtreeonly = ",pasture_addtreeonly
+       write(iulog, '(A,F20.17)') "pasture_setherbfracrem = ",pasture_setherbfracrem
+       write(iulog, '(A,F20.17)') "pasture_setavailtreefracrem = ",pasture_setavailtreefracrem
 
        write(iulog,*) 'name of dynamic landuse timeseries file:'
        write(iulog, '(A,A)') "fdyndat_ehc = ", trim(fdyndat_ehc)
 
        write(iulog,*) 'rumtime options:'
-       write(iulog, '(A,L)') "read_scalars = ",read_scalars
+       write(iulog, '(A,L10)') "read_scalars = ",read_scalars
        write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
-       write(iulog, '(A,L)') "write_scalars = ",write_scalars
-       write(iulog, '(A,L)') "write_co2 = ",write_co2
-       write(iulog, '(A,L)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
-       write(iulog, '(A,L)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
-       write(iulog, '(A,L)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
-       write(iulog, '(A,L)') "gcam_spinup = ",gcam_spinup
-       write(iulog, '(A,L)') "run_gcam = ",run_gcam
+       write(iulog, '(A,L10)') "write_scalars = ",write_scalars
+       write(iulog, '(A,L10)') "write_co2 = ",write_co2
+       write(iulog, '(A,L10)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
+       write(iulog, '(A,L10)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
+       write(iulog, '(A,L10)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
+       write(iulog, '(A,L10)') "gcam_spinup = ",gcam_spinup
+       write(iulog, '(A,L10)') "run_gcam = ",run_gcam
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)
