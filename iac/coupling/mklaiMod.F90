@@ -130,9 +130,11 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   call check_ret(nf_inq_dimlen(ncidi, dimid, ntim), subname)
 
   if (numpft_i /= numpft+1) then
-     write(6,*)'MKLAI: parameter numpft+1= ',numpft+1, &
+     write(6,*)'WARNING: MKLAI: parameter numpft+1= ',numpft+1, &
           'does not equal input dataset numpft= ',numpft_i
-     stop
+     write(6,*) subname//': Will use the first ',min(numpft_i,numpft+1), &
+          ' PFT layers from file; extra crop PFTs will be zero.'
+     !stop
   endif
   if (ntim /= 12) then
      write(6,*)'MKLAI: must have 12 time samples on input data'
@@ -156,6 +158,12 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   if (ier /= 0) then
      write(6,*)'mklai allocation error'; call abort()
   end if
+  ! Zero-initialize so crop PFT slots absent from file (numpft_i < numpft+1)
+  ! are safely set to 0 rather than uninitialized garbage.
+  mlai_i(:,:)  = 0._r8
+  msai_i(:,:)  = 0._r8
+  mhgtt_i(:,:) = 0._r8
+  mhgtb_i(:,:) = 0._r8
 
   ! Determine mapping weights and map
 

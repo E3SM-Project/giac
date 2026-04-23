@@ -1346,6 +1346,13 @@ subroutine mksurfdat_run(year,plodata)
 
           len(ndims) = 1
           beg(ndims) = ntim
+          ! Clamp the natpft dimension to the actual size of pctnatpft (0:natpft_ub).
+          ! The legacy dynamic land use file may have been written with more natpft entries
+          ! (e.g. 17 for the old non-crop PFT set) than pctnatpft holds (num_natpft+1=15
+          ! with numpft=50). Writing more elements than the array contains causes SIGSEGV.
+          do n = 1, ndims-1
+             len(n) = min(len(n), size(pctnatpft, n))
+          end do
           call check_ret(nf_inq_varid(ncid, 'PCT_NAT_PFT', varid), subname)
           call check_ret(nf_put_vara_double(ncid, varid, beg, len, pctnatpft), subname)
 
@@ -1383,12 +1390,17 @@ subroutine mksurfdat_run(year,plodata)
           ! loop over the pft and harvest data and copy them to iac2lnd_vars
           ! note that pctnatpft and harvest are 2d arrays (assume lon varying
           !    faster), and iac2lnd_vars variables are 3d arrays (lon,lat,type)
-          ! note that pctnatpft is indexed from 0 to numpft (0 to 50 with 51 PFTs)
+          ! note that pctnatpft covers natural PFTs (0:natpft_ub=0:14) and
+          !      pctcft covers crop PFTs (cft_lb:cft_ub=15:50)
           do k=1,iac_ctl%npft
              do n=1,ns_o
                 nj=(n-1)/iac_ctl%nlon+1
                 ni=modulo((n-1), iac_ctl%nlon)+1
-                iac2lnd_vars%pct_pft(ni,nj,k) = pctnatpft(n,k-1)
+                if (k-1 <= natpft_ub) then
+                   iac2lnd_vars%pct_pft(ni,nj,k) = pctnatpft(n,k-1)
+                else
+                   iac2lnd_vars%pct_pft(ni,nj,k) = pctcft(n,k-1)
+                end if
                 if(k <= iac_ctl%nharvest) then
                    iac2lnd_vars%harvest_frac(ni,nj,k) = harvest(n,k)
                 endif

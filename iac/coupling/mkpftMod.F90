@@ -335,13 +335,29 @@ subroutine mkpft(ldomain, mapfname, fpft, ndiag, pctlnd_o, pctpft_o, plodata)
         call check_ret(nf_inq_dimlen (ncid, dimid, numpft_i), subname)
 
         if (numpft_i .ne. numpft+1) then
-           write(6,*) subname//': parameter numpft+1= ',numpft+1, &
-                'does not equal input dataset numpft= ',numpft_i
-           call abort()
+           write(6,*) subname//': WARNING: parameter numpft+1= ',numpft+1, &
+                ' does not equal input dataset numpft= ',numpft_i
+           write(6,*) subname//': Will use the first ',min(numpft_i,numpft+1), &
+                ' PFT layers from file; extra crop PFTs will be zero.'
         endif
-     
+
         call check_ret(nf_inq_varid (ncid, 'PCT_PFT', varid), subname)
-        call check_ret(nf_get_var_double (ncid, varid, pctpft_i), subname)
+
+        ! Zero-initialize so crop PFTs absent from file start at 0
+        pctpft_i(:,:) = 0._r8
+
+        if (numpft_i .ge. numpft+1) then
+           ! File has at least as many PFTs as expected - read all
+           call check_ret(nf_get_var_double (ncid, varid, pctpft_i), subname)
+        else
+           ! File has fewer PFTs than expected (e.g. non-crop 17-PFT file used
+           ! with crop-enabled numpft=50).  Read only the numpft_i layers that
+           ! exist and leave the remainder (crop CFTs) as zero.
+           ! pctpft_i is (ns_i, 0:numpft); layout in memory matches NetCDF
+           ! variable layout for the first numpft_i columns.
+           call check_ret(nf_get_var_double (ncid, varid, &
+                pctpft_i(1:ns_i, 0:numpft_i-1)), subname)
+        endif
 
         call check_ret(nf_close(ncid), subname)
      

@@ -1,10 +1,12 @@
 #define GLMONFLDS 9
-#define PLONFLDS 23
+#define PLONFLDS 57
 
 /*  this declaration matches the one in updateannuallanduse_v2.c  */
 void updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], int *inyear,
 			int *crop_addtreeonly, double *crop_setherbfracrem, double *crop_setavailtreefracrem,
                 int *pasture_addtreeonly, double *pasture_setherbfracrem, double *pasture_setavailtreefracrem);
+
+void set_crop_cft_fractions(double *frac_data, int *ngridcells_ptr);
 
 void updateannuallanduse_(double *glmo[][GLMONFLDS], double *plodata[][PLONFLDS], int *myear,
 		int *crop_addtreeonly, double *crop_setherbfracrem, double *crop_setavailtreefracrem,

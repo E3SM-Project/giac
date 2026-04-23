@@ -335,7 +335,7 @@ call shr_cal_date2ymd(ymd,year,mon,day)
     allocate(rgmax(nregions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate rgmax',ier)
 
-    allocate(gcamo_base(num_iac2elm_landtypes,nglu), stat=ier)
+    allocate(gcamo_base(num_ehc2elm_landtypes,nglu), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamo_base',ier)
     allocate(gcam_crop_area_byglu(iac_num_gcam_crops, nglu), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcam_crop_area_byglu',ier)

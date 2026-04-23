@@ -446,8 +446,9 @@ char dyn_pft_file[500];
    CFT index 'cft' (0-based, where cft=0 is c3_crop/PFT15, cft=35 is willow_irrigated/PFT50).
    The fractions for each grid cell should sum to 1.0 (or 0.0 if no crop).
    Currently initialized with all crop as c3_crop (C3CROPCFT).
-   In the future, this array will be populated from GCAM per-crop-type output. */
-double crop_cft_fraction[NUM_CFT][MAXOUTPIX * MAXOUTLIN];
+   In the future, this array will be populated from GCAM per-crop-type output.
+   Allocated dynamically to avoid bloating the BSS segment (~71 MB). */
+double (*crop_cft_fraction)[MAXOUTPIX * MAXOUTLIN] = NULL;
 
 char *monthname[MAXMONTH] = {"jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"};
 double monthday[12] = {15,46,74,105,135,166,196,227,258,288,319,349};
@@ -2723,6 +2724,14 @@ normglmo(double array[MAXOUTPIX * MAXOUTLIN]) {
 void
 init_crop_cft_fractions(void) {
     int outgrid, icft;
+    if (crop_cft_fraction == NULL) {
+        crop_cft_fraction = (double (*)[MAXOUTPIX * MAXOUTLIN])
+            malloc(sizeof(double) * NUM_CFT * MAXOUTPIX * MAXOUTLIN);
+        if (crop_cft_fraction == NULL) {
+            fprintf(stderr, "init_crop_cft_fractions: malloc failed\n");
+            exit(1);
+        }
+    }
     for (outgrid = 0; outgrid < MAXOUTPIX * MAXOUTLIN; outgrid++) {
         for (icft = 0; icft < NUM_CFT; icft++) {
             crop_cft_fraction[icft][outgrid] = 0.0;
@@ -2748,6 +2757,11 @@ set_crop_cft_fractions(double *frac_data, int *ngridcells_ptr) {
     int outgrid, icft;
     int ngrid = *ngridcells_ptr;
     double total;
+
+    /* Allocate on first call if not yet done */
+    if (crop_cft_fraction == NULL) {
+        init_crop_cft_fractions();
+    }
 
     if (ngrid != MAXOUTPIX * MAXOUTLIN) {
         fprintf(stderr, "WARNING set_crop_cft_fractions: ngridcells=%d != expected %d\n",
@@ -3566,6 +3580,9 @@ readpotvegpft() {
       double *pftpctvalues;
       double pfttotal;
       int outgrid, offsetgrid, inpft, outpftid;
+      int pft_dimids[NC_MAX_VAR_DIMS];
+      size_t pft_dimlen;
+      int file_npfts;
       
       selectedvarcnt = 0;
       
@@ -3573,7 +3590,6 @@ readpotvegpft() {
       
       for (nvarspcnt = 0; nvarspcnt < nvarsp; nvarspcnt ++) {
          nc_inq_varname(innetcdfid, nvarspcnt, varname);
-         /*      nc_inq_var(innetcdfid, nvarspcnt, varname, &vartype, &vardimsp, &vardimidsp, &varattsp); */
          if (strcmp(varname,"PCT_PFT") == 0) {
             selectedvarids[0] = nvarspcnt;
             selectedvarcnt++;
@@ -3582,7 +3598,16 @@ readpotvegpft() {
          }
       }
       
-      varlayers = MAXPFT+1;
+      /* Query actual PFT dimension from the file — may differ from MAXPFT+1
+         if the potential veg file was built with a crop-enabled PFT set.
+         Use the file's value for the malloc so nc_get_var_double never writes
+         past the end of the buffer, but only copy the first MAXPFT layers. */
+      nc_inq_var(innetcdfid, selectedvarids[0], NULL, NULL, NULL, pft_dimids, NULL);
+      nc_inq_dimlen(innetcdfid, pft_dimids[0], &pft_dimlen);
+      file_npfts = (int) pft_dimlen;
+      fprintf(stderr, "readpotvegpftpct: file PCT_PFT has %d PFT layers (MAXPFT=%d)\n", file_npfts, MAXPFT);
+      
+      varlayers = file_npfts;
       varlayers2 = 1;
       pftpctvalues = malloc(sizeof(double) * lonlen * latlen * varlayers * varlayers2);
       nc_get_var_double(innetcdfid,selectedvarids[0],pftpctvalues);
@@ -5990,10 +6015,10 @@ updateannuallanduse_main(double glmo[][GLMONFLDS], double plodata[][PLONFLDS], i
         double pasture_setherbfracrem_fut = 1.0;          // pasture addition
         double pasture_setavailtreefracrem_fut = 0.0;     // pasture removal
 
-       /* Initialize crop CFT fractions (default: all crop = c3_crop).
-          TODO: In the future, populate from GCAM per-crop-type output passed
-          via glmo or a side array from gcam2glm_mod.F90. */
-       init_crop_cft_fractions();
+	/* NOTE: crop_cft_fraction is populated by set_crop_cft_fractions() called
+	   from Fortran (glm2iac_mod.F90) BEFORE updateannuallanduse_main is called.
+	   Do NOT call init_crop_cft_fractions() here - it would overwrite the
+	   GCAM-derived per-crop fractions with the all-c3_crop default every year. */
 
 	// the following is for standalone mode only
 #ifdef STANDALONE

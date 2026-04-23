@@ -54,7 +54,7 @@ contains
          case_name, &
          num_pft, num_harvest, num_lat, num_lon, &
          num_gcam_energy_regions, num_gcam_land_regions, &
-         num_iac2elm_landtypes, num_emiss_sectors, &
+         num_ehc2elm_landtypes, num_emiss_sectors, &
          num_emiss_ctys, num_periods, &
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
@@ -119,7 +119,7 @@ contains
        write(iulog, '(A,I20)') "num_gcam_energy_regions = ", &
                              num_gcam_energy_regions
        write(iulog, '(A,I20)') "num_gcam_land_regions = ",num_gcam_land_regions
-       write(iulog, '(A,I20)') "num_iac2elm_landtypes = ",num_iac2elm_landtypes
+       write(iulog, '(A,I20)') "num_ehc2elm_landtypes = ",num_ehc2elm_landtypes
        write(iulog, '(A,I20)') "num_emiss_sectors = ",num_emiss_sectors
        write(iulog, '(A,I20)') "num_emiss_ctys = ", num_emiss_ctys
        write(iulog, '(A,I20)') "num_periods = ", num_periods

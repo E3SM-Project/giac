@@ -136,7 +136,7 @@ contains
     ! as teh cdata_z structure used in e3sm-space).  This is how we
     ! transmit the namelist variables downstream to all the gcam and
     ! gcam/coupling functions that need them - through gdata.
-    allocate(gcamo(num_iac2elm_landtypes,num_gcam_land_regions), stat=ier)
+    allocate(gcamo(num_ehc2elm_landtypes,num_gcam_land_regions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamo',ier)
     allocate(gcamoemis(num_emiss_sectors,num_gcam_energy_regions), stat=ier)
     if(ier/=0) call mct_die(subName,'allocate gcamoemis',ier)

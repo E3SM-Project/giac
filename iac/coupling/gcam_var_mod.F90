@@ -112,7 +112,7 @@ module gcam_var_mod
   integer, public ::  num_lon             ! number of vertical grid cells
   integer, public ::  num_gcam_energy_regions   ! gcam region number
   integer, public ::  num_gcam_land_regions     ! gcam land units: regionXglu
-  integer, public ::  num_iac2elm_landtypes     ! number of gcamo land fields
+  integer, public ::  num_ehc2elm_landtypes     ! number of gcamo land fields
   integer, public ::  num_emiss_sectors         ! for emis downscaling
   integer, public ::  num_emiss_ctys            ! for emis downscaling
   integer, public ::  num_periods               ! for emis downscaling
