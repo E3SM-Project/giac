@@ -68,7 +68,8 @@ contains
           lnd2iac_vars%hr(i,j,p) = x2z(index_x2z_Sl_hr(p),g)
           lnd2iac_vars%npp(i,j,p) = x2z(index_x2z_Sl_npp(p),g)
           lnd2iac_vars%pftwgt(i,j,p) = x2z(index_x2z_Sl_pftwgt(p),g)
-          lnd2iac_vars%t_ref2m(i,j,p) = x2z(index_x2z_Sl_t_ref2m(p),g)
+          lnd2iac_vars%HDD_accum(i,j,p) = x2z(index_x2z_Sl_HDD_accum(p),g)
+          lnd2iac_vars%CDD_accum(i,j,p) = x2z(index_x2z_Sl_CDD_accum(p),g)
        end do ! global index g
     end do ! pft index p
 

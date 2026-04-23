@@ -36,6 +36,7 @@ module gcam_comp_mod
 ! Author: JET - added interface files for cesm/gcam communication
 
 ! !PRIVATE DATA MEMBERS:
+  logical, save :: iac_first_run = .true.  ! flag for first call to gcam_run_mod
 
 !EOP
 !===============================================================
@@ -361,10 +362,12 @@ contains
 ! !LOCAL VARIABLES:
     integer :: ymd, tod, dt
     integer :: yr
-    integer :: i,j,p,wc,gs,cs,rs,ws,rr,ays,tr
-    real(r8) :: t_base_K          ! base temperature for DD in Kelvin (18C)
-    real(r8) :: total_wgt         ! total PFT weight for a gridcell
-    real(r8) :: weighted_temp     ! PFT-weighted average temperature
+    integer :: i,j,p,wc,gs,cs,rs,ws,rr,ays,rdd,wdd
+    real(r8) :: t_base_K          ! base temperature for DD in Kelvin (18C) — kept for reference
+    real(r8) :: total_wgt_c       ! total PFT weight for CDD accumulation at a gridcell
+    real(r8) :: total_wgt_h       ! total PFT weight for HDD accumulation at a gridcell
+    real(r8) :: weighted_temp_c   ! PFT-weighted annual CDD increment for gridcell
+    real(r8) :: weighted_temp_h   ! PFT-weighted annual HDD increment for gridcell
     character(len=256) :: scalar_source_dir_loc
     character(len=256) :: elm2gcam_mapping_file_loc 
     character(len=256) :: base_npp_file_loc
@@ -431,50 +434,85 @@ contains
      cs = 0
   end if
 
-  ! for temp transfer
-  if ( elm_ehc_deg_days ) then
-     tr = 1
+  ! for reading/writing HDD and CDD from/to diagnostic files
+  if ( elm_ehc_hdd_cdd ) then
+     wdd = 1
   else
-     tr = 0
+     wdd = 0
+  end if
+  rdd = 0
+
+  ! Compute heating degree days (HDD) and cooling degree days (CDD) from
+  ! the cumulative per-PFT accumulators received from ELM (K-days since
+  ! model start, never reset in ELM).
+  !
+  ! Each year we diff the current snapshot against the previous snapshot
+  ! to get the annual increment, then accumulate PFT-weighted gridcell sums.
+  ! On GCAM model years (multiples of iac_gcam_timestep) the accumulated
+  ! totals are divided by iac_gcam_timestep to give a multi-year average
+  ! HDD/CDD, which is passed to runcGCAM.  The prev snapshot is then updated.
+  !
+  ! Note: HDD_accum / CDD_accum are 3D (lon,lat,pft); HDD / CDD are 2D (lon,lat).
+  t_base_K = 291.15_r8  ! unused in new logic but kept for clarity
+
+  ! On restart, HDD_accum_prev was re-initialized to zero while HDD_accum holds
+  ! the full cumulative history from ELM.  Bootstrap prev = accum on the first
+  ! call so the first diff is zero, avoiding a spurious huge increment.
+  if ( iac_first_run ) then
+     lnd2iac_vars%HDD_accum_prev(:,:,:) = lnd2iac_vars%HDD_accum(:,:,:)
+     lnd2iac_vars%CDD_accum_prev(:,:,:) = lnd2iac_vars%CDD_accum(:,:,:)
+     iac_first_run = .false.
   end if
 
-  ! Compute degree days from 5-year average t_ref2m
-  ! t_ref2m is in Kelvin, base temperature is 18C (291.15 K)
-  ! DD = (T_avg - T_base) * 365
-  ! Positive DD = cooling degree days, Negative DD = heating degree days
-  !
-  ! IMPORTANT: The coupler accumulates l2x fields (including t_ref2m) every
-  ! land coupling timestep, but only averages them every 5 years (when
-  ! iacrun_avg_alarm fires). In intermediate years, lnd2iac_vars%t_ref2m
-  ! contains raw accumulated sums, NOT averaged temperatures. Therefore,
-  ! degree-days can only be computed correctly on GCAM model years
-  ! (multiples of iac_gcam_timestep) when the data has been properly averaged.
-  t_base_K = 291.15_r8  ! 18C in Kelvin
-  lnd2iac_vars%degree_days(:,:) = 0.0_r8
-
-  if ( elm_ehc_deg_days .and. modulo(yr, iac_gcam_timestep) == 0 ) then
-     write(iulog,*) trim(subname),' computing degree days for year ', yr
+  if ( elm_ehc_hdd_cdd ) then
+     write(iulog,*) trim(subname),' accumulating annual HDD/CDD for year ', yr
      do j = 1, iac_ctl%nlat
         do i = 1, iac_ctl%nlon
-           ! Compute PFT-weighted average temperature for this gridcell
-           total_wgt = 0.0_r8
-           weighted_temp = 0.0_r8
+           total_wgt_c  = 0.0_r8
+           total_wgt_h  = 0.0_r8
+           weighted_temp_c = 0.0_r8
+           weighted_temp_h = 0.0_r8
            do p = 1, iac_ctl%npft
               if (lnd2iac_vars%pftwgt(i,j,p) > 0.0_r8) then
-                 weighted_temp = weighted_temp + &
-                    lnd2iac_vars%t_ref2m(i,j,p) * lnd2iac_vars%pftwgt(i,j,p)
-                 total_wgt = total_wgt + lnd2iac_vars%pftwgt(i,j,p)
+                 ! Annual increment = current cumulative - previous cumulative
+                 weighted_temp_h = weighted_temp_h + &
+                    (lnd2iac_vars%HDD_accum(i,j,p) - lnd2iac_vars%HDD_accum_prev(i,j,p)) &
+                    * lnd2iac_vars%pftwgt(i,j,p)
+                 total_wgt_h = total_wgt_h + lnd2iac_vars%pftwgt(i,j,p)
+                 weighted_temp_c = weighted_temp_c + &
+                    (lnd2iac_vars%CDD_accum(i,j,p) - lnd2iac_vars%CDD_accum_prev(i,j,p)) &
+                    * lnd2iac_vars%pftwgt(i,j,p)
+                 total_wgt_c = total_wgt_c + lnd2iac_vars%pftwgt(i,j,p)
               end if
            end do
-           if (total_wgt > 0.0_r8) then
-              weighted_temp = weighted_temp / total_wgt
-              lnd2iac_vars%degree_days(i,j) = (weighted_temp - t_base_K) * 365.0_r8
+           ! Accumulate this year's gridcell-mean HDD/CDD contributions
+           if (total_wgt_h > 0.0_r8) then
+              lnd2iac_vars%HDD(i,j) = lnd2iac_vars%HDD(i,j) + weighted_temp_h / total_wgt_h
+           end if
+           if (total_wgt_c > 0.0_r8) then
+              lnd2iac_vars%CDD(i,j) = lnd2iac_vars%CDD(i,j) + weighted_temp_c / total_wgt_c
            end if
         end do
      end do
-  else if ( elm_ehc_deg_days ) then
-     write(iulog,*) trim(subname),' skipping degree days for year ', yr, &
-        ' (not a GCAM model year; t_ref2m is not yet averaged)'
+
+     ! Update previous snapshot for next year's differencing
+     lnd2iac_vars%HDD_accum_prev(:,:,:) = lnd2iac_vars%HDD_accum(:,:,:)
+     lnd2iac_vars%CDD_accum_prev(:,:,:) = lnd2iac_vars%CDD_accum(:,:,:)
+
+     ! On GCAM model years: average and reset the period accumulator
+     if ( modulo(yr, iac_gcam_timestep) == 0 ) then
+        write(iulog,*) trim(subname),' finalizing ', iac_gcam_timestep, &
+           '-yr average HDD/CDD for year ', yr
+        lnd2iac_vars%HDD(:,:) = lnd2iac_vars%HDD(:,:) / real(iac_gcam_timestep, r8)
+        lnd2iac_vars%CDD(:,:) = lnd2iac_vars%CDD(:,:) / real(iac_gcam_timestep, r8)
+        ! Reset period accumulators for the next GCAM period
+        ! (prev snapshot is already current, so next year's diff is clean)
+        ! but on non-GCAM years HDD/CDD hold period sums — reset them
+        ! NOTE: reset happens AFTER runcGCAM reads HDD/CDD (see below)
+     end if
+  else
+     lnd2iac_vars%HDD(:,:) = 0.0_r8
+     lnd2iac_vars%CDD(:,:) = 0.0_r8
   end if
 
   ! get some file names for scalars
@@ -488,10 +526,16 @@ contains
   !  Call runcGCAM method of E3SM Interface 
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
-                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%degree_days, lnd2iac_vars%forc_hdm, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, iac_ctl%landfrac, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
-                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, ays, cs, tr,&
+                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%HDD, lnd2iac_vars%CDD, lnd2iac_vars%forc_hdm, &
+                iac_ctl%landfrac, iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, &
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
+
+  ! Reset period HDD/CDD accumulators after runcGCAM has consumed them
+  if ( elm_ehc_hdd_cdd .and. modulo(yr, iac_gcam_timestep) == 0 ) then
+     lnd2iac_vars%HDD(:,:) = 0.0_r8
+     lnd2iac_vars%CDD(:,:) = 0.0_r8
+  end if
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
   if ( ehc_eam_co2_emissions ) then
