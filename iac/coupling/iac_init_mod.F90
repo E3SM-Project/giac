@@ -390,6 +390,14 @@ contains
     ! find the last matching year
     indprev = findloc(lsf_years, curr_yr, dim=1, back=.true.)
 
+    ! if model year not found in file (e.g., test runs starting at year 1),
+    ! fall back to the first available year
+    if (indprev == 0) then
+       write(iulog,*) "(", subname, ") Warning: curr_yr ", curr_yr, &
+          " not found in fdyndat_ehc YEAR array; using first available year ", lsf_years(1)
+       indprev = 1
+    end if
+
     ! prev pct pft, but put it in pct_pft for now
     start4(1) = 1
     start4(2) = 1
