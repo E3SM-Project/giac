@@ -68,8 +68,6 @@ contains
           lnd2iac_vars%hr(i,j,p) = x2z(index_x2z_Sl_hr(p),g)
           lnd2iac_vars%npp(i,j,p) = x2z(index_x2z_Sl_npp(p),g)
           lnd2iac_vars%pftwgt(i,j,p) = x2z(index_x2z_Sl_pftwgt(p),g)
-          lnd2iac_vars%HDD_accum(i,j,p) = x2z(index_x2z_Sl_HDD_accum(p),g)
-          lnd2iac_vars%CDD_accum(i,j,p) = x2z(index_x2z_Sl_CDD_accum(p),g)
        end do ! global index g
     end do ! pft index p
 
@@ -78,7 +76,9 @@ contains
        i=iac_ctl%ilon(g)
        j=iac_ctl%jlat(g)
        lnd2iac_vars%forc_hdm(i,j) = x2z(index_x2z_Sl_forc_hdm, g)
-    end do ! global index g (forc_hdm)
+       lnd2iac_vars%hdd(i,j)      = x2z(index_x2z_Sl_hdd,g)
+       lnd2iac_vars%cdd(i,j)      = x2z(index_x2z_Sl_cdd,g)
+    end do ! global index g
 
   end subroutine iac_import
    !===============================================================================

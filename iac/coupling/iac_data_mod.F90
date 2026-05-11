@@ -61,17 +61,9 @@ module iac_data_mod
      real(r8), allocatable :: npp(:,:,:)
      real(r8), allocatable :: hr(:,:,:)
      real(r8), allocatable :: pftwgt(:,:,:)
-     ! Cumulative degree-day accumulators from ELM (K-days, never reset in ELM)
-     ! Dimensioned (lon,lat,pft) — updated once per year via iac_import
-     real(r8), allocatable :: HDD_accum(:,:,:)  ! cumulative heating degree days per PFT
-     real(r8), allocatable :: CDD_accum(:,:,:)  ! cumulative cooling degree days per PFT
-     ! Previous-year snapshot of the ELM accumulators (for differencing)
-     real(r8), allocatable :: HDD_accum_prev(:,:,:)
-     real(r8), allocatable :: CDD_accum_prev(:,:,:)
-     ! Multi-year averaged HDD/CDD passed to runcGCAM (lon,lat), finalized on GCAM years
-     real(r8), allocatable :: HDD(:,:)
-     real(r8), allocatable :: CDD(:,:)
      real(r8), allocatable :: forc_hdm(:,:)       ! population density (lon,lat)
+     real(r8), allocatable :: hdd(:,:)
+     real(r8), allocatable :: cdd(:,:)
   end type lnd2iac_type
 
   type, public :: iac2lnd_type

@@ -239,20 +239,9 @@ contains
     allocate(lnd2iac_vars%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_vars%HDD_accum(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_vars%CDD_accum(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_vars%HDD_accum_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    allocate(lnd2iac_vars%CDD_accum_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
-    lnd2iac_vars%HDD_accum(:,:,:)      = 0.0_r8
-    lnd2iac_vars%CDD_accum(:,:,:)      = 0.0_r8
-    lnd2iac_vars%HDD_accum_prev(:,:,:) = 0.0_r8
-    lnd2iac_vars%CDD_accum_prev(:,:,:) = 0.0_r8
-    allocate(lnd2iac_vars%HDD(iac_ctl%nlon,iac_ctl%nlat))
-    allocate(lnd2iac_vars%CDD(iac_ctl%nlon,iac_ctl%nlat))
-    lnd2iac_vars%HDD(:,:) = 0.0_r8
-    lnd2iac_vars%CDD(:,:) = 0.0_r8
     allocate(lnd2iac_vars%forc_hdm(iac_ctl%nlon,iac_ctl%nlat))
-    lnd2iac_vars%forc_hdm(:,:) = 0.0_r8
+    allocate(lnd2iac_vars%hdd(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(lnd2iac_vars%cdd(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))

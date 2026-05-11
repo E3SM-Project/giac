@@ -43,9 +43,9 @@ module gcam_cpl_indices
   integer, pointer, public ::index_x2z_Sl_hr(:)        ! total heterotrophic respiration
   integer, pointer, public ::index_x2z_Sl_npp(:)       ! net primary production
   integer, pointer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
-  integer, pointer, public ::index_x2z_Sl_HDD_accum(:) ! cumulative heating degree days per PFT (K-days)
-  integer, pointer, public ::index_x2z_Sl_CDD_accum(:) ! cumulative cooling degree days per PFT (K-days)
-  integer, public ::index_x2z_Sl_forc_hdm = 0        ! human population density
+  integer, public ::index_x2z_Sl_forc_hdm = 0          ! human population density
+  integer, public ::index_x2z_Sl_hdd = 0               ! heating degree days
+  integer, public ::index_x2z_Sl_cdd = 0               ! cooling degree days
   integer, public ::nflds_x2z = 0
 
   !-----------------------------------------------------------------------
@@ -148,10 +148,6 @@ contains
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_npp',ier)
     allocate(index_x2z_Sl_pftwgt(iac_ctl%npft))
     if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_pftwgt',ier)
-    allocate(index_x2z_Sl_HDD_accum(iac_ctl%npft))
-    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_HDD_accum',ier)
-    allocate(index_x2z_Sl_CDD_accum(iac_ctl%npft))
-    if(ier/=0) call mct_die(subName,'allocate index_x2z_Sl_CDD_accum',ier)
   end subroutine gcam_cpl_indices_init
 
   !-----------------------------------------------------------------------
@@ -217,13 +213,13 @@ contains
        index_x2z_Sl_hr(p) = mct_avect_indexra(x2z,trim('Sl_hr_pft' // pftstr))
        index_x2z_Sl_npp(p) = mct_avect_indexra(x2z,trim('Sl_npp_pft' // pftstr))
        index_x2z_Sl_pftwgt(p) = mct_avect_indexra(x2z,trim('Sl_pftwgt_pft' // pftstr))
-       index_x2z_Sl_HDD_accum(p) = mct_avect_indexra(x2z,trim('Sl_HDD_accum_pft' // pftstr))
-       index_x2z_Sl_CDD_accum(p) = mct_avect_indexra(x2z,trim('Sl_CDD_accum_pft' // pftstr))
 
     end do
 
     ! Scalar per-gridcell lnd->iac field (no PFT loop needed)
     index_x2z_Sl_forc_hdm = mct_avect_indexra(x2z, 'Sl_forc_hdm')
+    index_x2z_Sl_hdd      = mct_avect_indexra(x2z, 'Sl_hdd')
+    index_x2z_Sl_cdd      = mct_avect_indexra(x2z, 'Sl_cdd')
 
     ! iac -> atm
     ! Monthly sfc, low alt air, high alt air
@@ -256,8 +252,6 @@ contains
     deallocate(index_x2z_Sl_hr)
     deallocate(index_x2z_Sl_npp)
     deallocate(index_x2z_Sl_pftwgt)
-    deallocate(index_x2z_Sl_HDD_accum)
-    deallocate(index_x2z_Sl_CDD_accum)
   end subroutine gcam_cpl_indices_finish
 
 end module gcam_cpl_indices
