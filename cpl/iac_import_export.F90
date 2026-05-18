@@ -33,6 +33,7 @@ contains
     integer :: n,n1,p,g,i,j
     integer :: begg, endg
     character(len=32), parameter :: sub = '(iac_import)'
+    real(r8), parameter ::  dayspy   = 365._r8                ! days per year
 
     ! Gcam expects things in npp_m[lon][lat][pft] format, so we need
     ! to extract from the flattened column representation.
@@ -76,8 +77,8 @@ contains
        i=iac_ctl%ilon(g)
        j=iac_ctl%jlat(g)
        lnd2iac_vars%forc_hdm(i,j) = x2z(index_x2z_Sl_forc_hdm, g)
-       lnd2iac_vars%hdd(i,j)      = x2z(index_x2z_Sl_hdd,g)
-       lnd2iac_vars%cdd(i,j)      = x2z(index_x2z_Sl_cdd,g)
+       lnd2iac_vars%hdd(i,j)      = x2z(index_x2z_Sl_hdd,g) * dayspy
+       lnd2iac_vars%cdd(i,j)      = x2z(index_x2z_Sl_cdd,g) * dayspy
     end do ! global index g
 
   end subroutine iac_import
