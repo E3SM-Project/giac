@@ -165,6 +165,7 @@ module gcam_var_mod
   character(len=256), public :: scalar_source_dir
   logical, public :: write_scalars ! scalars will be written to a file.
   ! hr, area, pft weight) are passed from e3sm.
+  logical, public :: write_hdd_cdd ! hdd cdd will be written to a file.
   logical, public :: write_co2 ! gridded co2 emissions will be
   ! written to a file (in addition to passed in code).
   

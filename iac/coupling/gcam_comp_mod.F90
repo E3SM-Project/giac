@@ -361,7 +361,7 @@ contains
 ! !LOCAL VARIABLES:
     integer :: ymd, tod, dt
     integer :: yr
-    integer :: i,j,p,wc,gs,cs,rs,ws,rr,ays,rdd,wdd
+    integer :: i,j,p,wc,gs,cs,rs,ws,rdd,wdd,rr,ays,dd
     character(len=256) :: scalar_source_dir_loc
     character(len=256) :: elm2gcam_mapping_file_loc 
     character(len=256) :: base_npp_file_loc
@@ -414,6 +414,14 @@ contains
      ws = 0
   end if
 
+  ! for reading/writing hdd and cdd from/to diagnostic files
+  if ( write_hdd_cdd ) then
+     wdd = 1
+  else
+     wdd = 0
+  end if
+  rdd = 0
+
   ! for ag yield scaling
   if ( elm_ehc_agyield_scaling ) then
      ays = 1
@@ -428,13 +436,12 @@ contains
      cs = 0
   end if
 
-  ! for reading/writing hdd and cdd from/to diagnostic files
+  ! for passing hdd and cdd from elm to ehc
   if ( elm_ehc_hdd_cdd ) then
-     wdd = 1
+     dd = 1
   else
-     wdd = 0
+     dd = 0
   end if
-  rdd = 0
 
   ! get some file names for scalars
   ! use local variables to avoid adding multiple null characters to the orig
@@ -449,7 +456,7 @@ contains
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
                 iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%hdd, lnd2iac_vars%cdd, lnd2iac_vars%forc_hdm, &
                 iac_ctl%landfrac, iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
-                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, &
+                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, dd, &
                 base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
