@@ -127,6 +127,8 @@ module gcam_var_mod
   character(len=256), public ::  base_npp_file   ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_hr_file    ! by pft, lat, lon, for land scalars
   character(len=256), public ::  base_pft_file   ! by pft, lat, lon, for land scalars
+  character(len=256), public ::  base_hdd_file   ! by lat, lon, for baseline hdd
+  character(len=256), public ::  base_cdd_file   ! by lat, lon, for baseline cdd
   character(len=256), public ::  gcam2elm_co2_mapping_file ! define gcam co2 out
   character(len=256), public ::  gcam2elm_luc_mapping_file ! def gcam lu out
   character(len=256), public ::  gcam2elm_woodharvest_mapping_file ! def gcam wh out

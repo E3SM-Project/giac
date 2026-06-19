@@ -81,6 +81,7 @@ contains
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
+         base_hdd_file, base_cdd_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
