@@ -12,7 +12,7 @@ module gcam_comp_mod
   use iac_data_mod         , only : cdata => gdata, EClock => GClock, &
                                     lnd2iac_type
   use shr_sys_mod , only : shr_sys_abort
-  use iac_data_mod, only : iac_ctl, iac_gcam_timestep
+  use iac_data_mod, only : iac_ctl
   use shr_kind_mod,      only: CX => SHR_KIND_CX
   use iac_spmd_mod, only : masterproc
   use gcam_var_mod
@@ -360,8 +360,7 @@ contains
     
 ! !LOCAL VARIABLES:
     integer :: ymd, tod, dt
-    integer :: yr
-    integer :: i,j,p,wc,gs,cs,rs,ws,rdd,wdd,rr,ays,dd
+    integer :: i,j,wc,gs,cs,rs,ws,rdd,wdd,rr,ays,dd
     character(len=256) :: scalar_source_dir_loc
     character(len=256) :: elm2gcam_mapping_file_loc 
     character(len=256) :: base_npp_file_loc
@@ -385,7 +384,6 @@ contains
   ymd = EClock(iac_eclock_ymd)
   tod = EClock(iac_eclock_tod)
   dt  = EClock(iac_eclock_dt)
-  yr  = ymd / 10000
 
   write(iulog,*) trim(subname),' date= ',ymd,tod
 
