@@ -77,9 +77,9 @@ contains
     do g=iac_ctl%begg,iac_ctl%endg
        i=iac_ctl%ilon(g)
        j=iac_ctl%jlat(g)
-       lnd2iac_vars%forc_hdm(i,j) = x2z(index_x2z_Sl_forc_hdm, g)
-       lnd2iac_vars%hdd(i,j)      = x2z(index_x2z_Sl_hdd,g) * dayspy * k2f
-       lnd2iac_vars%cdd(i,j)      = x2z(index_x2z_Sl_cdd,g) * dayspy * k2f
+       lnd2iac_vars%forc_hdm(i,j) = 0._r8; if (index_x2z_Sl_forc_hdm > 0) lnd2iac_vars%forc_hdm(i,j) = x2z(index_x2z_Sl_forc_hdm, g)
+       lnd2iac_vars%hdd(i,j)      = 0._r8; if (index_x2z_Sl_hdd      > 0) lnd2iac_vars%hdd(i,j)      = x2z(index_x2z_Sl_hdd,g) * dayspy * k2f
+       lnd2iac_vars%cdd(i,j)      = 0._r8; if (index_x2z_Sl_cdd      > 0) lnd2iac_vars%cdd(i,j)      = x2z(index_x2z_Sl_cdd,g) * dayspy * k2f
     end do ! global index g
 
   end subroutine iac_import

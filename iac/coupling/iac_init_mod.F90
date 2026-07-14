@@ -62,6 +62,7 @@ contains
          base_hdd_file, base_cdd_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
+         gcam2elm_degdays_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
@@ -71,7 +72,7 @@ contains
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
          read_scalars, scalar_source_dir, &
-         write_scalars, write_hdd_cdd, write_co2, &
+         write_scalars, read_hdd_cdd, write_hdd_cdd, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, elm_ehc_hdd_cdd, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
@@ -142,6 +143,7 @@ contains
        write(iulog, '(A,A)') "gcam2elm_luc_mapping_file = ", trim(gcam2elm_luc_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_woodharvest_mapping_file = ", trim(gcam2elm_woodharvest_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_cdensity_mapping_file = ", trim(gcam2elm_cdensity_mapping_file)
+       write(iulog, '(A,A)') "gcam2elm_degdays_mapping_file = ", trim(gcam2elm_degdays_mapping_file)
 
        write(iulog,*) 'grid mapping and initialization files:'
        write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
@@ -176,6 +178,7 @@ contains
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
        write(iulog, '(A,L10)') "write_scalars = ",write_scalars
+       write(iulog, '(A,L10)') "read_hdd_cdd = ",read_hdd_cdd
        write(iulog, '(A,L10)') "write_hdd_cdd = ",write_hdd_cdd
        write(iulog, '(A,L10)') "write_co2 = ",write_co2
        write(iulog, '(A,L10)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling

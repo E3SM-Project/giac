@@ -133,6 +133,7 @@ module gcam_var_mod
   character(len=256), public ::  gcam2elm_luc_mapping_file ! def gcam lu out
   character(len=256), public ::  gcam2elm_woodharvest_mapping_file ! def gcam wh out
   character(len=256), public ::  gcam2elm_cdensity_mapping_file ! def gcam cdensity in
+  character(len=256), public ::  gcam2elm_degdays_mapping_file ! def gcam degday in
 
   ! Grid and mapping and initialization files
   character(len=256), public ::  gcam_gridfile ! definition of iac grid
@@ -167,6 +168,7 @@ module gcam_var_mod
   character(len=256), public :: scalar_source_dir
   logical, public :: write_scalars ! scalars will be written to a file.
   ! hr, area, pft weight) are passed from e3sm.
+  logical, public :: read_hdd_cdd ! if .FALSE., HDD/CDD are calculated; if .TRUE. HDD/CDD are read from file
   logical, public :: write_hdd_cdd ! hdd cdd will be written to a file.
   logical, public :: write_co2 ! gridded co2 emissions will be
   ! written to a file (in addition to passed in code).

@@ -236,6 +236,8 @@ contains
     gcam2elm_woodharvest_mapping_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(gcam2elm_cdensity_mapping_file)
     gcam2elm_cdensity_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_degdays_mapping_file)
+    gcam2elm_degdays_mapping_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(base_co2_surface_file)
     base_co2_surface_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(base_co2_shipment_file)
@@ -281,6 +283,7 @@ contains
          trim(gcam2elm_luc_mapping_file),&
          trim(gcam2elm_woodharvest_mapping_file),&
          trim(gcam2elm_cdensity_mapping_file),&
+         trim(gcam2elm_degdays_mapping_file),&
          trim(base_gcam_co2_file), trim(base_co2_surface_file),&
          trim(base_co2_shipment_file), trim(base_co2_aircraft_file),&
          iac_ctl%area, iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors, rr)
@@ -415,12 +418,16 @@ contains
   end if
 
   ! for reading/writing hdd and cdd from/to diagnostic files
+  if ( read_hdd_cdd ) then
+     rdd = 1
+  else
+     rdd = 0
+  end if
   if ( write_hdd_cdd ) then
      wdd = 1
   else
      wdd = 0
   end if
-  rdd = 0
 
   ! for ag yield scaling
   if ( elm_ehc_agyield_scaling ) then
