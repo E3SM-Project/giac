@@ -187,6 +187,18 @@ contains
        write(iulog, '(A,L10)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
        write(iulog, '(A,L10)') "gcam_spinup = ",gcam_spinup
        write(iulog, '(A,L10)') "run_gcam = ",run_gcam
+       if (read_scalars .and. write_scalars) then
+          write(iulog,*) '('//trim(subname)//') WARNING: read_scalars and write_scalars are both true.'
+          write(iulog,*) '('//trim(subname)//') read_scalars takes precedence, so write_scalars is effectively false:'
+          write(iulog,*) '('//trim(subname)//') no scalar calculations or writes will be performed.'
+          write_scalars = .false.
+       end if
+       if (read_hdd_cdd .and. write_hdd_cdd) then
+          write(iulog,*) '('//trim(subname)//') WARNING: read_hdd_cdd and write_hdd_cdd are both true.'
+          write(iulog,*) '('//trim(subname)//') read_hdd_cdd takes precedence, so write_hdd_cdd is effectively false:'
+          write(iulog,*) '('//trim(subname)//') no HDD/CDD calculations or writes will be performed.'
+          write_hdd_cdd = .false.
+       end if
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)
