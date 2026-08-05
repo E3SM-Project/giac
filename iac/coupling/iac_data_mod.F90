@@ -61,6 +61,9 @@ module iac_data_mod
      real(r8), allocatable :: npp(:,:,:)
      real(r8), allocatable :: hr(:,:,:)
      real(r8), allocatable :: pftwgt(:,:,:)
+     real(r8), allocatable :: forc_hdm(:,:)       ! population density (lon,lat)
+     real(r8), allocatable :: hdd(:,:)
+     real(r8), allocatable :: cdd(:,:)
   end type lnd2iac_type
 
   type, public :: iac2lnd_type

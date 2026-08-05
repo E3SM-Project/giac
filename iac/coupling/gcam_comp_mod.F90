@@ -236,6 +236,8 @@ contains
     gcam2elm_woodharvest_mapping_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(gcam2elm_cdensity_mapping_file)
     gcam2elm_cdensity_mapping_file(char_len+1:char_len+1) = c_null_char
+    char_len = len_trim(gcam2elm_degdays_mapping_file)
+    gcam2elm_degdays_mapping_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(base_co2_surface_file)
     base_co2_surface_file(char_len+1:char_len+1) = c_null_char
     char_len = len_trim(base_co2_shipment_file)
@@ -281,6 +283,7 @@ contains
          trim(gcam2elm_luc_mapping_file),&
          trim(gcam2elm_woodharvest_mapping_file),&
          trim(gcam2elm_cdensity_mapping_file),&
+         trim(gcam2elm_degdays_mapping_file),&
          trim(base_gcam_co2_file), trim(base_co2_surface_file),&
          trim(base_co2_shipment_file), trim(base_co2_aircraft_file),&
          iac_ctl%area, iac_ctl%nlon, iac_ctl%nlat, num_gcam_energy_regions, num_emiss_sectors, rr)
@@ -360,12 +363,14 @@ contains
     
 ! !LOCAL VARIABLES:
     integer :: ymd, tod, dt
-    integer :: i,j,wc,gs,cs,rs,ws,rr,ays
+    integer :: i,j,wc,gs,cs,rs,ws,rdd,wdd,rr,ays,dd
     character(len=256) :: scalar_source_dir_loc
     character(len=256) :: elm2gcam_mapping_file_loc 
     character(len=256) :: base_npp_file_loc
     character(len=256) :: base_hr_file_loc
     character(len=256) :: base_pft_file_loc
+    character(len=256) :: base_hdd_file_loc
+    character(len=256) :: base_cdd_file_loc
     character(len=*),parameter :: subname='(gcam_run_mod)'
 
 
@@ -412,6 +417,18 @@ contains
      ws = 0
   end if
 
+  ! for reading/writing hdd and cdd from/to diagnostic files
+  if ( read_hdd_cdd ) then
+     rdd = 1
+  else
+     rdd = 0
+  end if
+  if ( write_hdd_cdd ) then
+     wdd = 1
+  else
+     wdd = 0
+  end if
+
   ! for ag yield scaling
   if ( elm_ehc_agyield_scaling ) then
      ays = 1
@@ -426,6 +443,13 @@ contains
      cs = 0
   end if
 
+  ! for passing hdd and cdd from elm to ehc
+  if ( elm_ehc_hdd_cdd ) then
+     dd = 1
+  else
+     dd = 0
+  end if
+
   ! get some file names for scalars
   ! use local variables to avoid adding multiple null characters to the orig
   scalar_source_dir_loc=trim(scalar_source_dir)//c_null_char
@@ -433,14 +457,16 @@ contains
   base_npp_file_loc=trim(base_npp_file)//c_null_char
   base_hr_file_loc=trim(base_hr_file)//c_null_char
   base_pft_file_loc=trim(base_pft_file)//c_null_char
+  base_hdd_file_loc=trim(base_hdd_file)//c_null_char
+  base_cdd_file_loc=trim(base_cdd_file)//c_null_char
 
   !  Call runcGCAM method of E3SM Interface 
   !  The yields and carbon density scalars are set within this function also
   call runcGCAM(ymd, gcamo, gcamoemis, trim(base_gcam_lu_wh_file), trim(base_gcam_co2_file), gs, &
-                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, &
-                iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
-                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, ays, cs,&
-                base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, rr)
+                iac_ctl%area, lnd2iac_vars%pftwgt, lnd2iac_vars%npp, lnd2iac_vars%hr, lnd2iac_vars%hdd, lnd2iac_vars%cdd, lnd2iac_vars%forc_hdm, &
+                iac_ctl%landfrac, iac_ctl%nlon, iac_ctl%nlat, iac_ctl%npft, num_gcam_energy_regions, num_emiss_ctys, num_emiss_sectors, num_periods,&
+                elm2gcam_mapping_file_loc, iac_first_coupled_year, rs, scalar_source_dir_loc, ws, rdd, wdd, ays, cs, dd, &
+                base_npp_file_loc, base_hr_file_loc, base_pft_file_loc, base_hdd_file_loc, base_cdd_file_loc, rr)
 
   ! If co2 emissions need to be passed from GCAM to EAM, then call downscale CO2                                 
   if ( ehc_eam_co2_emissions ) then

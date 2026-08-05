@@ -59,8 +59,10 @@ contains
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
+         base_hdd_file, base_cdd_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
+         gcam2elm_degdays_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
@@ -70,8 +72,8 @@ contains
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
          read_scalars, scalar_source_dir, &
-         write_scalars, write_co2, &
-         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
+         write_scalars, read_hdd_cdd, write_hdd_cdd, write_co2, &
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, elm_ehc_hdd_cdd, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
 
     nlfilename_iac = "gcam_in"
@@ -135,10 +137,13 @@ contains
        write(iulog, '(A,A)') "base_npp_file = ", trim(base_npp_file )
        write(iulog, '(A,A)') "base_hr_file = ", trim(base_hr_file)
        write(iulog, '(A,A)') "base_pft_file = ", trim(base_pft_file )
+       write(iulog, '(A,A)') "base_hdd_file = ", trim(base_hdd_file )
+       write(iulog, '(A,A)') "base_cdd_file = ", trim(base_cdd_file )
        write(iulog, '(A,A)') "gcam2elm_co2_mapping_file = ", trim(gcam2elm_co2_mapping_file )
        write(iulog, '(A,A)') "gcam2elm_luc_mapping_file = ", trim(gcam2elm_luc_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_woodharvest_mapping_file = ", trim(gcam2elm_woodharvest_mapping_file)
        write(iulog, '(A,A)') "gcam2elm_cdensity_mapping_file = ", trim(gcam2elm_cdensity_mapping_file)
+       write(iulog, '(A,A)') "gcam2elm_degdays_mapping_file = ", trim(gcam2elm_degdays_mapping_file)
 
        write(iulog,*) 'grid mapping and initialization files:'
        write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
@@ -173,12 +178,27 @@ contains
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
        write(iulog, '(A,L10)') "write_scalars = ",write_scalars
+       write(iulog, '(A,L10)') "read_hdd_cdd = ",read_hdd_cdd
+       write(iulog, '(A,L10)') "write_hdd_cdd = ",write_hdd_cdd
        write(iulog, '(A,L10)') "write_co2 = ",write_co2
        write(iulog, '(A,L10)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
        write(iulog, '(A,L10)') "elm_ehc_carbon_scaling = ", elm_ehc_carbon_scaling
+       write(iulog, '(A,L10)') "elm_ehc_hdd_cdd = ", elm_ehc_hdd_cdd
        write(iulog, '(A,L10)') "ehc_eam_co2_emissions = ", ehc_eam_co2_emissions
        write(iulog, '(A,L10)') "gcam_spinup = ",gcam_spinup
        write(iulog, '(A,L10)') "run_gcam = ",run_gcam
+       if (read_scalars .and. write_scalars) then
+          write(iulog,*) '('//trim(subname)//') WARNING: read_scalars and write_scalars are both true.'
+          write(iulog,*) '('//trim(subname)//') read_scalars takes precedence, so write_scalars is effectively false:'
+          write(iulog,*) '('//trim(subname)//') no scalar calculations or writes will be performed.'
+          write_scalars = .false.
+       end if
+       if (read_hdd_cdd .and. write_hdd_cdd) then
+          write(iulog,*) '('//trim(subname)//') WARNING: read_hdd_cdd and write_hdd_cdd are both true.'
+          write(iulog,*) '('//trim(subname)//') read_hdd_cdd takes precedence, so write_hdd_cdd is effectively false:'
+          write(iulog,*) '('//trim(subname)//') no HDD/CDD calculations or writes will be performed.'
+          write_hdd_cdd = .false.
+       end if
 
        !if (nsrest == nsrStartup .and. finidat_rtm /= ' ') then
        !   write(iulog,*) '   MOSART initial data   = ',trim(finidat_rtm)
@@ -238,6 +258,9 @@ contains
     allocate(lnd2iac_vars%npp(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%hr(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(lnd2iac_vars%pftwgt(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
+    allocate(lnd2iac_vars%forc_hdm(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(lnd2iac_vars%hdd(iac_ctl%nlon,iac_ctl%nlat))
+    allocate(lnd2iac_vars%cdd(iac_ctl%nlon,iac_ctl%nlat))
 
     allocate(iac2lnd_vars%pct_pft(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))
     allocate(iac2lnd_vars%pct_pft_prev(iac_ctl%nlon,iac_ctl%nlat,iac_ctl%npft))

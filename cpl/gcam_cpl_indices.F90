@@ -43,6 +43,9 @@ module gcam_cpl_indices
   integer, pointer, public ::index_x2z_Sl_hr(:)        ! total heterotrophic respiration
   integer, pointer, public ::index_x2z_Sl_npp(:)       ! net primary production
   integer, pointer, public ::index_x2z_Sl_pftwgt(:)    ! pft weights for each cell
+  integer, public ::index_x2z_Sl_forc_hdm = 0          ! human population density
+  integer, public ::index_x2z_Sl_hdd = 0               ! heating degree days
+  integer, public ::index_x2z_Sl_cdd = 0               ! cooling degree days
   integer, public ::nflds_x2z = 0
 
   !-----------------------------------------------------------------------
@@ -78,8 +81,10 @@ contains
          gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
+         base_hdd_file, base_cdd_file, &
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
+         gcam2elm_degdays_mapping_file, &
          gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
@@ -89,8 +94,8 @@ contains
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
          read_scalars, scalar_source_dir, &
-         write_scalars, write_co2, &
-         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions,&
+         write_scalars, read_hdd_cdd, write_hdd_cdd, write_co2, &
+         elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, elm_ehc_hdd_cdd, ehc_eam_co2_emissions,&
          gcam_spinup, run_gcam
  
     nlfilename_iac = "gcam_in"
@@ -212,6 +217,11 @@ contains
        index_x2z_Sl_pftwgt(p) = mct_avect_indexra(x2z,trim('Sl_pftwgt_pft' // pftstr))
 
     end do
+
+    ! Scalar per-gridcell lnd->iac field (no PFT loop needed)
+    index_x2z_Sl_forc_hdm = mct_avect_indexra(x2z, 'Sl_forc_hdm')
+    index_x2z_Sl_hdd      = mct_avect_indexra(x2z, 'Sl_hdd')
+    index_x2z_Sl_cdd      = mct_avect_indexra(x2z, 'Sl_cdd')
 
     ! iac -> atm
     ! Monthly sfc, low alt air, high alt air
