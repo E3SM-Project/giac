@@ -69,7 +69,7 @@ contains
          crop_addtreeonly, crop_setherbfracrem, crop_setavailtreefracrem, &
          pasture_addtreeonly, pasture_setherbfracrem, pasture_setavailtreefracrem, &         
          fdyndat_ehc, &
-         read_scalars, scalar_source_dir, &
+         read_scalars, scalar_source_dir, elm_data_dir, &
          write_scalars, write_co2, &
          elm_ehc_agyield_scaling, elm_ehc_carbon_scaling, ehc_eam_co2_emissions, &
          gcam_spinup, run_gcam 
@@ -172,6 +172,7 @@ contains
        write(iulog,*) 'runtime options:'
        write(iulog, '(A,L)') "read_scalars = ",read_scalars
        write(iulog, '(A,A)') "scalar_source_dir = ", trim(scalar_source_dir)
+       write(iulog, '(A,A)') "elm_data_dir = ", trim(elm_data_dir)
        write(iulog, '(A,L10)') "write_scalars = ",write_scalars
        write(iulog, '(A,L10)') "write_co2 = ",write_co2
        write(iulog, '(A,L10)') "elm_ehc_agyield_scaling = ", elm_ehc_agyield_scaling
@@ -206,6 +207,15 @@ contains
     call ncd_inqdlen(ncid,dimid,iac_ctl%nlon)
     call ncd_inqdid(ncid,'lsmlat',dimid)
     call ncd_inqdlen(ncid,dimid,iac_ctl%nlat)
+
+    ! Guard (2026-08-31): the namelist num_lon/num_lat size several arrays (e.g. the CO2
+    ! downscaling in gcam_comp_mod) while the IAC grid itself comes from gcam_gridfile;
+    ! a mismatch corrupts memory silently. Abort loudly instead.
+    if (num_lon /= iac_ctl%nlon .or. num_lat /= iac_ctl%nlat) then
+       write(iulog,*) 'iac_init: num_lon/num_lat (',num_lon,num_lat, &
+            ') do not match gcam_gridfile dims (',iac_ctl%nlon,iac_ctl%nlat,')'
+       call shr_sys_abort('iac_init: num_lon/num_lat inconsistent with gcam_gridfile')
+    end if
     iac_ctl%ngrid=iac_ctl%nlon*iac_ctl%nlat
 
     ! No decomposition

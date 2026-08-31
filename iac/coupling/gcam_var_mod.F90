@@ -163,6 +163,10 @@ module gcam_var_mod
   ! runtime options
   logical, public :: read_scalars ! if .FALSE., scalars are calculated from npp/hr; If .TRUE., scalars are calculated from scalar_source_dir/scalar_
   character(len=256), public :: scalar_source_dir
+  ! Detached ladder: if non-empty, GCAM reads ELM npp/hr/pft weights for the year that just
+  ! completed from <elm_data_dir>/elm2gcam_<year>_{npp,hr,pft_wt}.csv instead of the (stub)
+  ! land model coupling fields, and computes the scalars from them (read_scalars must be .false.)
+  character(len=256), public :: elm_data_dir = ''
   logical, public :: write_scalars ! scalars will be written to a file.
   ! hr, area, pft weight) are passed from e3sm.
   logical, public :: write_co2 ! gridded co2 emissions will be
