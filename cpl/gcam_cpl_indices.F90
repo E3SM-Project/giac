@@ -120,6 +120,7 @@ contains
           call shr_sys_abort( subname//' encountered end-of-file on &
              gcam_inparm read' )
        endif
+       close(unitn)
        call shr_file_freeUnit( unitn )
     end if
 
