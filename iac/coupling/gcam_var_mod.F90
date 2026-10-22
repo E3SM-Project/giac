@@ -138,8 +138,7 @@ module gcam_var_mod
 
   ! Grid and mapping and initialization files
   character(len=256), public ::  gcam_gridfile ! definition of iac grid
-  character(len=256), public ::  elm2gcam_co2_mapping_file ! def gcam units to grid
-  character(len=256), public ::  elm2gcam_luc_mapping_file ! def gcam units to grid
+  character(len=256), public ::  elm2gcam_mapping_file ! def gcam units to grid
   character(len=256), public :: gcam2glm_glumap
   character(len=256), public :: gcam2glm_baselu
   character(len=256), public :: gcam2glm_basebiomass

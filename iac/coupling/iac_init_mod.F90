@@ -63,7 +63,7 @@ contains
          gcam2elm_co2_mapping_file, gcam2elm_luc_mapping_file, &
          gcam2elm_woodharvest_mapping_file, gcam2elm_cdensity_mapping_file, &
          gcam2elm_degdays_mapping_file, &
-         gcam_gridfile, elm2gcam_co2_mapping_file, elm2gcam_luc_mapping_file, &
+         gcam_gridfile, elm2gcam_mapping_file, &
          gcam2glm_glumap, gcam2glm_baselu, gcam2glm_basebiomass, &
          country2grid_map, country2region_map, pop_iiasa_file, gdp_iiasa_file, &
          pop_gcam_file, gdp_gcam_file, co2_gcam_file, &
@@ -149,10 +149,8 @@ contains
 
        write(iulog,*) 'grid mapping and initialization files:'
        write(iulog, '(A,A)') "gcam_gridfile = ", trim(gcam_gridfile)
-       write(iulog, '(A,A)') "elm2gcam_co2_mapping_file = ", &
-                             trim(elm2gcam_co2_mapping_file)
-       write(iulog, '(A,A)') "elm2gcam_luc_mapping_file = ", &
-                             trim(elm2gcam_luc_mapping_file)
+       write(iulog, '(A,A)') "elm2gcam_mapping_file = ", &
+                             trim(elm2gcam_mapping_file)
        write(iulog, '(A,A)') "gcam2glm_glumap = ", trim(gcam2glm_glumap)
        write(iulog, '(A,A)') "gcam2glm_baselu = ", trim(gcam2glm_baselu)
        write(iulog, '(A,A)') "gcam2glm_basebiomass = ", trim(gcam2glm_basebiomass)
