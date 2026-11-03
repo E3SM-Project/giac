@@ -78,7 +78,7 @@ contains
          num_gcam_energy_regions, num_gcam_land_regions, &
          num_iac2elm_landtypes, num_emiss_sectors, &
          num_emiss_ctys, num_periods, &
-         gcam_config, base_gcam_co2_file, base_gcam_lu_wh_file, &
+         gcam_config, use_gcam_usa, base_gcam_co2_file, base_gcam_lu_wh_file, &
          base_co2_surface_file, base_co2_shipment_file, base_co2_aircraft_file, &
          base_npp_file, base_hr_file, base_pft_file, &
          base_hdd_file, base_cdd_file, &
